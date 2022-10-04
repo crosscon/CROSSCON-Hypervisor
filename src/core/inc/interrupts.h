@@ -18,6 +18,7 @@
 
 #include <bao.h>
 #include <arch/interrupts.h>
+#include <vm.h>
 
 #include <bitmap.h>
 
@@ -47,6 +48,8 @@ bool interrupts_arch_check(irqid_t int_id);
 void interrupts_arch_clear(irqid_t int_id);
 void interrupts_arch_ipi_send(cpuid_t cpu_target, irqid_t ipi_id);
 void interrupts_arch_vm_assign(struct vm *vm, irqid_t id);
+/* TODO */
+void interrupts_arch_vm_inject(struct vcpu* vcpu, uint64_t id);
 bool interrupts_arch_conflict(bitmap_t* interrupt_bitmap, irqid_t id);
 
 #endif /* __INTERRUPTS_H__ */

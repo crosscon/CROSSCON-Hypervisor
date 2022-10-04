@@ -69,8 +69,11 @@ struct vcpu {
     vcpuid_t id;
     cpuid_t phys_id;
     bool active;
+    enum { VCPU_OFF, VCPU_INACTIVE, VCPU_ACTIVE, VCPU_STACKED } state;
 
     struct vm* vm;
+    struct list children;
+    struct vcpu* parent;
 
     uint8_t stack[STACK_SIZE] __attribute__((aligned(STACK_SIZE)));
 };
@@ -79,6 +82,7 @@ extern struct vm vm;
 extern struct config* vm_config_ptr;
 
 void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id);
+vcpu_t* vm_init_dynamic(struct vm*, const struct vm_config*, uint64_t);
 void vm_start(struct vm* vm, vaddr_t entry);
 struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid);
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu);
@@ -89,6 +93,7 @@ void vcpu_init(struct vcpu* vcpu, struct vm* vm, vaddr_t entry);
 void vm_msg_broadcast(struct vm* vm, struct cpu_msg* msg);
 cpumap_t vm_translate_to_pcpu_mask(struct vm* vm, cpumap_t mask, size_t len);
 cpumap_t vm_translate_to_vcpu_mask(struct vm* vm, cpumap_t mask, size_t len);
+vcpu_t* vcpu_get_child(vcpu_t* vcpu, int index);
 
 static inline cpuid_t vm_translate_to_pcpuid(struct vm* vm, vcpuid_t vcpuid)
 {
@@ -136,5 +141,17 @@ unsigned long vcpu_readpc(struct vcpu* vcpu);
 void vcpu_writepc(struct vcpu* vcpu, unsigned long pc);
 void vcpu_arch_run(struct vcpu* vcpu);
 void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry);
+void vcpu_save_state(vcpu_t* vcpu);
+void vcpu_restore_state(vcpu_t* vcpu);
+
+void vm_map_img_rgn(struct vm* vm, const struct vm_config* config,
+                    struct mem_region* reg);
+
+void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
+                        struct mem_region* reg);
+
+void vm_map_mem_region(struct vm* vm, struct mem_region* reg);
+
+void vm_init_mem_regions(struct vm* vm, const struct vm_config* config);
 
 #endif /* __VM_H__ */

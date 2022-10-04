@@ -13,17 +13,16 @@
  #
 ##
 
-core-objs-y+=init.o
-core-objs-y+=mem.o
-core-objs-y+=objcache.o
-core-objs-y+=cache.o
-core-objs-y+=interrupts.o
-core-objs-y+=cpu.o
-core-objs-y+=vmm.o
-core-objs-y+=vm.o
-core-objs-y+=config.o
-core-objs-y+=console.o
-core-objs-y+=iommu.o
-core-objs-y+=ipc.o
-core-objs-y+=vmstack.o
-core-objs-y+=baoenclave.o
+# Architecture definition
+ARCH:=armv8
+# CPU definition
+CPU:=cortex-a53
+
+GIC_VERSION:=GICV3
+
+drivers = imx_uart
+
+platform-cppflags =
+platform-cflags = -mcpu=$(CPU)
+platform-asflags =
+platform-ldflags =

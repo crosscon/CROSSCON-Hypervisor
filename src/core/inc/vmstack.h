@@ -5,7 +5,6 @@
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
- *      Sandro Pinto <sandro.pinto@bao-project.org>
  *
  * Bao is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
@@ -14,31 +13,17 @@
  *
  */
 
-#ifndef __VMM_H__
-#define __VMM_H__
+#ifndef VMSTACK_H
+#define VMSTACK_H
 
 #include <bao.h>
+
 #include <cpu.h>
 #include <vm.h>
-#include <list.h>
-#include <objcache.h>
-#include <interrupts.h>
 
-struct partition {
-    spinlock_t lock;
-    struct cpu_synctoken sync;
-    uint64_t master;
-    struct {
-        struct vm* curr_vm;
-        size_t ncpus;
-    } init;
-    struct objcache nodes;
-    struct vm* interrupts[MAX_INTERRUPTS];
-} extern* const partition;
+void vmstack_push(vcpu_t* vcpu);
+vcpu_t* vmstack_pop();
+void vmstack_unwind(vcpu_t* vcpu);
+int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 
-void vmm_init();
-void vmm_init_dynamic(struct config*, uint64_t);
-void vmm_arch_init();
-uint64_t vmm_alloc_vmid();
-
-#endif /* __VMM_H__ */
+#endif /* VMSTACK_H */

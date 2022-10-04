@@ -16,6 +16,23 @@
 #include <vmm.h>
 #include <arch/sysregs.h>
 #include <interrupts.h>
+#include <platform.h>
+#include <vm.h>
+#include <vmstack.h>
+
+//static void vmm_vtimer_irq_handler(){
+//    vmstack_unwind(cpu.arch.vtimer.next_vcpu);
+//    node_data_t *node =  (node_data_t*)list_pop(&cpu.arch.vtimer.event_list);
+//    if(node != NULL){
+//        vcpu_t *vcpu = node->data;
+//        cpu.arch.vtimer.next_vcpu = vcpu;
+//        MSR(CNTHP_CTL_EL2, vcpu->arch.sysregs.vm.cntv_ctl_el0);
+//        MSR(CNTHP_CVAL_EL2, vcpu->arch.sysregs.vm.cntv_cval_el0);
+//    } else {
+//        cpu.arch.vtimer.next_vcpu = NULL;
+//        MSR(CNTHP_CTL_EL2, 0x2);
+//    }    
+//}
 
 void vmm_arch_init()
 {
@@ -53,7 +70,14 @@ void vmm_arch_init()
             vm_pt_dscr->lvl_wdt[0] = parange_table[parange];
             vm_pt_dscr->lvls = vm_pt_dscr->lvls - 1;
         }
+	/* TODO */
+        /*interrupts_reserve(platform.arch.generic_timer.irqs.hyp, 
+            vmm_vtimer_irq_handler);*/
+        
+        interrupts_set_shared(platform.arch.generic_timer.irqs.virtual);
     }
+
+    interrupts_cpu_enable(platform.arch.generic_timer.irqs.hyp, true);
 
     cpu_sync_barrier(&cpu_glb_sync);
 
@@ -68,4 +92,6 @@ void vmm_arch_init()
                    HCR_TSC_BIT; /* trap smc */
 
     MSR(HCR_EL2, hcr);
+    MSR(HSTR_EL2, 0);
+    MSR(CPTR_EL2, 0);
 }

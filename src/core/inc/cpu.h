@@ -42,6 +42,8 @@ struct cpu {
     struct addr_space as;
 
     struct vcpu* vcpu;
+    struct list vcpu_stack;
+    struct list vcpus;
 
     struct cpu_arch arch;
 
@@ -119,6 +121,9 @@ void cpu_msg_handler();
 void cpu_msg_set_handler(cpuid_t id, cpu_msg_handler_t handler);
 void cpu_idle();
 void cpu_idle_wakeup();
+void cpu_add_vcpu(struct vcpu * vcpu);
+			/* TODO */
+struct vcpu* cpu_get_vcpu(uint64_t vmid);
 
 void cpu_arch_init(cpuid_t cpu_id, paddr_t load_addr);
 void cpu_arch_idle();

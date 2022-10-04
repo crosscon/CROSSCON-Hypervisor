@@ -114,6 +114,19 @@ void gic_map_mmio()
     mem_map_dev(&cpu.as, (vaddr_t)gicr, platform.arch.gic.gicr_addr, gicr_size);
 }
 
+uint32_t gicc_iar() {
+    return MRS(ICC_IAR1_EL1);
+}
+
+void gicc_eoir(uint32_t eoir) {
+    MSR(ICC_EOIR1_EL1, eoir);
+}
+
+void gicc_dir(uint32_t dir) {
+    MSR(ICC_DIR_EL1, dir);
+}
+
+
 void gicr_set_prio(irqid_t int_id, uint8_t prio, cpuid_t gicr_id)
 {
     size_t reg_ind = GIC_PRIO_REG(int_id);

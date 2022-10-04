@@ -110,7 +110,11 @@ bool mem_map_dev(struct addr_space* as, vaddr_t va, paddr_t base, size_t n);
 
 void as_arch_init(struct addr_space* as);
 bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa);
-
+/* bao enclave */
+bool mem_map_vm_config(uint64_t config_addr);
+bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa);
+void mem_guest_ipa_translate(void* va, uint64_t* physical_address);
+void mem_enclave_translate(struct addr_space as, void* va, uint64_t* physical_address);
 #endif /* |__ASSEMBLER__ */
 
 #endif /* __MEM_H__ */

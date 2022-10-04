@@ -61,3 +61,17 @@ bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
         return true;
     }
 }
+
+void mem_guest_ipa_translate(void* va, uint64_t* physical_address)
+{
+    uint64_t tmp = 0, tmp2 = 0;
+    tmp = MRS(SCTLR_EL1);
+    tmp2 = tmp & ~(1ULL << 0);
+    MSR(SCTLR_EL1, tmp2);
+    ISB();
+    asm volatile("AT S12E1W, %0" ::"r"(va));
+    ISB();
+    MSR(SCTLR_EL1, tmp);
+    *physical_address =
+        (MRS(PAR_EL1) & PAR_PA_MSK) | (((uint64_t)va) & (PAGE_SIZE - 1));
+}

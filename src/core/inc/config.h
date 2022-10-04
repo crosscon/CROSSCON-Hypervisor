@@ -80,11 +80,16 @@ struct vm_config {
      * depending on the number of available colors calculated at runtime
      */
     colormap_t colors;
+    size_t children_num;
+    struct vm_config **children;
 
     /**
      * A description of the virtual platform available to the guest, i.e.,
      * the virtual machine itself.
      */
+
+    // --- BaoEnclave --- //
+    uint64_t alloc_vm;
 
     struct platform_desc platform;
 

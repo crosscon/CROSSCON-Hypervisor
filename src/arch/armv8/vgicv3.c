@@ -28,6 +28,21 @@
 #define GICR_REG_OFF(REG) (offsetof(struct gicr_hw, REG) & 0x1ffff)
 #define GICR_REG_MASK(ADDR) ((ADDR)&0x1ffff)
 
+/* TODO */
+static inline bool vgic_broadcast(vcpu_t *vcpu, vgic_int_t *interrupt)
+{
+    return (interrupt->route & GICD_IROUTER_IRM_BIT);
+}
+
+bool vgic_int_vcpu_is_target(vcpu_t *vcpu, vgic_int_t *interrupt)
+{
+    bool priv = gic_is_priv(interrupt->id);
+    bool local = priv && (interrupt->phys.redist == vcpu->phys_id);
+    bool routed_here =
+        !priv && !(interrupt->phys.route ^ (MRS(MPIDR_EL1) & MPIDR_AFF_MSK));
+    bool any = !priv && vgic_broadcast(vcpu, interrupt);
+    return local || routed_here || any;
+}
 
 bool vgic_int_has_other_target(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
@@ -42,7 +57,7 @@ bool vgic_int_has_other_target(struct vcpu *vcpu, struct vgic_int *interrupt)
 uint8_t vgic_int_ptarget_mask(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
     if (vgic_broadcast(vcpu, interrupt)) {
-        return cpu.vcpu->vm->cpus & ~(1U << cpu.vcpu->phys_id);
+        return vcpu->vm->cpus & ~(1U << vcpu->phys_id);
     } else {
         return (1 << interrupt->phys.route);
     }

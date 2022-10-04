@@ -22,19 +22,25 @@ void config_adjust_to_va(struct config *config, paddr_t phys)
     for (size_t i = 0; i < config->vmlist_size; i++) {
         adjust_ptr(config->vmlist[i].image.load_addr, phys);
 
-	    adjust_ptr(config->vmlist[i].platform.regions, config);
+	adjust_ptr(config->vmlist[i].platform.regions, config);
 
-	    if(adjust_ptr(config->vmlist[i].platform.devs, config)){
-	        for (size_t j = 0; j < config->vmlist[i].platform.dev_num; j++) {
-	    	    adjust_ptr(config->vmlist[i].platform.devs[j].interrupts, config);
-	        }
+	if(adjust_ptr(config->vmlist[i].platform.devs, config)){
+	    for (size_t j = 0; j < config->vmlist[i].platform.dev_num; j++) {
+	       adjust_ptr(config->vmlist[i].platform.devs[j].interrupts, config);
 	    }
+	}
 
-	    if(adjust_ptr(config->vmlist[i].platform.ipcs, config)){
-	        for (size_t j = 0; j < config->vmlist[i].platform.ipc_num; j++) {
-	    	    adjust_ptr(config->vmlist[i].platform.ipcs[j].interrupts, config);
-	        }
-	    }
+	if(adjust_ptr(config->vmlist[i].platform.ipcs, config)){
+	   for (size_t j = 0; j < config->vmlist[i].platform.ipc_num; j++) {
+	       adjust_ptr(config->vmlist[i].platform.ipcs[j].interrupts, config);
+	   }
+	}
+
+        adjust_ptr(vm_config->children, config);
+        for (int i = 0; i < vm_config->children_num; i++) {
+            adjust_ptr(vm_config->children[i], config);
+            config_adjust_to_va(vm_config->children[i], config, phys);
+        }
     }
 
     config_arch_adjust_to_va(config, phys);

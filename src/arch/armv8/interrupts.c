@@ -70,3 +70,8 @@ void interrupts_arch_vm_assign(struct vm *vm, irqid_t id)
 {
     vgic_set_hw(vm, id);
 }
+
+void interrupts_arch_vm_inject(vcpu_t* vcpu, uint64_t id)
+{
+    vgic_inject(vcpu, id, cpu.vcpu->id);
+}

@@ -30,6 +30,7 @@
 #include <cpu.h>
 #include <interrupts.h>
 #include <vm.h>
+#include <vmstack.h>
 
 enum VGIC_EVENTS { VGIC_UPDATE_ENABLE, VGIC_ROUTE, VGIC_INJECT, VGIC_SET_REG };
 extern volatile const uint64_t VGIC_IPI_ID;
@@ -52,6 +53,56 @@ extern volatile const uint64_t VGIC_IPI_ID;
 
 void vgic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vgic_ipi_handler, VGIC_IPI_ID);
+
+static inline uint64_t vgic_lr_rd(vcpu_t* vcpu, uint64_t lr){
+    if(vcpu->state == VCPU_ACTIVE){
+        return gich_read_lr(lr);
+    } else {
+        return vcpu->arch.vgic_priv.gich.LR[lr];
+    }
+}
+
+static inline void vgic_lr_wr(vcpu_t* vcpu, uint64_t lr, uint64_t val){
+    if(vcpu->state == VCPU_ACTIVE){
+        gich_write_lr(lr, val);
+    } else {
+        vcpu->arch.vgic_priv.gich.LR[lr] = val;
+        bitmap_set((bitmap_t) &vcpu->arch.vgic_priv.gich.ELSR, lr);
+        /**
+         * TODO: take this decision out of the vgic and make it more arch
+         * indepenent
+         */
+        if(vcpu->state == VCPU_STACKED && (val & GICH_LR_STATE_PND)){
+            //vmstack_unwind(vcpu);
+        }
+    }
+}
+
+static inline bool vgic_lr_empty(vcpu_t* vcpu, uint64_t lr){
+    if(vcpu->state == VCPU_ACTIVE){
+        uint64_t elsr = gich_get_elrsr();
+        return bit_get(elsr, lr%64);
+    } else {
+        return bit_get(vcpu->arch.vgic_priv.gich.ELSR, lr%64);
+    }   
+}
+
+
+static inline void vgic_hcr_set(vcpu_t* vcpu, uint64_t mask){
+    if(vcpu->state == VCPU_ACTIVE){
+        gich_set_hcr(gich_get_hcr() | mask);
+    } else {
+        vcpu->arch.vgic_priv.gich.HCR |= mask;
+    }   
+}
+
+static inline void vgic_hcr_clear(vcpu_t* vcpu, uint64_t mask){
+    if(vcpu->state == VCPU_ACTIVE){
+        gich_set_hcr(gich_get_hcr() & ~mask);
+    } else {
+        vcpu->arch.vgic_priv.gich.HCR &= ~mask;
+    }
+}
 
 static inline struct vgic_int *vgic_get_int(struct vcpu *vcpu, irqid_t int_id,
                                        vcpuid_t vgicr_id)
@@ -394,10 +445,16 @@ bool vgic_add_lr(struct vcpu *vcpu, struct vgic_int *interrupt)
 
 static inline void vgic_update_enable(struct vcpu *vcpu)
 {
-    if (cpu.vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
+/*    if (cpu.vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
         gich_set_hcr(gich_get_hcr() | GICH_HCR_En_BIT);
     } else {
         gich_set_hcr(gich_get_hcr() & ~GICH_HCR_En_BIT);
+    }*/
+/* TODO */
+    if (vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
+        vgic_hcr_set(vcpu, GICH_HCR_En_BIT);
+    } else {
+        vgic_hcr_clear(vcpu, GICH_HCR_En_BIT);
     }
 }
 
@@ -938,10 +995,21 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
     irqid_t int_id = VGIC_MSG_INTID(data);
     uint64_t val = VGIC_MSG_VAL(data);
 
-    if (vm_id != cpu.vcpu->vm->id) {
+    /*if (vm_id != cpu.vcpu->vm->id) {
         ERROR("received vgic3 msg target to another vcpu");
         // TODO: need to fetch vcpu from other vm if the taget vm for this
         // is not active
+    }*/
+    /* TODO */
+    vcpu_t* vcpu = NULL;
+    if(vm_id == cpu.vcpu->vm->id){
+        vcpu = cpu.vcpu;
+    } else {
+        vcpu = cpu_get_vcpu(vm_id);
+    }
+
+    if(vcpu == NULL){
+        ERROR("cant find vcpu for vgic handling");
     }
 
     switch (event) {
@@ -1044,6 +1112,11 @@ static void vgic_refill_lrs(struct vcpu *vcpu, bool npie) {
 
 static void vgic_eoir_highest_spilled_active(struct vcpu *vcpu)
 {   
+    vgic_int_t *interrupt = NULL;
+    for (int i = 0; i < gic_num_irqs(); i++) {
+        vgic_int_t *temp_int = vgic_get_int(vcpu, i, vcpu->id);
+        if (temp_int == NULL) break;
+
     struct list* list = NULL;
     struct vgic_int *interrupt = 
         vgic_highest_prio_spilled(vcpu, ACT, &list);
@@ -1161,4 +1234,57 @@ void vgic_set_hw(struct vm *vm, irqid_t id)
             WARNING("trying to link non-existent virtual irq to physical irq")
         }
     }
+}
+
+bool vgic_int_get_enabled(vcpu_t* vcpu, uint64_t int_id) {
+    vgic_int_t *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
+    return interrupt != NULL && interrupt->enabled; 
+}
+
+void vgic_hw_commit(vcpu_t* vcpu, uint64_t int_id) {
+    vgic_int_t *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
+
+    if(interrupt != NULL && interrupt->hw) {
+        // vgic_int_set_cfg_hw(vcpu, interrupt);
+        vgic_int_set_prio_hw(vcpu, interrupt);
+        vgic_int_state_hw(vcpu, interrupt);    
+        vgic_int_enable_hw(vcpu, interrupt);
+    }
+}
+
+/**
+ * TODO: Should we save and restore GIC.APR state too?
+ * If so, fix the commented out loops below
+ */
+
+void vgic_save_state(vcpu_t* vcpu){
+    
+    vcpu->arch.vgic_priv.gich.HCR = gich_get_hcr();
+    vcpu->arch.vgic_priv.gich.VMCR = gich_get_vmcr();
+    
+    vcpu->arch.vgic_priv.gich.ELSR = gich_get_elrsr();
+
+    // for(int i = 0; i < NUM_LRS; i++){
+    //     vcpu->arch.vgic_priv.gich.APR[i] = gich_get_apr(i);
+    // }
+
+    for(int i = 0; i < NUM_LRS; i++){
+        vcpu->arch.vgic_priv.gich.LR[i] = gich_read_lr(i);
+    }
+
+}
+
+void vgic_restore_state(vcpu_t* vcpu){
+
+    gich_set_hcr(vcpu->arch.vgic_priv.gich.HCR); 
+    gich_set_vmcr(vcpu->arch.vgic_priv.gich.VMCR);
+
+    // for(int i = 0; i < GIC_APR_MAX; i++){
+    //     gich_set_apr(i, vcpu->arch.vgic_priv.gich.APR[i]);
+    // }
+
+    for(int i = 0; i < NUM_LRS; i++){
+        gich_write_lr(i, vcpu->arch.vgic_priv.gich.LR[i]);
+    }
+
 }

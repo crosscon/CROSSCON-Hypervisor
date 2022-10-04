@@ -303,6 +303,8 @@ struct gicc_hw {
 #define GICH_LR_STATE_LEN (2)
 #define GICH_LR_HW_BIT (1U << 31)
 #define GICH_LR_EOI_BIT (1U << 19)
+#define GICH_LR_MAX (64)
+#define GIC_APR_MAX (1)
 #define GICH_NUM_ELRSR (2)
 #else
 #define GICH_LR_VID_OFF (0)
@@ -316,6 +318,8 @@ struct gicc_hw {
 #define GICH_LR_GRP_BIT (1ULL << 60)
 #define GICH_LR_HW_BIT (1ULL << 61)
 #define GICH_LR_EOI_BIT (1ULL << 41)
+#define GICH_LR_MAX (16)
+#define GIC_APR_MAX (4)
 #define GICH_NUM_ELRSR (1)
 #endif
 
@@ -450,6 +454,10 @@ extern volatile struct gicd_hw gicd;
 extern volatile struct gicr_hw *gicr;
 
 size_t gich_num_lrs();
+uint32_t gicc_iar();
+void gicc_eoir(uint32_t eoir);
+void gicc_dir(uint32_t dir);
+
 
 static inline size_t gic_num_irqs()
 {

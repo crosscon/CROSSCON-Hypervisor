@@ -34,11 +34,13 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     vm->master = cpu.id;
     vm->config = config;
     vm->cpu_num = config->platform.cpu_num;
-    vm->id = vm_id;
+    //vm->id = vm_id;
+    /* TODO */
+    vm->id = vmm_alloc_vmid();
 
     cpu_sync_init(&vm->sync, vm->cpu_num);
 
-    as_init(&vm->as, AS_VM, vm_id, NULL, config->colors);
+    as_init(&vm->as, AS_VM, vm->id, NULL, config->colors);
 
     list_init(&vm->emul_list);
     objcache_init(&vm->emul_oc, sizeof(struct emul_node), SEC_HYP_VM, false);
@@ -77,6 +79,14 @@ void vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     memset(vcpu->stack, 0, sizeof(vcpu->stack));
     vcpu->regs = (struct arch_regs*)(vcpu->stack + sizeof(vcpu->stack) -
                                      sizeof(*vcpu->regs));
+
+    vcpu->state = VCPU_INACTIVE;
+    vcpu->parent = NULL;
+
+    list_init(&vcpu->children);
+    node_data_t* node = objcache_alloc(&partition->nodes);
+    node->data = vcpu;
+    list_append(&vm->vcpu_list, (node_t*)node);
 
     vcpu_arch_init(vcpu, vm);
     vcpu_arch_reset(vcpu, config->entry);
@@ -265,6 +275,22 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* config)
       
 }
 
+vcpu_t* vm_init_dynamic(vm_t* vm, const vm_config_t* config, uint64_t vm_addr)
+{
+    vm_master_init(vm, config);
+    vm_cpu_init(vm);
+
+    vcpu_t* vcpu = (void*)vm_vcpu_init(vm, config);
+    vm_arch_init(vm, config);
+
+    alloc_baoenclave(vm, vm_addr);
+
+    vm_init_dev(vm, config);
+    vm_init_ipc(vm, config);
+
+    return vcpu;
+}
+
 void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
 {
     /**
@@ -424,4 +450,18 @@ void vcpu_run(struct vcpu* vcpu)
 {
     cpu.vcpu->active = true;
     vcpu_arch_run(vcpu);
+}
+
+vcpu_t* vcpu_get_child(vcpu_t* vcpu, int index)
+{
+    int i = 0;
+    vcpu_t* child = NULL;
+    list_foreach(vcpu->children, node_data_t, node)
+    {
+        if (i++ == index) {
+            child = node->data;
+            break;
+        }
+    }
+    return child;
 }

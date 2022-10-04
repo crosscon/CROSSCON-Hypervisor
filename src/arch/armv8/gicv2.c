@@ -38,6 +38,81 @@ size_t gich_num_lrs()
     return ((gich.VTR & GICH_VTR_MSK) >> GICH_VTR_OFF) + 1;
 }
 
+/* TODO Begin */
+inline uint64_t gich_read_lr(size_t i)
+{
+    if (i < NUM_LRS) {
+        return gich.LR[i];
+    } else {
+        ERROR("gic: trying to read inexistent list register");
+    }
+}
+
+inline void gich_write_lr(size_t i, uint64_t val)
+{
+    if (i < NUM_LRS) {
+        gich.LR[i] = val;
+    } else {
+        ERROR("gic: trying to write inexistent list register");
+    }
+}
+
+uint32_t gich_get_hcr()
+{
+    return gich.HCR;
+}
+
+void gich_set_hcr(uint32_t hcr)
+{
+    gich.HCR = hcr;
+}
+
+uint32_t gich_get_misr()
+{
+    return gich.MISR;
+}
+
+uint64_t gich_get_eisr()
+{
+    uint64_t eisr = gich.EISR[0];
+    if (NUM_LRS > 32) eisr |= (((uint64_t)gich.EISR[1] << 32));
+    return eisr;
+}
+
+uint64_t gich_get_elrsr()
+{
+    uint64_t elsr = gich.ELSR[0];
+    if (NUM_LRS > 32) elsr |= (((uint64_t)gich.ELSR[1] << 32));
+    return elsr;
+}
+
+uint32_t gich_get_vmcr() 
+{
+    return gich.VMCR;
+}
+
+void gich_set_vmcr(uint32_t vmcr) 
+{
+    gich.VMCR = vmcr;
+}
+
+uint32_t gich_get_apr(size_t i) 
+{
+     if(i == 0) {
+        return gich.APR;
+    } else {
+        return 0;
+    }   
+}
+
+void gich_set_apr(size_t i, uint32_t val) 
+{
+    if(i == 0) {
+        gich.APR = val;
+    }
+}
+/* TODO End */
+
 static inline void gicc_init()
 {
     for (size_t i = 0; i < gich_num_lrs(); i++) {

@@ -34,4 +34,6 @@ unsigned long ipc_hypercall(unsigned long arg0, unsigned long arg1, unsigned lon
 void ipc_init(const struct vm_config* vm_config, bool vm_master);
 struct shmem* ipc_get_shmem(size_t shmem_id);
 
+int64_t baoenclave_dynamic_hypercall(unsigned long, unsigned long, unsigned long, unsigned long);
+void alloc_baoenclave(void*, unsigned long);
 #endif /* IPC_H */

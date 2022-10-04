@@ -18,15 +18,21 @@
 
 #include <bao.h>
 #include <arch/psci.h>
+#include <list.h>
 
 #define CPU_MAX (8UL)
 
 struct cpu_arch {
     struct psci_off_state psci_off_state;
     unsigned long mpidr;
+    struct {
+        struct vcpu * next_vcpu;
+        struct list event_list;
+    } vtimer;
 };
 
 unsigned long cpu_id_to_mpidr(cpuid_t id);
+cpuid_t cpu_mpidr_to_id(unsigned long mpdir);
 
 extern cpuid_t CPU_MASTER;
 

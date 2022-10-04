@@ -21,7 +21,11 @@
 #include <arch/psci.h>
 #include <hypercall.h>
 
-typedef void (*abort_handler_t)(uint64_t, uint64_t, uint64_t);
+/** hypercall handler declarations */
+#include <ipc.h>
+#include <vmstack.h>
+#include <baoenclave.h>
+
 
 void internal_abort_handler(uint64_t gprs[]) {
 
@@ -85,13 +89,32 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     uint64_t x3 = cpu.vcpu->regs->x[3];
 
     int64_t ret = -1;
+    vcpu_t* vcpu = cpu.vcpu;
 
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler(smc_fid, x1, x2, x3);
+        vcpu_writereg(cpu.vcpu, 0, ret);
     } else {
-        INFO("unknown smc_fid 0x%lx", smc_fid);
+        if (vcpu->parent) {
+            /**
+             * TODO: we should somehow signal the the parent the child is
+             * returning do to an unhandled system call
+             */
+            vmstack_pop();
+	} else {
+	    INFO("passing through smc_fid 0x%lx", smc_fid);
+	    smc_res_t res;
+	    ret = smc_call(smc_fid, cpu.vcpu->regs->x[1], cpu.vcpu->regs->x[2],
+		    cpu.vcpu->regs->x[3], &res);
+	    vcpu_writereg(cpu.vcpu, 0, res.x0);
+	    vcpu_writereg(cpu.vcpu, 1, res.x1);
+	    vcpu_writereg(cpu.vcpu, 2, res.x2);
+	    vcpu_writereg(cpu.vcpu, 3, res.x3);
+	    WARNING("SMC returned 0x%lx", ret);
+	}
     }
 
+    /* TODO */
     vcpu_writereg(cpu.vcpu, 0, ret);
     uint64_t pc_step = 2 + (2 * il);
     cpu.vcpu->regs->elr_el2 += pc_step;
@@ -99,16 +122,24 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 
 void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 {
-    uint64_t hvc_fid = cpu.vcpu->regs->x[0];
+    uint64_t x0 = cpu.vcpu->regs->x[0];
     uint64_t x1 = cpu.vcpu->regs->x[1];
     uint64_t x2 = cpu.vcpu->regs->x[2];
     uint64_t x3 = cpu.vcpu->regs->x[3];
-
+    uint64_t hvc_fid = (x0 >> 16) & 0xffff;
     int64_t ret = -HC_E_INVAL_ID;
+    vcpu_t* vcpu = cpu.vcpu;
+
     switch(hvc_fid){
         case HC_IPC:
             ret = ipc_hypercall(x1, x2, x3);
         break;
+        case HC_VMSTACK:
+            ret = vmstack_hypercall(x0 & 0xffff, x1, x2, x3);
+            break;
+        case HC_ENCLAVE:
+            ret = baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
+            break;
     }
 
     vcpu_writereg(cpu.vcpu, 0, ret);

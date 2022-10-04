@@ -78,6 +78,14 @@ static inline void tlb_vm_inv_all(asid_t vmid)
         DSB(ish);
         MSR(VTTBR_EL2, ((vmid << VTTBR_VMID_OFF) & VTTBR_VMID_MSK));
     }
+
+    /* TODO */
+    if (switch_vmid) {
+        /* restore vttbr */
+        MSR(VTTBR_EL2, vttbr);
+        DSB(ish);
+        ISB();
+    }
 }
 
 #endif /* __ARCH_TLB_H__ */

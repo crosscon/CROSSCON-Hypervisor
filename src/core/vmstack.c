@@ -22,7 +22,7 @@
 
 int cpu_different;
 
-void vmstack_push(vcpu_t* vcpu){
+void vmstack_push(struct vcpu* vcpu){
 
     if(cpu.vcpu != NULL && vcpu->state != VCPU_INACTIVE){
         return;
@@ -40,13 +40,13 @@ void vmstack_push(vcpu_t* vcpu){
     cpu.vcpu = vcpu;
 }
 
-vcpu_t* vmstack_pop(){
+struct vcpu* vmstack_pop(){
 
-    vcpu_t* vcpu = (vcpu_t*) list_pop(&cpu.vcpu_stack);
+    struct vcpu* vcpu = (struct vcpu*) list_pop(&cpu.vcpu_stack);
 
     if(vcpu != NULL){
         vcpu->parent = NULL;
-        vcpu_t *temp = vcpu;
+        struct vcpu *temp = vcpu;
         vcpu = cpu.vcpu;
         cpu.vcpu = temp;
         vcpu_save_state(vcpu);
@@ -58,16 +58,16 @@ vcpu_t* vmstack_pop(){
     return vcpu;
 }
 
-void vmstack_unwind(vcpu_t* vcpu){
+void vmstack_unwind(struct vcpu* vcpu){
     
     if(vcpu->state != VCPU_STACKED){
         return;
     }
 
-    vcpu_t* temp_vcpu = NULL;
+    struct vcpu* temp_vcpu = NULL;
 
     do {
-        temp_vcpu = (vcpu_t*) list_pop(&cpu.vcpu_stack);
+        temp_vcpu = (struct vcpu*) list_pop(&cpu.vcpu_stack);
         temp_vcpu->state = VCPU_INACTIVE;
         temp_vcpu->parent = NULL;
     } while(temp_vcpu != vcpu);
@@ -91,7 +91,7 @@ int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t ar
 {
     int64_t res = HC_E_SUCCESS;
     
-    vcpu_t* child = NULL;
+    struct vcpu* child = NULL;
 
     uint64_t tmp = MRS(DAIF);
 
@@ -123,7 +123,7 @@ int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t ar
      * let's enter idle and wait for someaone to wake us up.
      * TODO: rewrite this check with an arch agnostic api
      */
-    if (cpu.vcpu->arch.psci_ctx.state == PSCI_OFF) {
+    if (cpu.vcpu->arch.psci_ctx.state == OFF) {
         cpu_idle();
     }
     

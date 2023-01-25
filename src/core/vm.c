@@ -15,6 +15,7 @@
  */
 
 #include <vm.h>
+#include <vmm.h>
 #include <string.h>
 #include <mem.h>
 #include <cache.h>
@@ -34,9 +35,7 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     vm->master = cpu.id;
     vm->config = config;
     vm->cpu_num = config->platform.cpu_num;
-    //vm->id = vm_id;
-    /* TODO */
-    vm->id = vmm_alloc_vmid();
+    vm->id = vm_id;
 
     cpu_sync_init(&vm->sync, vm->cpu_num);
 
@@ -60,7 +59,7 @@ void vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     if(vcpu == NULL){ ERROR("failed to allocate vcpu"); }
     memset(vcpu, 0, n * PAGE_SIZE);
 
-    cpu.vcpu = vcpu;
+    /* cpu.vcpu = vcpu; */
     vcpu->phys_id = cpu.id;
     vcpu->vm = vm;
 
@@ -84,17 +83,15 @@ void vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     vcpu->parent = NULL;
 
     list_init(&vcpu->children);
-    node_data_t* node = objcache_alloc(&partition->nodes);
-    node->data = vcpu;
-    list_append(&vm->vcpu_list, (node_t*)node);
+    list_push(&vm->vcpu_list, (node_t*)vcpu);
 
     vcpu_arch_init(vcpu, vm);
     vcpu_arch_reset(vcpu, config->entry);
 
-    list_push(&vm->vcpu_list, &vcpu->node);
+    cpu_add_vcpu(vcpu);
 }
 
-static void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
+void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
                                struct mem_region* reg)
 {
     /* map original img address */
@@ -189,7 +186,7 @@ static void vm_install_image(struct vm* vm) {
     mem_free_vpage(&cpu.as, dst_va, img_num_pages, false);
 }
 
-static void vm_map_img_rgn(struct vm* vm, const struct vm_config* config,
+void vm_map_img_rgn(struct vm* vm, const struct vm_config* config,
                            struct mem_region* reg)
 {
     if (reg->place_phys) {
@@ -275,20 +272,18 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* config)
       
 }
 
-vcpu_t* vm_init_dynamic(vm_t* vm, const vm_config_t* config, uint64_t vm_addr)
+void vm_init_dynamic(struct vm* vm, const struct vm_config* config, uint64_t vm_addr, vmid_t vmid)
 {
-    vm_master_init(vm, config);
+    vm_master_init(vm, config, vmid);
     vm_cpu_init(vm);
 
-    vcpu_t* vcpu = (void*)vm_vcpu_init(vm, config);
+    vm_vcpu_init(vm, config);
     vm_arch_init(vm, config);
 
     alloc_baoenclave(vm, vm_addr);
 
     vm_init_dev(vm, config);
     vm_init_ipc(vm, config);
-
-    return vcpu;
 }
 
 void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
@@ -452,14 +447,14 @@ void vcpu_run(struct vcpu* vcpu)
     vcpu_arch_run(vcpu);
 }
 
-vcpu_t* vcpu_get_child(vcpu_t* vcpu, int index)
+struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
-    vcpu_t* child = NULL;
-    list_foreach(vcpu->children, node_data_t, node)
+    struct vcpu* child = NULL;
+    list_foreach(vcpu->children, struct vcpu, _vcpu)
     {
         if (i++ == index) {
-            child = node->data;
+            child = _vcpu;
             break;
         }
     }

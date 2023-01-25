@@ -131,12 +131,13 @@ extern struct config {
     size_t vmlist_size;
 
     /* Array list with VM configuration */
-    struct vm_config vmlist[];
+    struct vm_config *vmlist[];
 
 } config __attribute__((section(".config")));
 
-void config_adjust_to_va(struct config *config, paddr_t phys);
-void config_arch_adjust_to_va(struct config *config, paddr_t phys);
+void config_adjust_to_va(struct config* config, paddr_t phys);
+void config_vm_adjust_to_va(struct vm_config *vm_config, struct config* config, paddr_t phys);
+void config_arch_vm_adjust_to_va(struct vm_config *vm_config, struct config* config, paddr_t phys);
 bool config_is_builtin();
 
 #define adjust_ptr(p, o)\

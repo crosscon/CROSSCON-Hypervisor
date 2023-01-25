@@ -22,7 +22,7 @@
 #include <interrupts.h>
 #include <vm.h>
 
-bool vgic_int_vcpu_is_target(vcpu_t *vcpu, vgic_int_t *interrupt)
+bool vgic_int_vcpu_is_target(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
     bool priv = gic_is_priv(interrupt->id);
     bool target = interrupt->targets & (1 << cpu.id);

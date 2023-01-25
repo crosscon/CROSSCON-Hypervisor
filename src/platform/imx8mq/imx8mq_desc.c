@@ -38,7 +38,7 @@ struct platform_desc platform = {
 
         .clusters =  {
             .num = 1,
-            .core_num = (uint8_t[]) {4}
+            .core_num = (size_t[]) {4}
         },
 
         .gic = {

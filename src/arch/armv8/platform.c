@@ -54,7 +54,7 @@ unsigned long platform_arch_cpuid_to_mpdir(const struct platform_desc* plat,
     return mpidr;
 }
 
-int64_t platform_arch_mpidr_to_cpuid(const struct platform_desc* plat,
+cpuid_t platform_arch_mpidr_to_cpuid(const struct platform_desc* plat,
                                       uint64_t mpidr){
     int64_t cpuid = 0; 
     int i = 0;

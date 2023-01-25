@@ -241,11 +241,11 @@ struct gicr_hw {
     bit64_extract(sgir, ICC_SGIR_TRGLSTFLT_OFF, ICC_SGIR_TRGLSTFLT_LEN)
 #define ICC_SGIR_AFF1_OFFSET    (16)
 
-#define ICC_SRE_ENB_BIT  (0x8)
-#define ICC_SRE_DIB_BIT  (0x4)
-#define ICC_SRE_DFB_BIT  (0x2)
-#define ICC_SRE_SRE_BIT  (0x1)
-#define ICC_IGRPEN_EL1_ENB_BIT (0x1)
+#define ICC_SRE_ENB_BIT  (0x8UL)
+#define ICC_SRE_DIB_BIT  (0x4UL)
+#define ICC_SRE_DFB_BIT  (0x2UL)
+#define ICC_SRE_SRE_BIT  (0x1UL)
+#define ICC_IGRPEN_EL1_ENB_BIT (0x1UL)
 
 struct gicc_hw {
     uint32_t CTLR;
@@ -448,15 +448,18 @@ void gicr_set_icfgr(irqid_t int_id, uint8_t cfg, cpuid_t gicr_id);
 void gicr_set_act(irqid_t int_id, bool act, cpuid_t gicr_id);
 uint8_t gicr_get_prio(irqid_t int_id, cpuid_t gicr_id);
 
+/* uint32_t gich_get_vmcr(); */
+/* void gich_set_vmcr(uint32_t); */
+/* uint32_t gich_get_apr(size_t); */
+/* void gich_set_apr(size_t, uint32_t); */
+/* uint32_t gich_get_hcr(); */
+
 void gic_maintenance_handler(irqid_t irq_id);
 
 extern volatile struct gicd_hw gicd;
 extern volatile struct gicr_hw *gicr;
 
 size_t gich_num_lrs();
-uint32_t gicc_iar();
-void gicc_eoir(uint32_t eoir);
-void gicc_dir(uint32_t dir);
 
 
 static inline size_t gic_num_irqs()

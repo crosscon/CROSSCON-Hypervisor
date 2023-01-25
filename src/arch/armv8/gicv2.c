@@ -57,44 +57,8 @@ inline void gich_write_lr(size_t i, uint64_t val)
     }
 }
 
-uint32_t gich_get_hcr()
-{
-    return gich.HCR;
-}
 
-void gich_set_hcr(uint32_t hcr)
-{
-    gich.HCR = hcr;
-}
 
-uint32_t gich_get_misr()
-{
-    return gich.MISR;
-}
-
-uint64_t gich_get_eisr()
-{
-    uint64_t eisr = gich.EISR[0];
-    if (NUM_LRS > 32) eisr |= (((uint64_t)gich.EISR[1] << 32));
-    return eisr;
-}
-
-uint64_t gich_get_elrsr()
-{
-    uint64_t elsr = gich.ELSR[0];
-    if (NUM_LRS > 32) elsr |= (((uint64_t)gich.ELSR[1] << 32));
-    return elsr;
-}
-
-uint32_t gich_get_vmcr() 
-{
-    return gich.VMCR;
-}
-
-void gich_set_vmcr(uint32_t vmcr) 
-{
-    gich.VMCR = vmcr;
-}
 
 uint32_t gich_get_apr(size_t i) 
 {

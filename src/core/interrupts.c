@@ -64,7 +64,7 @@ static inline bool interrupt_is_reserved(irqid_t int_id)
     return bitmap_get(hyp_interrupt_bitmap, int_id);
 }
 
-inline void interrupts_vm_inject(vcpu_t* vcpu, uint64_t id) 
+inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id) 
 {
    interrupts_arch_vm_inject(vcpu, id);
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
@@ -79,7 +79,7 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 
 enum irq_res interrupts_handle(irqid_t int_id)
 {
-    vcpu_t *vcpu = NULL;
+    struct vcpu *vcpu = NULL;
     if(interrupts_is_shared(int_id) || (cpu.vcpu->vm->id == interrupts_get_vmid(int_id))){
         vcpu = cpu.vcpu;
     } else {
@@ -114,7 +114,7 @@ void interrupts_vm_assign(struct vm *vm, irqid_t id)
     }
 
     interrupts_arch_vm_assign(vm, id);
-
+    interrupt_owner[id] = vm->id; /* TODO */
     bitmap_set(vm->interrupt_bitmap, id);
     bitmap_set(global_interrupt_bitmap, id);
 }

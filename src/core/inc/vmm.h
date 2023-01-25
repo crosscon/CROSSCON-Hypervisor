@@ -24,6 +24,11 @@
 #include <objcache.h>
 #include <interrupts.h>
 
+struct vcpu_node{
+    node_t node;
+    void* data;
+};
+
 struct partition {
     spinlock_t lock;
     struct cpu_synctoken sync;

@@ -107,7 +107,7 @@ switch_space:
      */
 
     /* Update value of TTBR0_EL2 */
-	msr TTBR0_EL2, x1
+    msr TTBR0_EL2, x1
     dsb ish
     isb
 

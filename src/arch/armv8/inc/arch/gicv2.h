@@ -77,4 +77,15 @@ static inline void gicc_dir(uint32_t dir) {
      gicc.DIR = dir;
 }
 
+static inline uint32_t gich_get_vmcr() 
+{
+    return gich.VMCR;
+}
+
+static inline void gich_set_vmcr(uint32_t vmcr) 
+{
+    gich.VMCR = vmcr;
+}
+
+
 #endif /* __GICV2_H__ */

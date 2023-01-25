@@ -1034,7 +1034,7 @@ bool mem_reserve_vm_cfg(struct page_pool *pool)
 {
     /* for every vm config */
     for (size_t i = 0; i < vm_config_ptr->vmlist_size; i++) {
-        struct vm_config *vm_cfg = &vm_config_ptr->vmlist[i];
+        struct vm_config *vm_cfg = vm_config_ptr->vmlist[i];
         /* for every mem region */
         for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
             struct mem_region *reg = &vm_cfg->platform.regions[j];

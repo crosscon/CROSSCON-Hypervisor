@@ -24,7 +24,7 @@
 //    vmstack_unwind(cpu.arch.vtimer.next_vcpu);
 //    node_data_t *node =  (node_data_t*)list_pop(&cpu.arch.vtimer.event_list);
 //    if(node != NULL){
-//        vcpu_t *vcpu = node->data;
+//        struct vcpu *vcpu = node->data;
 //        cpu.arch.vtimer.next_vcpu = vcpu;
 //        MSR(CNTHP_CTL_EL2, vcpu->arch.sysregs.vm.cntv_ctl_el0);
 //        MSR(CNTHP_CVAL_EL2, vcpu->arch.sysregs.vm.cntv_cval_el0);

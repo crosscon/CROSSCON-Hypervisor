@@ -144,7 +144,7 @@ void vcpu_arch_run(struct vcpu* vcpu)
     
 }
 
-void vtimer_save_state(vcpu_t* vcpu) {
+void vtimer_save_state(struct vcpu* vcpu) {
 
 //    uint64_t timer_ctl = MRS(CNTV_CTL_EL0);
 //    uint64_t timer_cmp = MRS(CNTV_CVAL_EL0);
@@ -152,7 +152,7 @@ void vtimer_save_state(vcpu_t* vcpu) {
 //    if((timer_ctl & 0x3) == 0x1 && vm_has_interrupt(vcpu->vm, 27) && 
 //        vgic_int_get_enabled(vcpu, 27)) {
 //
-//        vcpu_t *next_vcpu = cpu.arch.vtimer.next_vcpu;
+//        struct vcpu *next_vcpu = cpu.arch.vtimer.next_vcpu;
 //        if(next_vcpu != NULL){
 //            if((next_vcpu->arch.sysregs.vm.cntv_ctl_el0 & 0x3) == 0x1){
 //                if(next_vcpu->arch.sysregs.vm.cntv_cval_el0 > timer_cmp){
@@ -172,7 +172,7 @@ void vtimer_save_state(vcpu_t* vcpu) {
 //    }
 }
 
-void vtimer_restore_state(vcpu_t *vcpu) {
+void vtimer_restore_state(struct vcpu *vcpu) {
 
 //    if(!vm_has_interrupt(vcpu->vm, 27)) {
 //        gic_set_enable(27, false);
@@ -184,7 +184,7 @@ void vtimer_restore_state(vcpu_t *vcpu) {
 //    if(cpu.arch.vtimer.next_vcpu == vcpu){
 //        node_data_t *node = (node_data_t*) list_pop(&cpu.arch.vtimer.event_list);
 //        if(node != NULL){
-//            vcpu_t *vcpu = node->data;
+//            struct vcpu *vcpu = node->data;
 //            objcache_free(&partition->nodes, node);
 //            cpu.arch.vtimer.next_vcpu = vcpu;
 //            MSR(CNTHP_CTL_EL2, vcpu->arch.sysregs.vm.cntv_ctl_el0);
@@ -196,10 +196,14 @@ void vtimer_restore_state(vcpu_t *vcpu) {
 //    }
 }
 
-void vcpu_save_state(vcpu_t* vcpu){
+void vcpu_save_state(struct vcpu* vcpu){
     if(vcpu == NULL) return;
+
     vcpu->arch.sysregs.hyp.elr_el2      = MRS(ELR_EL2);
     vcpu->arch.sysregs.hyp.spsr_el2     = MRS(SPSR_EL2);
+    vcpu->arch.sysregs.hyp.vttbr_el2    = MRS(VTTBR_EL2);
+    vcpu->arch.sysregs.hyp.vmpidr_el2   = MRS(VMPIDR_EL2);
+    vcpu->arch.sysregs.hyp.cntvoff_el2  = MRS(CNTVOFF_EL2);
     vcpu->arch.sysregs.vm.vbar_el1      = MRS(VBAR_EL1);
     vcpu->arch.sysregs.vm.tpidr_el1     = MRS(TPIDR_EL1);
     vcpu->arch.sysregs.vm.mair_el1      = MRS(MAIR_EL1);
@@ -223,11 +227,12 @@ void vcpu_save_state(vcpu_t* vcpu){
     vcpu->arch.sysregs.vm.cntv_ctl_el0  = MRS(CNTV_CTL_EL0);
     vcpu->arch.sysregs.vm.cntv_cval_el0 = MRS(CNTV_CVAL_EL0);
     vcpu->arch.sysregs.vm.cntkctl_el1   = MRS(CNTKCTL_EL1);
+
     vgic_save_state(vcpu);
     vtimer_save_state(vcpu);
 }
 
-void vcpu_restore_state(vcpu_t* vcpu){                                          //o registo é escrito aqui
+void vcpu_restore_state(struct vcpu* vcpu){                                          //o registo é escrito aqui
     if(vcpu == NULL) return;
     MSR(ELR_EL2, vcpu->arch.sysregs.hyp.elr_el2);
     MSR(SPSR_EL2, vcpu->arch.sysregs.hyp.spsr_el2);

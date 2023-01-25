@@ -41,7 +41,8 @@
     stp x26, x27, [sp, #(8*26)]
     stp x28, x29, [sp, #(8*28)]
     mov x29, sp 
-    add x29, x29, 32*8
+    //add x29, x29, 32*8
+    sub x29, x29, 32*8
     stp x30, x29, [sp, #(8*30)]
 
 .endm
@@ -66,9 +67,9 @@
     stp x28, x29, [sp, #(8*28)]
     str x30,      [sp, #(8*30)]
 
-    mrs x0, ELR_EL2
+    /*mrs x0, ELR_EL2
     mrs x1, SPSR_EL2
-    stp x0, x1,   [sp, #(8*31)]
+    stp x0, x1,   [sp, #(8*31)]*/
 
     ldr x0, =cpu
     ldr x0, [x0, #CPU_VCPU_OFF]
@@ -84,9 +85,9 @@ vcpu_arch_entry:
     ldr x0, [x0, #VCPU_REGS_OFF]
     mov sp, x0
 
-    ldp x0, x1, [sp, #(8*31)]
+    /*ldp x0, x1, [sp, #(8*31)]
     msr ELR_EL2, x0
-    msr SPSR_EL2, x1
+    msr SPSR_EL2, x1*/
 
     ldp x0, x1,   [sp, #(8*0)]
     ldp x2, x3,   [sp, #(8*2)]

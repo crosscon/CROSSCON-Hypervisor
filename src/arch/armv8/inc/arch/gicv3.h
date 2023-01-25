@@ -71,6 +71,7 @@ static inline void gich_write_lr(size_t i, uint64_t val)
     }
 }
 
+
 static inline uint32_t gich_get_hcr()
 {
     return MRS(ICH_HCR_EL2);
@@ -94,6 +95,37 @@ static inline uint64_t gich_get_eisr()
 static inline uint64_t gich_get_elrsr()
 {
     return MRS(ICH_ELRSR_EL2);
+}
+
+static inline uint32_t gich_get_vmcr() 
+{
+    return MRS(ICH_VMCR_EL2);
+}
+
+static inline void gich_set_vmcr(uint32_t vmcr) 
+{
+    MSR(ICH_VMCR_EL2, vmcr);
+}
+
+static inline uint32_t gich_get_apr(size_t i) 
+{
+    switch (i) {
+        case 0: return MRS(ICH_AP1R0_EL2);
+        case 1: return MRS(ICH_AP1R1_EL2);
+        case 2: return MRS(ICH_AP1R2_EL2);
+        case 3: return MRS(ICH_AP1R3_EL2);
+        default: return 0;
+    }
+}
+
+static inline void gich_set_apr(size_t i, uint32_t val) 
+{
+    switch (i) {
+        case 0: MSR(ICH_AP1R0_EL2, val);
+        case 1: MSR(ICH_AP1R1_EL2, val);
+        case 2: MSR(ICH_AP1R2_EL2, val);
+        case 3: MSR(ICH_AP1R3_EL2, val);
+    }
 }
 
 static inline uint32_t gicc_iar() {

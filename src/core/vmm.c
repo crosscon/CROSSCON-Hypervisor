@@ -33,11 +33,11 @@ extern int cpu_different;
 
 static void* vmm_alloc_vm_struct()
 {
-    size_t vm_npages = ALIGN(sizeof(vm_t), PAGE_SIZE) / PAGE_SIZE;
-    void* va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, NULL, vm_npages);
+    size_t vm_npages = ALIGN(sizeof(struct vm), PAGE_SIZE) / PAGE_SIZE;
+    vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, (vaddr_t)NULL, vm_npages);
     mem_map(&cpu.as, va, NULL, vm_npages, PTE_HYP_FLAGS);
-    memset(va, 0, vm_npages * PAGE_SIZE);
-    return va;
+    memset((void*)va, 0, vm_npages * PAGE_SIZE);
+    return (void*)va;
 }
 
 uint64_t vmm_alloc_vmid()
@@ -53,7 +53,7 @@ uint64_t vmm_alloc_vmid()
     return vmid;
 }
 
-static vcpu_t* vmm_create_vms(vm_config_t* config, vcpu_t* parent)
+static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent)
 {
     if (cpu.id == partition->master) {
         partition->init.curr_vm = vmm_alloc_vm_struct();
@@ -66,8 +66,8 @@ static vcpu_t* vmm_create_vms(vm_config_t* config, vcpu_t* parent)
         cpu_sync_barrier(&partition->sync);
     }
 
-    vm_t* vm = partition->init.curr_vm;
-    vcpu_t* vcpu = NULL;
+    struct vm* vm = partition->init.curr_vm;
+    struct vcpu* vcpu = NULL;
 
     bool assigned = false;
     bool master = false;
@@ -96,18 +96,10 @@ static vcpu_t* vmm_create_vms(vm_config_t* config, vcpu_t* parent)
     spin_unlock(&partition->lock);
 
     if (assigned) {
-        vcpu = vm_init(vm, config, master);
-        // for (int i = 0; i < config->children_num; i++) {
-        //    vm_config_t* child_config = config->children[i];
-        //    vcpu_t* child = vmm_create_vms(
-        //        child_config, vcpu);  // TODO: do this without recursion
-        //    if (child != NULL) {
-        //        node_data_t* node = objcache_alloc(&partition->nodes);
-        //        node->data = child;
-        //        list_append(&vcpu->children, (node_t*)node);
-        //    }
+	vmid_t vm_id = vmm_alloc_vmid();
+        vm_init(vm, config, master, vm_id);
+	vcpu = (struct vcpu*)list_peek(&vm->vcpu_list);
         cpu_sync_barrier(&vm->sync);
-        //}
     }
 
     return vcpu;
@@ -115,14 +107,15 @@ static vcpu_t* vmm_create_vms(vm_config_t* config, vcpu_t* parent)
 
 void vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
 {
-    vm_t* vm = vmm_alloc_vm_struct();
-    vm_config_t* enclave_config = ptr_vm_config->vmlist[0];
+    vmid_t vmid = 0;
+    struct vm* enclave = vmm_alloc_vm_struct();
+    struct vm_config* enclave_config = ptr_vm_config->vmlist[0];
 
-    vcpu_t* enclave = vm_init_dynamic(vm, enclave_config, vm_addr);
-    
-    node_data_t* node = objcache_alloc(&partition->nodes);
-    node->data = enclave;
-    list_append(&cpu.vcpu->children, (node_t*)node);
+    vmid = vmm_alloc_vmid();
+    vm_init_dynamic(enclave, enclave_config, vm_addr, vmid);
+
+    /* TODO */
+    list_push(&cpu.vcpu->children, (void*)list_peek(&enclave->vcpu_list));
 
     cpu_different = cpu.id;
 }
@@ -169,7 +162,7 @@ void vmm_init()
      * Assign cpus according to vm affinity.
      */
     for (size_t i = 0; i < vm_config_ptr->vmlist_size && !assigned; i++) {
-        if (vm_config_ptr->vmlist[i].cpu_affinity & (1UL << cpu.id)) {
+        if (vm_config_ptr->vmlist[i]->cpu_affinity & (1UL << cpu.id)) {
             spin_lock(&vm_assign[i].lock);
             if (!vm_assign[i].master) {
                 vm_assign[i].master = true;
@@ -179,7 +172,7 @@ void vmm_init()
                 assigned = true;
                 vm_id = i;
             } else if (vm_assign[i].ncpus <
-                       vm_config_ptr->vmlist[i].platform.cpu_num) {
+                       vm_config_ptr->vmlist[i]->platform.cpu_num) {
                 assigned = true;
                 vm_assign[i].ncpus++;
                 vm_assign[i].cpus |= (1UL << cpu.id);
@@ -198,7 +191,7 @@ void vmm_init()
         for (size_t i = 0; i < vm_config_ptr->vmlist_size && !assigned; i++) {
             spin_lock(&vm_assign[i].lock);
             if (vm_assign[i].ncpus <
-                vm_config_ptr->vmlist[i].platform.cpu_num) {
+                vm_config_ptr->vmlist[i]->platform.cpu_num) {
                 if (!vm_assign[i].master) {
                     vm_assign[i].master = true;
                     vm_assign[i].ncpus++;
@@ -220,7 +213,7 @@ void vmm_init()
     cpu_sync_barrier(&cpu_glb_sync);
 
     if (assigned) {
-        vm_config = &vm_config_ptr->vmlist[vm_id];
+        vm_config = vm_config_ptr->vmlist[vm_id];
         if (master) {
             //size_t vm_npages = NUM_PAGES(sizeof(struct vm));
             /* TODO */
@@ -230,9 +223,9 @@ void vmm_init()
                                             vm_npages);
             mem_map(&cpu.as, va, NULL, vm_npages, PTE_HYP_FLAGS);
             memset((void*)va, 0, vm_npages * PAGE_SIZE);
-            vcpu_sync_init(&partition->sync, vm_assign[vm_id].ncpus);
+            cpu_sync_init(&partition->sync, vm_assign[vm_id].ncpus);
             partition->master = cpu.id;
-            objcache_init(&partition->nodes, sizeof(node_data_t), SEC_HYP_VM,
+            objcache_init(&partition->nodes, sizeof(struct vcpu), SEC_HYP_VM,
                           true);
             fence_ord_write();
             vm_assign[vm_id].vm_shared_table =
@@ -259,7 +252,7 @@ void vmm_init()
         vcpu_run(cpu.vcpu);
 */
 	/* TODO */
-        vcpu_t* root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
+        struct vcpu* root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
         vmstack_push(root);
         cpu_sync_barrier(&partition->sync);
         vcpu_run(root);

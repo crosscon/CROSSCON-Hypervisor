@@ -20,6 +20,8 @@
 #include <objcache.h>
 #include <vm.h>
 #include <fences.h>
+#include <vmm.h>
+#include <string.h>
 
 struct cpu_msg_node {
     node_t node;
@@ -119,15 +121,13 @@ void cpu_idle_wakeup()
     }
 }
 
-void cpu_add_vcpu(vcpu_t * vcpu){
-    node_data_t* node = objcache_alloc(&partition->nodes);
-    node->data = vcpu;
-    list_append(&cpu.vcpus, (node_t*) node);  
+void cpu_add_vcpu(struct vcpu * vcpu){
+    struct vcpu* node = objcache_alloc(&partition->nodes);
+    list_push(&cpu.vcpus, (node_t*) node);  
 }
 
-vcpu_t* cpu_get_vcpu(uint64_t vmid){
-    list_foreach(cpu.vcpus, node_data_t, node){
-        vcpu_t *vcpu = node->data;
+struct vcpu* cpu_get_vcpu(uint64_t vmid){
+    list_foreach(cpu.vcpus, struct vcpu, vcpu){
         if(vcpu->vm->id == vmid){
             return vcpu;
         }

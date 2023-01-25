@@ -19,12 +19,12 @@
 #include <arch/vgic.h>
 #include <vm.h>
 
-static inline bool vgic_broadcast(vcpu_t *vcpu, struct vgic_int *interrupt)
+static inline bool vgic_broadcast(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
     return (interrupt->route & GICD_IROUTER_IRM_BIT);
 }
 
-static inline bool vgic_int_vcpu_is_target(vcpu_t *vcpu, struct vgic_int *interrupt)
+static inline bool vgic_int_vcpu_is_target(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
     bool priv = gic_is_priv(interrupt->id);
     bool local = priv && (interrupt->phys.redist == vcpu->phys_id);

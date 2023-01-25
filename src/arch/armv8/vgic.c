@@ -54,7 +54,7 @@ extern volatile const uint64_t VGIC_IPI_ID;
 void vgic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vgic_ipi_handler, VGIC_IPI_ID);
 
-static inline uint64_t vgic_lr_rd(vcpu_t* vcpu, uint64_t lr){
+static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, uint64_t lr){
     if(vcpu->state == VCPU_ACTIVE){
         return gich_read_lr(lr);
     } else {
@@ -62,12 +62,12 @@ static inline uint64_t vgic_lr_rd(vcpu_t* vcpu, uint64_t lr){
     }
 }
 
-static inline void vgic_lr_wr(vcpu_t* vcpu, uint64_t lr, uint64_t val){
+static inline void vgic_lr_wr(struct vcpu* vcpu, uint64_t lr, uint64_t val){
     if(vcpu->state == VCPU_ACTIVE){
         gich_write_lr(lr, val);
     } else {
         vcpu->arch.vgic_priv.gich.LR[lr] = val;
-        bitmap_set((bitmap_t) &vcpu->arch.vgic_priv.gich.ELSR, lr);
+        bitmap_set((bitmap_t*) &vcpu->arch.vgic_priv.gich.ELSR, lr);
         /**
          * TODO: take this decision out of the vgic and make it more arch
          * indepenent
@@ -78,7 +78,7 @@ static inline void vgic_lr_wr(vcpu_t* vcpu, uint64_t lr, uint64_t val){
     }
 }
 
-static inline bool vgic_lr_empty(vcpu_t* vcpu, uint64_t lr){
+static inline bool vgic_lr_empty(struct vcpu* vcpu, uint64_t lr){
     if(vcpu->state == VCPU_ACTIVE){
         uint64_t elsr = gich_get_elrsr();
         return bit_get(elsr, lr%64);
@@ -88,7 +88,7 @@ static inline bool vgic_lr_empty(vcpu_t* vcpu, uint64_t lr){
 }
 
 
-static inline void vgic_hcr_set(vcpu_t* vcpu, uint64_t mask){
+static inline void vgic_hcr_set(struct vcpu* vcpu, uint64_t mask){
     if(vcpu->state == VCPU_ACTIVE){
         gich_set_hcr(gich_get_hcr() | mask);
     } else {
@@ -96,7 +96,7 @@ static inline void vgic_hcr_set(vcpu_t* vcpu, uint64_t mask){
     }   
 }
 
-static inline void vgic_hcr_clear(vcpu_t* vcpu, uint64_t mask){
+static inline void vgic_hcr_clear(struct vcpu* vcpu, uint64_t mask){
     if(vcpu->state == VCPU_ACTIVE){
         gich_set_hcr(gich_get_hcr() & ~mask);
     } else {
@@ -123,13 +123,28 @@ static inline bool vgic_int_is_hw(struct vgic_int *interrupt)
     return !(interrupt->id < GIC_MAX_SGIS) && interrupt->hw;
 }
 
-static inline int64_t gich_get_lr(struct vgic_int *interrupt, unsigned long *lr)
+/*static inline int64_t gich_get_lr(struct vgic_int *interrupt, unsigned long *lr)
 {
     if (!interrupt->in_lr || interrupt->owner->phys_id != cpu.id) {
         return -1;
     }
 
     unsigned long lr_val = gich_read_lr(interrupt->lr);
+    if ((GICH_LR_VID(lr_val) == interrupt->id) &&
+        (GICH_LR_STATE(lr_val) != INV)) {
+        if (lr != NULL) *lr = lr_val;
+        return interrupt->lr;
+    }
+
+    return -1;
+}*/
+static inline int64_t gich_get_lr(struct vcpu *vcpu, struct vgic_int *interrupt, uint64_t *lr)
+{
+    if (!interrupt->in_lr || interrupt->owner->phys_id != cpu.id) {
+        return -1;
+    }
+
+    uint64_t lr_val = vgic_lr_rd(vcpu, interrupt->lr);
     if ((GICH_LR_VID(lr_val) == interrupt->id) &&
         (GICH_LR_STATE(lr_val) != INV)) {
         if (lr != NULL) *lr = lr_val;
@@ -144,7 +159,7 @@ static inline uint8_t vgic_get_state(struct vgic_int *interrupt)
     uint8_t state = 0;
 
     unsigned long lr_val = 0;
-    if (gich_get_lr(interrupt, &lr_val) >= 0) {
+    if (gich_get_lr(cpu.vcpu, interrupt, &lr_val) >= 0) {
         state = GICH_LR_STATE(lr_val);
     } else {
         state = interrupt->state;
@@ -301,7 +316,8 @@ static inline void vgic_write_lr(struct vcpu *vcpu, struct vgic_int *interrupt,
     interrupt->in_lr = true;
     interrupt->lr = lr_ind;
     vcpu->arch.vgic_priv.curr_lrs[lr_ind] = interrupt->id;
-    gich_write_lr(lr_ind, lr);
+    //gich_write_lr(lr_ind, lr);
+    vgic_lr_wr(vcpu, lr_ind, lr);
 }
 
 bool vgic_remove_lr(struct vcpu *vcpu, struct vgic_int *interrupt)
@@ -314,7 +330,7 @@ bool vgic_remove_lr(struct vcpu *vcpu, struct vgic_int *interrupt)
 
     unsigned long lr_val = 0;
     ssize_t lr_ind = -1;
-    if ((lr_ind = gich_get_lr(interrupt, &lr_val)) >= 0) {
+    if ((lr_ind = gich_get_lr(vcpu, interrupt, &lr_val)) >= 0) {
         gich_write_lr(lr_ind, 0);
     }
 
@@ -445,16 +461,10 @@ bool vgic_add_lr(struct vcpu *vcpu, struct vgic_int *interrupt)
 
 static inline void vgic_update_enable(struct vcpu *vcpu)
 {
-/*    if (cpu.vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
+    if (cpu.vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
         gich_set_hcr(gich_get_hcr() | GICH_HCR_En_BIT);
     } else {
         gich_set_hcr(gich_get_hcr() & ~GICH_HCR_En_BIT);
-    }*/
-/* TODO */
-    if (vcpu->vm->arch.vgicd.CTLR & VGIC_ENABLE_MASK) {
-        vgic_hcr_set(vcpu, GICH_HCR_En_BIT);
-    } else {
-        vgic_hcr_clear(vcpu, GICH_HCR_En_BIT);
     }
 }
 
@@ -995,21 +1005,10 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
     irqid_t int_id = VGIC_MSG_INTID(data);
     uint64_t val = VGIC_MSG_VAL(data);
 
-    /*if (vm_id != cpu.vcpu->vm->id) {
+    if (vm_id != cpu.vcpu->vm->id) {
         ERROR("received vgic3 msg target to another vcpu");
         // TODO: need to fetch vcpu from other vm if the taget vm for this
         // is not active
-    }*/
-    /* TODO */
-    vcpu_t* vcpu = NULL;
-    if(vm_id == cpu.vcpu->vm->id){
-        vcpu = cpu.vcpu;
-    } else {
-        vcpu = cpu_get_vcpu(vm_id);
-    }
-
-    if(vcpu == NULL){
-        ERROR("cant find vcpu for vgic handling");
     }
 
     switch (event) {
@@ -1112,11 +1111,6 @@ static void vgic_refill_lrs(struct vcpu *vcpu, bool npie) {
 
 static void vgic_eoir_highest_spilled_active(struct vcpu *vcpu)
 {   
-    vgic_int_t *interrupt = NULL;
-    for (int i = 0; i < gic_num_irqs(); i++) {
-        vgic_int_t *temp_int = vgic_get_int(vcpu, i, vcpu->id);
-        if (temp_int == NULL) break;
-
     struct list* list = NULL;
     struct vgic_int *interrupt = 
         vgic_highest_prio_spilled(vcpu, ACT, &list);
@@ -1236,13 +1230,13 @@ void vgic_set_hw(struct vm *vm, irqid_t id)
     }
 }
 
-bool vgic_int_get_enabled(vcpu_t* vcpu, uint64_t int_id) {
-    vgic_int_t *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
+bool vgic_int_get_enabled(struct vcpu* vcpu, uint64_t int_id) {
+    struct vgic_int *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
     return interrupt != NULL && interrupt->enabled; 
 }
 
-void vgic_hw_commit(vcpu_t* vcpu, uint64_t int_id) {
-    vgic_int_t *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
+void vgic_hw_commit(struct vcpu* vcpu, uint64_t int_id) {
+    struct vgic_int *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
 
     if(interrupt != NULL && interrupt->hw) {
         // vgic_int_set_cfg_hw(vcpu, interrupt);
@@ -1257,7 +1251,7 @@ void vgic_hw_commit(vcpu_t* vcpu, uint64_t int_id) {
  * If so, fix the commented out loops below
  */
 
-void vgic_save_state(vcpu_t* vcpu){
+void vgic_save_state(struct vcpu* vcpu){
     
     vcpu->arch.vgic_priv.gich.HCR = gich_get_hcr();
     vcpu->arch.vgic_priv.gich.VMCR = gich_get_vmcr();
@@ -1274,7 +1268,7 @@ void vgic_save_state(vcpu_t* vcpu){
 
 }
 
-void vgic_restore_state(vcpu_t* vcpu){
+void vgic_restore_state(struct vcpu* vcpu){
 
     gich_set_hcr(vcpu->arch.vgic_priv.gich.HCR); 
     gich_set_vmcr(vcpu->arch.vgic_priv.gich.VMCR);

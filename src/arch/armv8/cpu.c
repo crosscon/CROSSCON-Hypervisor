@@ -48,7 +48,7 @@ unsigned long cpu_id_to_mpidr(cpuid_t id)
 }
 
 
-int64_t cpu_mpidr_to_id(uint64_t mpidr)
+cpuid_t cpu_mpidr_to_id(unsigned long mpidr)
 {
     return platform_arch_mpidr_to_cpuid(&platform, mpidr);
 }

@@ -36,7 +36,7 @@ extern void psci_boot_entry(unsigned long x0);
 
 void psci_wake_from_off(uint64_t vmid){
   
-    vcpu_t *vcpu = cpu_get_vcpu(vmid);
+    struct vcpu *vcpu = cpu_get_vcpu(vmid);
 
     if(cpu.vcpu == NULL){   
         return;
@@ -57,7 +57,7 @@ void psci_cpumsg_handler(uint32_t event, uint64_t data){
 
     switch(event){
         case PSCI_MSG_ON:
-            psci_wake_from_off();
+            psci_wake_from_off(data);
         break;
     }
 }
@@ -74,7 +74,7 @@ int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entrypoint,
      */ 
     uint32_t state_type = power_state & PSCI_STATE_TYPE_BIT;
     int32_t ret;
-    vcpu_t* vcpu = cpu.vcpu;
+    /* struct vcpu* vcpu = cpu.vcpu; */
 
     if(state_type){
         //PSCI_STATE_TYPE_POWERDOWN:
@@ -294,7 +294,7 @@ static void psci_restore_state(){
     vcpu_restore_state(cpu.vcpu);
 }
 
-void psci_wake_from_powerdown(){
+void psci_wake_from_powerdown(uint64_t vmid){
 
     if(cpu.vcpu == NULL){
         ERROR("cpu woke up but theres no vcpu to run");
@@ -305,13 +305,13 @@ void psci_wake_from_powerdown(){
     vcpu_run(cpu.vcpu);
 }
 
-void psci_wake_from_idle(){
+void psci_wake_from_idle(uint64_t vmid){
 
     cpu_idle_wakeup();
 
 }
 
-void (*psci_wake_handlers[PSCI_WAKEUP_NUM])(void) = {
+void (*psci_wake_handlers[PSCI_WAKEUP_NUM])(uint64_t vmid) = {
     [PSCI_WAKEUP_CPU_OFF] = psci_wake_from_off,
     [PSCI_WAKEUP_POWERDOWN] = psci_wake_from_powerdown,
     [PSCI_WAKEUP_IDLE] = psci_wake_from_idle,
@@ -323,7 +323,7 @@ void psci_wake(uint32_t handler_id)
     psci_restore_state();
 
     if(handler_id < PSCI_WAKEUP_NUM){
-        psci_wake_handlers[handler_id]();
+        psci_wake_handlers[handler_id](0U);
     } else {
         ERROR("unkown reason for cpu wake up");
     }

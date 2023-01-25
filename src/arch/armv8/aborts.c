@@ -20,12 +20,14 @@
 #include <emul.h>
 #include <arch/psci.h>
 #include <hypercall.h>
+#include <arch/smc.h>
 
 /** hypercall handler declarations */
 #include <ipc.h>
 #include <vmstack.h>
 #include <baoenclave.h>
 
+typedef void (*abort_handler_t)(uint64_t, uint64_t, uint64_t);
 
 void internal_abort_handler(uint64_t gprs[]) {
 
@@ -71,13 +73,15 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
 
         if (handler(&emul)) {
             uint64_t pc_step = 2 + (2 * il);
-            cpu.vcpu->regs->elr_el2 += pc_step;
+            //cpu.vcpu->regs->elr_el2 += pc_step;
+            vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
         } else {
             ERROR("data abort emulation failed (0x%x)", far);
         }
     } else {
         ERROR("no emulation handler for abort(0x%x at 0x%x)", far,
-              cpu.vcpu->regs->elr_el2);
+              //cpu.vcpu->regs->elr_el2);
+              vcpu_readpc(cpu.vcpu));
     }
 }
 
@@ -89,11 +93,11 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     uint64_t x3 = cpu.vcpu->regs->x[3];
 
     int64_t ret = -1;
-    vcpu_t* vcpu = cpu.vcpu;
+    struct vcpu* vcpu = cpu.vcpu;
 
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler(smc_fid, x1, x2, x3);
-        vcpu_writereg(cpu.vcpu, 0, ret);
+        vcpu_writereg(vcpu, 0, ret);
     } else {
         if (vcpu->parent) {
             /**
@@ -103,7 +107,7 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
             vmstack_pop();
 	} else {
 	    INFO("passing through smc_fid 0x%lx", smc_fid);
-	    smc_res_t res;
+	    struct smc_res res;
 	    ret = smc_call(smc_fid, cpu.vcpu->regs->x[1], cpu.vcpu->regs->x[2],
 		    cpu.vcpu->regs->x[3], &res);
 	    vcpu_writereg(cpu.vcpu, 0, res.x0);
@@ -128,7 +132,7 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     uint64_t x3 = cpu.vcpu->regs->x[3];
     uint64_t hvc_fid = (x0 >> 16) & 0xffff;
     int64_t ret = -HC_E_INVAL_ID;
-    vcpu_t* vcpu = cpu.vcpu;
+    /* struct vcpu* vcpu = cpu.vcpu; */
 
     switch(hvc_fid){
         case HC_IPC:
@@ -160,13 +164,16 @@ void sysreg_handler(uint64_t iss, uint64_t far, uint64_t il)
 
         if (handler(&emul)) {
             uint64_t pc_step = 2 + (2 * il);
-            cpu.vcpu->regs->elr_el2 += pc_step;
+            //cpu.vcpu->regs->elr_el2 += pc_step;
+            vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
         } else {
             ERROR("register access emulation failed (0x%x)", reg_addr);
         }
     } else {
-        ERROR("no emulation handler for register access (0x%x at 0x%x)", reg_addr,
-              cpu.vcpu->regs->elr_el2);
+        //ERROR("no emulation handler for register access (0x%x at 0x%x)", reg_addr,
+        //      cpu.vcpu->regs->elr_el2);
+        ERROR("no emulation handler for register access (0x%x at 0x%x)",
+              reg_addr, vcpu_readpc(cpu.vcpu));
     }
 }
 

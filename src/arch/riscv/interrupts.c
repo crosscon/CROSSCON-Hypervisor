@@ -144,3 +144,9 @@ void interrupts_arch_vm_assign(struct vm *vm, irqid_t id)
 {
     vplic_set_hw(vm, id);
 }
+
+
+void interrupts_arch_vm_inject(struct vcpu* vcpu, uint64_t id)
+{
+    vplic_inject(vcpu, id);
+}

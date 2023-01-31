@@ -93,13 +93,13 @@ int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t ar
     
     struct vcpu* child = NULL;
 
-    uint64_t tmp = MRS(DAIF);
+    /* uint64_t tmp = MRS(DAIF); */
 
     switch(id) {
         case VMSTACK_RESUME:
         case VMSTACK_GOTO:
-            tmp |= (1ULL << 7);
-            MSR(DAIF, tmp);
+            /* tmp |= (1ULL << 7); */
+            /* MSR(DAIF, tmp); */
             if((child = vcpu_get_child(cpu.vcpu, arg0)) != NULL){
                 if(id == VMSTACK_GOTO) {
                     vcpu_writepc(child, arg1);
@@ -110,8 +110,8 @@ int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t ar
             }
             break;
         case VMSTACK_RETURN:
-            tmp &= ~(1ULL << 7);
-            MSR(DAIF, tmp);
+            /* tmp &= ~(1ULL << 7); */
+            /* MSR(DAIF, tmp); */
             vmstack_pop();
             break;
         default:
@@ -123,7 +123,7 @@ int64_t vmstack_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t ar
      * let's enter idle and wait for someaone to wake us up.
      * TODO: rewrite this check with an arch agnostic api
      */
-    if (cpu.vcpu->arch.psci_ctx.state == OFF) {
+    if (vcpu_is_off(cpu.vcpu)) {
         cpu_idle();
     }
     

@@ -83,6 +83,11 @@ void vcpu_writepc(struct vcpu *vcpu, unsigned long pc)
     vcpu->regs->sepc = pc;
 }
 
+int vcpu_is_off(struct vcpu* vcpu)
+{
+    return cpu.vcpu->arch.sbi_ctx.state == STOPPED;
+}
+
 void vcpu_arch_run(struct vcpu *vcpu){
 
     if(vcpu->arch.sbi_ctx.state == STARTED){
@@ -91,4 +96,25 @@ void vcpu_arch_run(struct vcpu *vcpu){
         cpu_idle();
     }    
 
+}
+
+void vcpu_save_state(struct vcpu* vcpu){
+    if(vcpu == NULL) return;
+
+    vcpu->arch.hstatus = CSRR(HSTATUS);
+    vcpu->arch.sstatus = CSRR(SSTATUS);
+    vcpu->arch.sepc    = CSRR(SEPC);
+
+    /* vgic_save_state(vcpu); */
+    /* vtimer_save_state(vcpu); */
+}
+
+void vcpu_restore_state(struct vcpu* vcpu){                                          //o registo é escrito aqui
+    if(vcpu == NULL) return;
+    CSRW(HSTATUS, vcpu->arch.hstatus);
+    CSRW(SSTATUS, vcpu->arch.sstatus);
+    CSRW(SEPC, vcpu->arch.sepc);
+
+    /* vgic_restore_state(vcpu); */
+    /* vtimer_restore_state(vcpu); */
 }

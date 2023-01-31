@@ -133,6 +133,11 @@ void vcpu_writepc(struct vcpu* vcpu, unsigned long pc)
     }
 }
 
+int vcpu_is_off(struct vcpu* vcpu)
+{
+    return cpu.vcpu->arch.psci_ctx.state == OFF;
+}
+
 void vcpu_arch_run(struct vcpu* vcpu)
 {
     // TODO: consider using TPIDR_EL2 to store vcpu pointer
@@ -234,34 +239,34 @@ void vcpu_save_state(struct vcpu* vcpu){
 
 void vcpu_restore_state(struct vcpu* vcpu){                                          //o registo é escrito aqui
     if(vcpu == NULL) return;
-    MSR(ELR_EL2, vcpu->arch.sysregs.hyp.elr_el2);
-    MSR(SPSR_EL2, vcpu->arch.sysregs.hyp.spsr_el2);
-    MSR(VTTBR_EL2, vcpu->arch.sysregs.hyp.vttbr_el2);
-    MSR(VMPIDR_EL2, vcpu->arch.sysregs.hyp.vmpidr_el2);
-    MSR(CNTVOFF_EL2, vcpu->arch.sysregs.hyp.cntvoff_el2);
-    MSR(VBAR_EL1, vcpu->arch.sysregs.vm.vbar_el1);
-    MSR(TPIDR_EL1, vcpu->arch.sysregs.vm.tpidr_el1);
-    MSR(MAIR_EL1, vcpu->arch.sysregs.vm.mair_el1);
-    MSR(AMAIR_EL1, vcpu->arch.sysregs.vm.amair_el1);
-    MSR(TCR_EL1, vcpu->arch.sysregs.vm.tcr_el1);
-    MSR(TTBR0_EL1, vcpu->arch.sysregs.vm.ttbr0_el1);
-    MSR(TTBR1_EL1, vcpu->arch.sysregs.vm.ttbr1_el1);
-    MSR(SP_EL0, vcpu->arch.sysregs.vm.sp_el0);
-    MSR(SP_EL1, vcpu->arch.sysregs.vm.sp_el1);
-    MSR(SPSR_EL1, vcpu->arch.sysregs.vm.spsr_el1);
-    MSR(SCTLR_EL1, vcpu->arch.sysregs.vm.sctlr_el1);
-    MSR(ACTLR_EL1, vcpu->arch.sysregs.vm.actlr_el1);
-    MSR(PAR_EL1, vcpu->arch.sysregs.vm.par_el1);
-    MSR(FAR_EL1, vcpu->arch.sysregs.vm.far_el1);
-    MSR(ESR_EL1, vcpu->arch.sysregs.vm.esr_el1);
-    MSR(ELR_EL1, vcpu->arch.sysregs.vm.elr_el1);
-    MSR(AFSR0_EL1, vcpu->arch.sysregs.vm.afsr0_el1);
-    MSR(AFSR1_EL1, vcpu->arch.sysregs.vm.afsr1_el1);
-    MSR(TPIDRRO_EL0, vcpu->arch.sysregs.vm.tpidrro_el0);
-    MSR(TPIDR_EL0, vcpu->arch.sysregs.vm.tpidr_el0);
-    MSR(CNTV_CTL_EL0, vcpu->arch.sysregs.vm.cntv_ctl_el0);
-    MSR(CNTV_CVAL_EL0, vcpu->arch.sysregs.vm.cntv_cval_el0);
-    MSR(CNTKCTL_EL1, vcpu->arch.sysregs.vm.cntkctl_el1);
+    MSR(ELR_EL2,         vcpu->arch.sysregs.hyp.elr_el2);
+    MSR(SPSR_EL2,        vcpu->arch.sysregs.hyp.spsr_el2);
+    MSR(VTTBR_EL2,       vcpu->arch.sysregs.hyp.vttbr_el2);
+    MSR(VMPIDR_EL2,      vcpu->arch.sysregs.hyp.vmpidr_el2);
+    MSR(CNTVOFF_EL2,     vcpu->arch.sysregs.hyp.cntvoff_el2);
+    MSR(VBAR_EL1,        vcpu->arch.sysregs.vm.vbar_el1);
+    MSR(TPIDR_EL1,       vcpu->arch.sysregs.vm.tpidr_el1);
+    MSR(MAIR_EL1,        vcpu->arch.sysregs.vm.mair_el1);
+    MSR(AMAIR_EL1,       vcpu->arch.sysregs.vm.amair_el1);
+    MSR(TCR_EL1,         vcpu->arch.sysregs.vm.tcr_el1);
+    MSR(TTBR0_EL1,       vcpu->arch.sysregs.vm.ttbr0_el1);
+    MSR(TTBR1_EL1,       vcpu->arch.sysregs.vm.ttbr1_el1);
+    MSR(SP_EL0,          vcpu->arch.sysregs.vm.sp_el0);
+    MSR(SP_EL1,          vcpu->arch.sysregs.vm.sp_el1);
+    MSR(SPSR_EL1,        vcpu->arch.sysregs.vm.spsr_el1);
+    MSR(SCTLR_EL1,       vcpu->arch.sysregs.vm.sctlr_el1);
+    MSR(ACTLR_EL1,       vcpu->arch.sysregs.vm.actlr_el1);
+    MSR(PAR_EL1,         vcpu->arch.sysregs.vm.par_el1);
+    MSR(FAR_EL1,         vcpu->arch.sysregs.vm.far_el1);
+    MSR(ESR_EL1,         vcpu->arch.sysregs.vm.esr_el1);
+    MSR(ELR_EL1,         vcpu->arch.sysregs.vm.elr_el1);
+    MSR(AFSR0_EL1,       vcpu->arch.sysregs.vm.afsr0_el1);
+    MSR(AFSR1_EL1,       vcpu->arch.sysregs.vm.afsr1_el1);
+    MSR(TPIDRRO_EL0,     vcpu->arch.sysregs.vm.tpidrro_el0);
+    MSR(TPIDR_EL0,       vcpu->arch.sysregs.vm.tpidr_el0);
+    MSR(CNTV_CTL_EL0,    vcpu->arch.sysregs.vm.cntv_ctl_el0);
+    MSR(CNTV_CVAL_EL0,   vcpu->arch.sysregs.vm.cntv_cval_el0);
+    MSR(CNTKCTL_EL1,     vcpu->arch.sysregs.vm.cntkctl_el1);
     vgic_restore_state(vcpu);
     vtimer_restore_state(vcpu);
 }

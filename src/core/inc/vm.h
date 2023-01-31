@@ -135,6 +135,7 @@ static inline void vcpu_inject_irq(struct vcpu *vcpu, irqid_t id)
 
 void vm_arch_init(struct vm* vm, const struct vm_config* config);
 void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm);
+int vcpu_is_off(struct vcpu* vcpu);
 void vcpu_run(struct vcpu* vcpu);
 unsigned long vcpu_readreg(struct vcpu* vcpu, unsigned long reg);
 void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val);

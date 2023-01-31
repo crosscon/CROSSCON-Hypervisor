@@ -173,7 +173,7 @@ int64_t baoenclave_dynamic_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1,
             res = -HC_E_FAILURE;
     }
 
-    if (cpu.vcpu->arch.psci_ctx.state == OFF) {
+    if (vcpu_is_off(cpu.vcpu)) {
         cpu_idle();
     }
 

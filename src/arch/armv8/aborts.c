@@ -121,7 +121,7 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     /* TODO */
     vcpu_writereg(cpu.vcpu, 0, ret);
     uint64_t pc_step = 2 + (2 * il);
-    cpu.vcpu->regs->elr_el2 += pc_step;
+    vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
 }
 
 void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)

@@ -105,7 +105,7 @@ static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent
     return vcpu;
 }
 
-void vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
+struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
 {
     vmid_t vmid = 0;
     struct vm* enclave = vmm_alloc_vm_struct();
@@ -118,6 +118,7 @@ void vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
     list_push(&cpu.vcpu->children, (void*)list_peek(&enclave->vcpu_list));
 
     cpu_different = cpu.id;
+    return enclave;
 }
 
 void vmm_init()

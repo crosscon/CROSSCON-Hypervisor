@@ -347,7 +347,7 @@ setup_cpu:
 	msr TTBR0_EL2, x3
 
 	/* set up cpu stack */
-	mov x3, #(SPSel_SP)								
+	mov x3, #(SPSel_SP)
 	msr SPSEL, x3	
 	ldr x3, =cpu
 	add x3, x3, #(CPU_STACK_OFF + CPU_STACK_SIZE)

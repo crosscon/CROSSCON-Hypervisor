@@ -80,10 +80,11 @@ enum {
     BAOENCLAVE_RESUME = 1,
     BAOENCLAVE_GOTO = 2,
     BAOENCLAVE_EXIT = 3,
-    BAOENCLAVE_DELETE = 4
+    BAOENCLAVE_DELETE = 4,
+    BAOENCLAVE_ADD_RGN = 5
 };
 
-int64_t baoenclave_dynamic_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1,
+int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
                                      uint64_t arg2)
 {
     int64_t res = HC_E_SUCCESS;
@@ -97,9 +98,9 @@ int64_t baoenclave_dynamic_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1,
 
     //uint64_t tmp = MRS(DAIF);
 
-    switch (id) {
+    switch (fid) {
         case BAOENCLAVE_CREATE:
-            mem_guest_ipa_translate((void*)arg0, &physical_address);
+            mem_guest_ipa_translate((void*)arg1, &physical_address);
 
             /* One page */
             va = alloc_baoenclave_struct(physical_address, 1);
@@ -116,18 +117,21 @@ int64_t baoenclave_dynamic_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1,
             config_adjust_to_va(config_ptr, physical_address);
 
             /* Create enclave */
-            vmm_init_dynamic(config_ptr, arg0);
+            struct vm *enclave = vmm_init_dynamic(config_ptr, arg1);
+
+	    /* init */
+	    /* TODO use parent vm.vcpu.id*/
+	    struct vcpu *enclave_vcpu = vm_get_vcpu(enclave, 0);
+	    vmstack_push(enclave_vcpu);
 
             INFO("Enclave Created");
             break;
         case BAOENCLAVE_RESUME:
-        case BAOENCLAVE_GOTO:
             INFO("Resume Enclave");
             if((child = vcpu_get_child(cpu.vcpu, arg0)) != NULL){
-                if(id == BAOENCLAVE_GOTO) {
-                    vcpu_writepc(child, arg1);
-                }
                 vmstack_push(child);
+		vcpu_writereg(cpu.vcpu, 1, arg1);
+
             } else {
                 res = -HC_E_INVAL_ARGS;
             }
@@ -155,20 +159,25 @@ int64_t baoenclave_dynamic_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1,
             /* Clear memory */
             va =
                 alloc_baoenclave_struct(physical_address, NUM_PAGES(full_size));
-            /* memset((void*)va, 0, full_size); */
+            memset((void*)va, 0, full_size);
             mem_free_vpage(&cpu.as, va, NUM_PAGES(full_size), true);
 
             vmstack_pop();
 
             /* Map in primary VM again, mapear pagina a pagina */
             if (!mem_map(&cpu.vcpu->vm->as,
-                        (vaddr_t)arg0 /*+ config_ptr->config_header_size*/, NULL,
+                        (vaddr_t)arg1 /*+ config_ptr->config_header_size*/, NULL,
                         NUM_PAGES(full_size), PTE_VM_FLAGS)) {
                 ERROR("mem_map failed %s", __func__);
             }
 
             INFO("Enclave Destroyed");
             break;
+        case BAOENCLAVE_ADD_RGN:
+            if ((child = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
+                vmstack_push(child);
+            }
+	    break;
         default:
             res = -HC_E_FAILURE;
     }

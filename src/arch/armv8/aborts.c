@@ -121,7 +121,7 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     /* TODO */
     vcpu_writereg(cpu.vcpu, 0, ret);
     uint64_t pc_step = 2 + (2 * il);
-    cpu.vcpu->regs->elr_el2 += pc_step;
+    vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
 }
 
 void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
@@ -137,16 +137,17 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     switch(hvc_fid){
         case HC_IPC:
             ret = ipc_hypercall(x1, x2, x3);
+	    vcpu_writereg(cpu.vcpu, 0, ret);
         break;
         case HC_VMSTACK:
             ret = vmstack_hypercall(x0 & 0xffff, x1, x2, x3);
+	    vcpu_writereg(cpu.vcpu, 0, ret);
             break;
         case HC_ENCLAVE:
-            ret = baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
+            baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
             break;
     }
 
-    vcpu_writereg(cpu.vcpu, 0, ret);
 }
 
 void sysreg_handler(uint64_t iss, uint64_t far, uint64_t il)
@@ -199,5 +200,5 @@ void aborts_sync_handler()
     if (handler)
         handler(iss, ipa_fault_addr, il);
     else
-        ERROR("no handler for abort ec = 0x%x", ec);  // unknown guest exception
+        ERROR("no handler for abort ec = 0x%x iss: 0x%x", ec, iss);  // unknown guest exception
 }

@@ -75,6 +75,9 @@ struct vcpu {
     struct vm* vm;
     struct list children;
     struct vcpu* parent;
+    struct {
+	bool initialized;
+    }nclv_data;
 
     uint8_t stack[STACK_SIZE] __attribute__((aligned(STACK_SIZE)));
 };

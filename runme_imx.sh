@@ -19,15 +19,15 @@ then
     done
 fi
 
-if [[ ! -e /media/david/boot ]]
-then
-    echo "/media/david/boot not found. Waiting"
-
-    while [[ ! -e /media/david/boot ]]
-    do
-      sleep 1
-    done
-fi
+# if [[ ! -e /media/david/boot ]]
+# then
+#     echo "/media/david/boot not found. Waiting"
+# 
+#     while [[ ! -e /media/david/boot ]]
+#     do
+#       sleep 1
+#     done
+# fi
 
 if [[ ! -e /media/david/root ]]
 then
@@ -39,30 +39,61 @@ then
     done
 fi
 
-cd ~/PhD/Research/MSc/baoEnclave/benchmarks/bao-baremetal-wallet
-compiledb make PLATFORM=imx8mq
+ENCLV="sgx-nbench"
+#ENCLV=sample_enclave
+
+pushd ../sgx_anytee_enclave/
+. sourceme.sh
+echo $PWD
+echo $ENCLV
+cd ${ENCLV}
+echo $PWD
+make app
+make enclave.so PLATFORM=imx8mq
+popd
+
+cp -v ../sgx_anytee_enclave/$ENCLV/app ../initramfs-aarch64/bin/enclave_app
+cp -r ../sgx_anytee_enclave/$ENCLV/App ../initramfs-aarch64/App
+cp -r ../sgx_anytee_enclave/$ENCLV/nbenchPortal ../initramfs-aarch64/
+
+compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave clean
+compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave -j16
+
+cp -v ../bao-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin \
+      ../initramfs-aarch64/enclave.signed.so
+
+cd ../linux/
+#cp ../linux-aarch64-qemu.config build-aarch64/.config
+make \
+    CROSS_COMPILE=aarch64-none-linux-gnu- \
+    ARCH=arm64 \
+    -j16 \
+    O=build-aarch64
 cd -
 
-cd ~/PhD/Research/MSc/baoEnclave/benchmarks/cma_malloc
-aarch64-none-linux-gnu-gcc userspace/finalApp.c userspace/src/tx.c userspace/src/baoenclave.c userspace/src/contiguousMalloc.c -g -static -I./userspace/inc/ -o wallet
-sudo cp -vr userspace /media/david/root/my_applications/
-sudo cp -vr wallet /media/david/root/my_applications/
-cd -
+make -C ../lloader \
+    IMAGE=../linux/build-aarch64/arch/arm64/boot/Image  \
+    DTB=../baoEnclave_ws/qemu.dtb TARGET=linux-aarch64-imx.bin \
+    ARCH=aarch64 \
+    clean
 
-compiledb make PLATFORM=imx8mq CONFIG=wallet -j16
-sudo cp -v ~/PhD/Research/MSc/baoEnclave/benchmarks/bao-hypervisor/configs/wallet/wallet.bin /media/david/root/my_configs/enclave_config.bin
+make -C ../lloader \
+    IMAGE=../linux/build-aarch64/arch/arm64/boot/Image \
+    DTB=../linux/build-aarch64/arch/arm64/boot/dts/freescale/imx8mq-evk.dtb \
+    TARGET=linux-aarch64-imx.bin \
+    ARCH=aarch64
+
+make clean ;
+compiledb make \
+    PLATFORM=imx8mq \
+    CONFIG_BUILTIN=y \
+    CONFIG=enclave_imx \
+    OPTIMIZATIONS=0
 
 
-cd ~/PhD/Research/MSc/baoEnclave/debug_vmstack/linux 
-make CROSS_COMPILE=aarch64-none-linux-gnu- ARCH=arm64 -j16
-cd -
 
-cd ~/PhD/Research/MSc/baoEnclave/benchmarks/lloader
-./runme.sh
-cd -
 
-make PLATFORM=imx8mq CONFIG_BUILTIN=y CONFIG=enclave DEBUG=y -j16
 
-cd ~/PhD/Research/MSc/baoEnclave/benchmarks/imx-mkimage
+cd ../imx-mkimage
 ./steps.sh
 cd -

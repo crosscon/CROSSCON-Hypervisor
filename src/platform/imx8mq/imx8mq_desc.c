@@ -17,7 +17,7 @@
 #include <platform.h>
 
 struct platform_desc platform = {
-    .cpu_num = 4,
+    .cpu_num = 1,
     .region_num = 1,
     .regions =  (struct mem_region[]) {
         {

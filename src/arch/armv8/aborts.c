@@ -199,5 +199,5 @@ void aborts_sync_handler()
     if (handler)
         handler(iss, ipa_fault_addr, il);
     else
-        ERROR("no handler for abort ec = 0x%x", ec);  // unknown guest exception
+        ERROR("no handler for abort ec = 0x%x iss: 0x%x", ec, iss);  // unknown guest exception
 }

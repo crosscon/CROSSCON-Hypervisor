@@ -127,7 +127,6 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             INFO("Enclave Created");
             break;
         case BAOENCLAVE_RESUME:
-            INFO("Resume Enclave");
             if((child = vcpu_get_child(cpu.vcpu, arg0)) != NULL){
                 vmstack_push(child);
 		vcpu_writereg(cpu.vcpu, 1, arg1);
@@ -137,7 +136,6 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             }
             break;
         case BAOENCLAVE_EXIT:
-            INFO("Enclave Exit");
             vmstack_pop();
             break;
         case BAOENCLAVE_DELETE: //ver alloc
@@ -174,9 +172,20 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             INFO("Enclave Destroyed");
             break;
         case BAOENCLAVE_ADD_RGN:
-            if ((child = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
-                vmstack_push(child);
+            if ((child = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
+		res = -HC_E_FAILURE;
+		break;
             }
+            mem_guest_ipa_translate((void*)arg1, &physical_address);
+	    struct ppages ppages = mem_ppages_get(physical_address, 1);
+	    vaddr_t va = mem_alloc_vpage(&child->vm->as, SEC_VM_ANY, (vaddr_t)arg2, 1);
+	    if(!va) {
+		ERROR("mem_alloc_vpage failed %s", __func__);
+	    }
+	    if (!mem_map(&child->vm->as, va, &ppages, 1, PTE_VM_FLAGS)) {
+		ERROR("mem_map failed %s", __func__);
+	    }
+
 	    break;
         default:
             res = -HC_E_FAILURE;

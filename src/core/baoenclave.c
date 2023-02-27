@@ -76,12 +76,13 @@ void alloc_baoenclave(void* vm_ptr, uint64_t donor_va)
 }
 
 enum {
-    BAOENCLAVE_CREATE = 0,
-    BAOENCLAVE_RESUME = 1,
-    BAOENCLAVE_GOTO = 2,
-    BAOENCLAVE_EXIT = 3,
-    BAOENCLAVE_DELETE = 4,
-    BAOENCLAVE_ADD_RGN = 5
+    BAOENCLAVE_CREATE  = 0,
+    BAOENCLAVE_CALL    = 1,
+    BAOENCLAVE_RESUME  = 2,
+    BAOENCLAVE_GOTO    = 3,
+    BAOENCLAVE_EXIT    = 4,
+    BAOENCLAVE_DELETE  = 5,
+    BAOENCLAVE_ADD_RGN = 6
 };
 
 int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
@@ -118,25 +119,41 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 
             /* Create enclave */
             struct vm *enclave = vmm_init_dynamic(config_ptr, arg1);
+		/* return the enclave id to the creator */
+	    vcpu_writereg(cpu.vcpu, 1, enclave->id);
+	    cpu.vcpu->nclv_data.initialized = false;
 
 	    /* init */
 	    /* TODO use parent vm.vcpu.id*/
 	    struct vcpu *enclave_vcpu = vm_get_vcpu(enclave, 0);
 	    vmstack_push(enclave_vcpu);
+	    enclave_vcpu->nclv_data.initialized = false;
 
             INFO("Enclave Created");
+	    vcpu_writereg(cpu.vcpu, 0, 0);
             break;
         case BAOENCLAVE_RESUME:
-            if((child = vcpu_get_child(cpu.vcpu, arg0)) != NULL){
+            if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
                 vmstack_push(child);
-		vcpu_writereg(cpu.vcpu, 1, arg1);
-
             } else {
                 res = -HC_E_INVAL_ARGS;
+		vcpu_writereg(cpu.vcpu, 0, res);
+            }
+            break;
+	case BAOENCLAVE_CALL:
+            if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
+                vmstack_push(child);
+		vcpu_writereg(cpu.vcpu, 1, arg1);
+            } else {
+                res = -HC_E_INVAL_ARGS;
+		vcpu_writereg(cpu.vcpu, 0, res);
             }
             break;
         case BAOENCLAVE_EXIT:
+	    /* this is just a hack */
+	    cpu.vcpu->nclv_data.initialized = true;
             vmstack_pop();
+	    res = 0;
             break;
         case BAOENCLAVE_DELETE: //ver alloc
 
@@ -170,6 +187,7 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             }
 
             INFO("Enclave Destroyed");
+	    vcpu_writereg(cpu.vcpu, 0, 0);
             break;
         case BAOENCLAVE_ADD_RGN:
             if ((child = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
@@ -185,10 +203,13 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 	    if (!mem_map(&child->vm->as, va, &ppages, 1, PTE_VM_FLAGS)) {
 		ERROR("mem_map failed %s", __func__);
 	    }
+	    vcpu_writereg(cpu.vcpu, 0, 0);
 
 	    break;
         default:
+	    ERROR("Uknown command %d from vm %u", fid, cpu.vcpu->vm->id);
             res = -HC_E_FAILURE;
+	    vcpu_writereg(cpu.vcpu, 0, res);
     }
 
     if (vcpu_is_off(cpu.vcpu)) {

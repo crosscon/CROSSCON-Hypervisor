@@ -122,8 +122,7 @@ void cpu_idle_wakeup()
 }
 
 void cpu_add_vcpu(struct vcpu * vcpu){
-    struct vcpu* node = objcache_alloc(&partition->nodes);
-    list_push(&cpu.vcpus, (node_t*) node);  
+    list_push(&cpu.vcpus, (node_t*) vcpu);  
 }
 
 struct vcpu* cpu_get_vcpu(uint64_t vmid){

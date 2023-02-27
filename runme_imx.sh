@@ -43,18 +43,26 @@ ENCLV="sgx-nbench"
 #ENCLV=sample_enclave
 
 pushd ../sgx_anytee_enclave/
-. sourceme.sh
-echo $PWD
-echo $ENCLV
-cd ${ENCLV}
-echo $PWD
-make app
-make enclave.so PLATFORM=imx8mq
+    . sourceme.sh
+    cd sdk
+    find . -name "*.o" -delete
+    find . -name "*.a" -delete
+    make all -j16
+    cd -
+    cd ${ENCLV}
+    cd App
+    find . -name "*.o" -delete
+    cd -
+    make app
+
+    rm -r ../sdk/libOS/build* || true
+    make enclave.so PLATFORM=imx8mq
 popd
 
 cp -v ../sgx_anytee_enclave/$ENCLV/app ../initramfs-aarch64/bin/enclave_app
 cp -r ../sgx_anytee_enclave/$ENCLV/App ../initramfs-aarch64/App
 cp -r ../sgx_anytee_enclave/$ENCLV/nbenchPortal ../initramfs-aarch64/
+cp -r ../sgx_anytee_enclave/$ENCLV/../nbench/nbench ../initramfs-aarch64/bin/nbench
 
 compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave clean
 compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave -j16

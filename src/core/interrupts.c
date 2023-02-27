@@ -68,7 +68,10 @@ inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id)
 {
    interrupts_arch_vm_inject(vcpu, id);
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
-       //vmstack_unwind(vcpu);
+       if(cpu.vcpu->nclv_data.initialized == false)
+	   return;
+       vmstack_unwind(vcpu);
+       vcpu_writereg(cpu.vcpu, 0, 1);
    }
 }
 

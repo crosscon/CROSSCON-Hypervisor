@@ -18,3 +18,8 @@
 void config_arch_adjust_to_va(struct config *config, paddr_t phys)
 {
 }
+
+void config_arch_vm_adjust_to_va(struct vm_config *vm_config, struct config* config, paddr_t phys)
+{
+
+}

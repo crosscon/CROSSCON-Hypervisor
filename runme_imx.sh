@@ -45,8 +45,8 @@ ENCLV="sgx-nbench"
 pushd ../sgx_anytee_enclave/
     . sourceme.sh
     cd sdk
-    find . -name "*.o" -delete
-    find . -name "*.a" -delete
+    # find . -name "*.o" -delete
+    # find . -name "*.a" -delete
     make all -j16
     cd -
     cd ${ENCLV}
@@ -64,7 +64,9 @@ cp -r ../sgx_anytee_enclave/$ENCLV/App ../initramfs-aarch64/App
 cp -r ../sgx_anytee_enclave/$ENCLV/nbenchPortal ../initramfs-aarch64/
 cp -r ../sgx_anytee_enclave/$ENCLV/../nbench/nbench ../initramfs-aarch64/bin/nbench
 
-compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave clean
+sed -i "s/.*::respawn:\/bin\/ash/ttymxc0::respawn:\/bin\/ash/" ../initramfs-aarch64/etc/inittab
+
+make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave clean
 compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave -j16
 
 cp -v ../bao-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin \
@@ -78,12 +80,6 @@ make \
     -j16 \
     O=build-aarch64
 cd -
-
-make -C ../lloader \
-    IMAGE=../linux/build-aarch64/arch/arm64/boot/Image  \
-    DTB=../baoEnclave_ws/qemu.dtb TARGET=linux-aarch64-imx.bin \
-    ARCH=aarch64 \
-    clean
 
 make -C ../lloader \
     IMAGE=../linux/build-aarch64/arch/arm64/boot/Image \

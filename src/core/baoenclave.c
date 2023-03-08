@@ -82,13 +82,16 @@ enum {
     BAOENCLAVE_GOTO    = 3,
     BAOENCLAVE_EXIT    = 4,
     BAOENCLAVE_DELETE  = 5,
-    BAOENCLAVE_ADD_RGN = 6
+    BAOENCLAVE_ADD_RGN = 6,
+    BAOENCLAVE_INFO = 7,
 };
 
 int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
                                      uint64_t arg2)
 {
     int64_t res = HC_E_SUCCESS;
+    static unsigned int n_calls = 0;
+    static unsigned int n_resumes = 0;
 
     size_t c_size;
     size_t full_size;
@@ -133,6 +136,7 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 	    vcpu_writereg(cpu.vcpu, 0, 0);
             break;
         case BAOENCLAVE_RESUME:
+	    n_resumes++;
             if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
                 vmstack_push(child);
             } else {
@@ -141,6 +145,7 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             }
             break;
 	case BAOENCLAVE_CALL:
+	    n_calls++;
             if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
                 vmstack_push(child);
 		vcpu_writereg(cpu.vcpu, 1, arg1);
@@ -151,7 +156,11 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             break;
         case BAOENCLAVE_EXIT:
 	    /* this is just a hack */
-	    cpu.vcpu->nclv_data.initialized = true;
+	    if (!cpu.vcpu->nclv_data.initialized){
+		cpu.vcpu->nclv_data.initialized = true;
+		INFO("VM %d initialized\n", cpu.vcpu->vm->id);
+	    }
+
             vmstack_pop();
 	    res = 0;
             break;
@@ -206,6 +215,14 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 	    vcpu_writereg(cpu.vcpu, 0, 0);
 
 	    break;
+	case BAOENCLAVE_INFO:
+	    vcpu_writereg(cpu.vcpu, 1, n_calls);
+	    vcpu_writereg(cpu.vcpu, 2, n_resumes);
+	    vcpu_writereg(cpu.vcpu, 0, res);
+	    n_calls = 0;
+	    n_resumes = 0;
+	    break;
+
         default:
 	    ERROR("Uknown command %d from vm %u", fid, cpu.vcpu->vm->id);
             res = -HC_E_FAILURE;

@@ -59,6 +59,9 @@ struct vm_arch {
 struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
+
+    unsigned long hstatus;
+    unsigned long sstatus;
 };
 
 struct arch_regs {
@@ -99,10 +102,7 @@ struct arch_regs {
         };
     };
 
-    unsigned long hstatus;
-    unsigned long sstatus;
     unsigned long sepc;
-
     // unsigned long vsstatus;
     // unsigned long vsie;
     // unsigned long vstvec;

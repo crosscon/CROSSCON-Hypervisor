@@ -42,8 +42,8 @@ void vcpu_arch_reset(struct vcpu *vcpu, vaddr_t entry)
 {
     memset(vcpu->regs, 0, sizeof(struct arch_regs));
 
-    vcpu->regs->hstatus = HSTATUS_SPV | HSTATUS_VSXL_64;
-    vcpu->regs->sstatus = SSTATUS_SPP_BIT | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
+    vcpu->arch.hstatus = HSTATUS_SPV | HSTATUS_VSXL_64;
+    vcpu->arch.sstatus = SSTATUS_SPP_BIT | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
     vcpu->regs->sepc = entry;
     vcpu->regs->a0 = vcpu->arch.hart_id = vcpu->id;
     vcpu->regs->a1 = 0;  // according to sbi it should be the dtb load address
@@ -101,9 +101,9 @@ void vcpu_arch_run(struct vcpu *vcpu){
 void vcpu_save_state(struct vcpu* vcpu){
     if(vcpu == NULL) return;
 
-    vcpu->arch.hstatus = CSRR(HSTATUS);
-    vcpu->arch.sstatus = CSRR(SSTATUS);
-    vcpu->arch.sepc    = CSRR(SEPC);
+    vcpu->arch.hstatus = CSRR(CSR_HSTATUS);
+    vcpu->arch.sstatus = CSRR(sstatus);
+    vcpu->regs->sepc    = CSRR(sepc);
 
     /* vgic_save_state(vcpu); */
     /* vtimer_save_state(vcpu); */
@@ -111,9 +111,9 @@ void vcpu_save_state(struct vcpu* vcpu){
 
 void vcpu_restore_state(struct vcpu* vcpu){                                          //o registo é escrito aqui
     if(vcpu == NULL) return;
-    CSRW(HSTATUS, vcpu->arch.hstatus);
-    CSRW(SSTATUS, vcpu->arch.sstatus);
-    CSRW(SEPC, vcpu->arch.sepc);
+    CSRW(CSR_HSTATUS, vcpu->arch.hstatus);
+    CSRW(sstatus, vcpu->arch.sstatus);
+    CSRW(sepc, vcpu->regs->sepc);
 
     /* vgic_restore_state(vcpu); */
     /* vtimer_restore_state(vcpu); */

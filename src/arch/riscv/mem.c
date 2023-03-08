@@ -76,3 +76,8 @@ bool mem_translate(struct addr_space *as, vaddr_t va, paddr_t *pa)
         return false;
     }
 }
+
+void mem_guest_ipa_translate(void* va, uint64_t* physical_address)
+{
+
+}

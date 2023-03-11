@@ -20,8 +20,6 @@
 #include <cpu.h>
 #include <string.h>
 
-int cpu_different;
-
 void vmstack_push(struct vcpu* vcpu){
 
     if(cpu.vcpu != NULL && vcpu->state != VCPU_INACTIVE){

@@ -29,8 +29,6 @@ struct config* vm_config_ptr;
 
 struct partition* const partition = (struct partition*)BAO_VM_BASE;
 
-extern int cpu_different;
-
 static void* vmm_alloc_vm_struct()
 {
     size_t vm_npages = ALIGN(sizeof(struct vm), PAGE_SIZE) / PAGE_SIZE;
@@ -124,7 +122,6 @@ struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
     /* TODO */
     list_push(&cpu.vcpu->children, (void*)list_peek(&enclave->vcpu_list));
 
-    cpu_different = cpu.id;
     return enclave;
 }
 

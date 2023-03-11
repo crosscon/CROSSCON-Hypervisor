@@ -21,6 +21,7 @@
 #include <fences.h>
 #include <hypercall.h>
 #include <vmstack.h>
+#include <tee.h>
 
 #define SBI_EXTID_BASE (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID (0)
@@ -440,6 +441,9 @@ struct sbiret sbi_bao_handler(unsigned long fid){
             break;
         case HC_ENCLAVE:
             ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3);
+            break;
+        case HC_TEE:
+            ret.value = tee_hypercall(arg0, arg1, arg2, arg3);
             break;
         default:
             ret.error = -HC_E_INVAL_ID;

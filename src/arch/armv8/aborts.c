@@ -26,6 +26,7 @@
 #include <ipc.h>
 #include <vmstack.h>
 #include <baoenclave.h>
+#include <tee.h>
 
 typedef void (*abort_handler_t)(uint64_t, uint64_t, uint64_t);
 
@@ -145,6 +146,9 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
             break;
         case HC_ENCLAVE:
             baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
+            break;
+        case HC_TEE:
+            ret = tee_hypercall(x0 & 0xffff, x1, x2, x3);
             break;
     }
 

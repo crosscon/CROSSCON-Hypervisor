@@ -27,3 +27,4 @@ core-objs-y+=iommu.o
 core-objs-y+=ipc.o
 core-objs-y+=vmstack.o
 core-objs-y+=baoenclave.o
+core-objs-y+=tee.o

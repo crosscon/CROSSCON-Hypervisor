@@ -51,8 +51,8 @@
 #define PTE_RSW_LEN 2
 #define PTE_RSW_MSK PTE_MASK(PTE_RSW_OFF, PTE_RSW_LEN)
 
-#define PTE_TABLE (0)
-#define PTE_PAGE (PTE_RWX)
+#define PTE_TABLE (PTE_VALID)
+#define PTE_PAGE (PTE_RWX | PTE_VALID)
 #define PTE_SUPERPAGE (PTE_PAGE)
 
 /* ------------------------------------------------------------- */
@@ -71,10 +71,10 @@
 #define PT_VM_REC_IND (pt_nentries(&cpu.as.pt, 0) - 2)
 
 #define PTE_INVALID (0)
-#define PTE_HYP_FLAGS (PTE_VALID | PTE_GLOBAL | PTE_ACCESS | PTE_DIRTY)
+#define PTE_HYP_FLAGS (PTE_GLOBAL | PTE_ACCESS | PTE_DIRTY)
 #define PTE_HYP_DEV_FLAGS PTE_HYP_FLAGS
 
-#define PTE_VM_FLAGS (PTE_VALID | PTE_ACCESS | PTE_DIRTY | PTE_USER)
+#define PTE_VM_FLAGS (PTE_ACCESS | PTE_DIRTY | PTE_USER)
 #define PTE_VM_DEV_FLAGS PTE_VM_FLAGS
 
 #ifndef __ASSEMBLER__
@@ -82,10 +82,13 @@
 typedef uint64_t pte_t;
 
 struct page_table;
+typedef pte_t pte_type_t;
+typedef pte_t pte_flags_t;
 
-static inline void pte_set(pte_t* pte, paddr_t addr, pte_t flags)
+static inline void pte_set(pte_t* pte, paddr_t addr, pte_type_t type, pte_flags_t flags)
 {
-    *pte = ((addr & PTE_ADDR_MSK) >> 2) | (flags & PTE_FLAGS_MSK);
+    *pte = ((addr & PTE_ADDR_MSK) >> 2) | 
+        (((type == PTE_TABLE) ? type : (type | flags)) & PTE_FLAGS_MSK);
 }
 
 static inline paddr_t pte_addr(pte_t* pte)
@@ -98,12 +101,12 @@ static inline bool pte_valid(pte_t* pte)
     return (*pte & PTE_VALID);
 }
 
-static inline void pte_set_rsw(pte_t* pte, pte_t flag)
+static inline void pte_set_rsw(pte_t* pte, pte_flags_t flag)
 {
     *pte = (*pte & ~PTE_RSW_MSK) | (flag & PTE_RSW_MSK);
 }
 
-static inline bool pte_check_rsw(pte_t* pte, pte_t flag)
+static inline bool pte_check_rsw(pte_t* pte, pte_flags_t flag)
 {
     return (*pte & PTE_RSW_MSK) == (flag & PTE_RSW_MSK);
 }

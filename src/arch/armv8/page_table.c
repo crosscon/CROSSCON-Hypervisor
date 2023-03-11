@@ -48,7 +48,7 @@ void pt_set_recursive(struct page_table* pt, size_t index)
     paddr_t pa;
     mem_translate(&cpu.as, (vaddr_t)pt->root, &pa);
     pte_t* pte = cpu.as.pt.root + index;
-    pte_set(pte, pa, PTE_TABLE | PTE_HYP_FLAGS);
+    pte_set(pte, pa, PTE_TABLE, PTE_HYP_FLAGS);
     pt->root_flags &= ~PT_ROOT_FLAGS_REC_IND_MSK;
     pt->root_flags |=
         (index << PT_ROOT_FLAGS_REC_IND_OFF) & PT_ROOT_FLAGS_REC_IND_MSK;

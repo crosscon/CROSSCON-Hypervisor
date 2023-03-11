@@ -26,6 +26,11 @@ struct list {
     spinlock_t lock;
 };
 
+struct node_data {
+    node_t node;
+    void* data;
+};
+
 #define list_foreach(list, type, nodeptr)                     \
     for (type* nodeptr = ((type*)list.head); nodeptr != NULL; \
          nodeptr = *((type**)nodeptr))

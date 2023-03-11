@@ -155,6 +155,7 @@ void sync_exception_handler()
 {
     size_t pc_step = 0;
     unsigned long _scause = CSRR(scause);
+    struct vcpu *calling_cpu = cpu.vcpu;
 
     if(!(CSRR(CSR_HSTATUS) & HSTATUS_SPV)) {
         internal_exception_handler(&cpu.vcpu->regs->x[0]);
@@ -166,8 +167,8 @@ void sync_exception_handler()
     if (_scause < sync_handler_table_size && sync_handler_table[_scause]) {
         pc_step = sync_handler_table[_scause]();
     } else {
-        ERROR("unkown synchronous exception (%d)", _scause);
+        ERROR("unkown synchronous exception (%d) at 0x%lx", _scause, CSRR(sepc));
     }
 
-    cpu.vcpu->regs->sepc += pc_step;
+    calling_cpu->regs->sepc += pc_step;
 }

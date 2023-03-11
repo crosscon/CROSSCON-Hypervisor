@@ -54,14 +54,12 @@
 
 struct vm_arch {
     struct vplic vplic;
+    unsigned long hgatp;
 };
 
 struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
-
-    unsigned long hstatus;
-    unsigned long sstatus;
 };
 
 struct arch_regs {
@@ -102,16 +100,19 @@ struct arch_regs {
         };
     };
 
+    unsigned long hstatus;
+    unsigned long sstatus;
     unsigned long sepc;
-    // unsigned long vsstatus;
-    // unsigned long vsie;
-    // unsigned long vstvec;
-    // unsigned long vsscratch;
-    // unsigned long vsepc;
-    // unsigned long vscause;
-    // unsigned long vstval;
-    // unsigned long vsip;
-    // unsigned long vsatp;
+
+    unsigned long vsstatus;
+    unsigned long vstvec;
+    unsigned long vsscratch;
+    unsigned long vsepc;
+    unsigned long vscause;
+    unsigned long vstval;
+    unsigned long vsatp;
+    unsigned long hvip;
+    unsigned long hie;
 
 } __attribute__((__packed__, aligned(sizeof(unsigned long))));
 

@@ -20,6 +20,7 @@
 #include <bitmap.h>
 #include <fences.h>
 #include <hypercall.h>
+#include <vmstack.h>
 
 #define SBI_EXTID_BASE (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID (0)
@@ -428,14 +429,23 @@ struct sbiret sbi_bao_handler(unsigned long fid){
     unsigned long arg0 = vcpu_readreg(cpu.vcpu, REG_A0);
     unsigned long arg1 = vcpu_readreg(cpu.vcpu, REG_A1);
     unsigned long arg2 = vcpu_readreg(cpu.vcpu, REG_A2);
+    unsigned long arg3 = vcpu_readreg(cpu.vcpu, REG_A3);
 
     switch(fid) {
         case HC_IPC:
-                ret.error = ipc_hypercall(arg0, arg1, arg2);
+            ret.value = ipc_hypercall(arg0, arg1, arg2);
+            break;
+        case HC_VMSTACK:
+            ret.value  = vmstack_hypercall(arg0, arg1, arg2, arg3);
+            break;
+        case HC_ENCLAVE:
+            ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3);
             break;
         default:
             ret.error = -HC_E_INVAL_ID;
    }
+
+   ret.error = ret.value  < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
 
    return ret;
 }
@@ -445,6 +455,7 @@ size_t sbi_vs_handler()
     unsigned long extid = vcpu_readreg(cpu.vcpu, REG_A7);
     unsigned long fid = vcpu_readreg(cpu.vcpu, REG_A6);
     struct sbiret ret;
+    struct vcpu *calling_cpu = cpu.vcpu;
 
     switch (extid) {
         case SBI_EXTID_BASE:
@@ -471,8 +482,8 @@ size_t sbi_vs_handler()
             ret.value = SBI_ERR_NOT_SUPPORTED;
     }
 
-    vcpu_writereg(cpu.vcpu, REG_A0, ret.error);
-    vcpu_writereg(cpu.vcpu, REG_A1, ret.value);
+    vcpu_writereg(calling_cpu, REG_A0, ret.error);
+    vcpu_writereg(calling_cpu, REG_A1, ret.value);
 
     return 4;
 }

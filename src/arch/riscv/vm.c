@@ -28,7 +28,7 @@ void vm_arch_init(struct vm *vm, const struct vm_config *config)
     unsigned long hgatp = (root_pt_pa >> PAGE_SHIFT) | (HGATP_MODE_DFLT) |
                           ((vm->id << HGATP_VMID_OFF) & HGATP_VMID_MSK);
 
-    CSRW(CSR_HGATP, hgatp);
+    vm->arch.hgatp = hgatp;
 
     vplic_init(vm, platform.arch.plic_base);
 }
@@ -42,8 +42,8 @@ void vcpu_arch_reset(struct vcpu *vcpu, vaddr_t entry)
 {
     memset(vcpu->regs, 0, sizeof(struct arch_regs));
 
-    vcpu->arch.hstatus = HSTATUS_SPV | HSTATUS_VSXL_64;
-    vcpu->arch.sstatus = SSTATUS_SPP_BIT | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
+    vcpu->regs->hstatus = HSTATUS_SPV | HSTATUS_VSXL_64;
+    vcpu->regs->sstatus= SSTATUS_SPP_BIT | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
     vcpu->regs->sepc = entry;
     vcpu->regs->a0 = vcpu->arch.hart_id = vcpu->id;
     vcpu->regs->a1 = 0;  // according to sbi it should be the dtb load address
@@ -101,20 +101,39 @@ void vcpu_arch_run(struct vcpu *vcpu){
 void vcpu_save_state(struct vcpu* vcpu){
     if(vcpu == NULL) return;
 
-    vcpu->arch.hstatus = CSRR(CSR_HSTATUS);
-    vcpu->arch.sstatus = CSRR(sstatus);
+    vcpu->regs->hstatus = CSRR(CSR_HSTATUS);
+    vcpu->regs->sstatus= CSRR(sstatus);
     vcpu->regs->sepc    = CSRR(sepc);
 
+    vcpu->regs->vsstatus = CSRR(CSR_VSSTATUS);
+    vcpu->regs->vstvec = CSRR(CSR_VSTVEC);
+    vcpu->regs->vsscratch = CSRR(CSR_VSSCRATCH);
+    vcpu->regs->vsepc = CSRR(CSR_VSEPC);
+    vcpu->regs->vscause = CSRR(CSR_VSCAUSE);
+    vcpu->regs->vsatp = CSRR(CSR_VSATP);
+
+    vcpu->regs->vstval = CSRR(CSR_VSTVAL);
+    vcpu->regs->hvip = CSRR(CSR_HVIP);
+    vcpu->regs->hie = CSRR(CSR_HIE);
+    
     /* vgic_save_state(vcpu); */
     /* vtimer_save_state(vcpu); */
 }
 
-void vcpu_restore_state(struct vcpu* vcpu){                                          //o registo é escrito aqui
+void vcpu_restore_state(struct vcpu* vcpu){
     if(vcpu == NULL) return;
-    CSRW(CSR_HSTATUS, vcpu->arch.hstatus);
-    CSRW(sstatus, vcpu->arch.sstatus);
-    CSRW(sepc, vcpu->regs->sepc);
 
-    /* vgic_restore_state(vcpu); */
-    /* vtimer_restore_state(vcpu); */
+    // hstatus, sstatus ans sepc are restored in vcpu_arch_entry
+
+    CSRW(CSR_VSSTATUS, vcpu->regs->vsstatus);
+    CSRW(CSR_VSTVEC, vcpu->regs->vstvec);
+    CSRW(CSR_VSSCRATCH, vcpu->regs->vsscratch);
+    CSRW(CSR_VSEPC, vcpu->regs->vsepc);
+    CSRW(CSR_VSCAUSE, vcpu->regs->vscause);
+    CSRW(CSR_VSTVAL, vcpu->regs->vstval);
+    CSRW(CSR_VSATP, vcpu->regs->vsatp);
+    CSRW(CSR_HVIP, vcpu->regs->hvip);
+    CSRW(CSR_HIE, vcpu->regs->hie);
+
+    CSRW(CSR_HGATP, vcpu->vm->arch.hgatp);
 }

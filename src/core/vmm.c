@@ -226,7 +226,7 @@ void vmm_init()
             memset((void*)va, 0, vm_npages * PAGE_SIZE);
             cpu_sync_init(&partition->sync, vm_assign[vm_id].ncpus);
             partition->master = cpu.id;
-            objcache_init(&partition->nodes, sizeof(struct vcpu), SEC_HYP_VM,
+            objcache_init(&partition->nodes, sizeof(struct node_data), SEC_HYP_VM,
                           true);
             fence_ord_write();
             vm_assign[vm_id].vm_shared_table =

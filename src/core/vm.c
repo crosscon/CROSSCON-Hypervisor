@@ -451,10 +451,10 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
     struct vcpu* child = NULL;
-    list_foreach(vcpu->children, struct vcpu, _vcpu)
+    list_foreach(vcpu->children, struct node_data, node)
     {
         if (i++ == index) {
-            child = _vcpu;
+            child = node->data;
             break;
         }
     }

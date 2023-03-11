@@ -95,11 +95,18 @@ static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent
     }
     spin_unlock(&partition->lock);
 
-    if (assigned) {
-	vmid_t vm_id = vmm_alloc_vmid();
-        vm_init(vm, config, master, vm_id);
-	vcpu = (struct vcpu*)list_peek(&vm->vcpu_list);
-        cpu_sync_barrier(&vm->sync);
+    if(assigned){
+        vcpu = vm_init(vm, config, master, vmm_alloc_vmid());
+        for(int i = 0; i < config->children_num; i++){
+            struct vm_config* child_config = config->children[i];
+            struct vcpu* child = vmm_create_vms(child_config, vcpu); //TODO: do this without recursion
+            if(child != NULL){
+                struct node_data* node = objcache_alloc(&partition->nodes);
+                node->data = child;
+                list_push(&vcpu->children, (node_t*)node);
+            }
+            cpu_sync_barrier(&vm->sync);
+        }
     }
 
     return vcpu;

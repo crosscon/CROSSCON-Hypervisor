@@ -252,11 +252,6 @@ void vmm_init()
     ipc_init(vm_config, master);
 
     if (assigned) {
-/*
-        vm_init((struct vm*)BAO_VM_BASE, vm_config, master, vm_id);
-        vcpu_run(cpu.vcpu);
-*/
-	/* TODO */
         struct vcpu* root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
         vmstack_push(root);
         cpu_sync_barrier(&partition->sync);

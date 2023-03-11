@@ -52,7 +52,7 @@ void vm_cpu_init(struct vm* vm)
     spin_unlock(&vm->lock);
 }
 
-void vm_vcpu_init(struct vm* vm, const struct vm_config* config)
+struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* config)
 {
     size_t n = NUM_PAGES(sizeof(struct vcpu));
     struct vcpu* vcpu = (struct vcpu*)mem_alloc_page(n, SEC_HYP_VM, false);
@@ -89,6 +89,8 @@ void vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     vcpu_arch_reset(vcpu, config->entry);
 
     cpu_add_vcpu(vcpu);
+
+    return vcpu;
 }
 
 void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
@@ -286,7 +288,7 @@ void vm_init_dynamic(struct vm* vm, const struct vm_config* config, uint64_t vm_
     vm_init_ipc(vm, config);
 }
 
-void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
+struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
 {
     /**
      * Before anything else, initialize vm structure.
@@ -305,7 +307,7 @@ void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t 
     /*
      *  Initialize each virtual core.
      */
-    vm_vcpu_init(vm, config);
+    struct vcpu* vcpu = vm_vcpu_init(vm, config);
 
     cpu_sync_barrier(&vm->sync);
 
@@ -327,6 +329,8 @@ void vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t 
     }
 
     cpu_sync_barrier(&vm->sync);
+
+    return vcpu;
 }
 
 struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid)

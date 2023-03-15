@@ -60,6 +60,7 @@ struct vm_arch {
 struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
+    unsigned long stime_value;
 };
 
 struct arch_regs {

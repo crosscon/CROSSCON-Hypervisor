@@ -244,6 +244,9 @@ struct sbiret sbi_time_handler(unsigned long fid)
     uint64_t stime_value = vcpu_readreg(cpu.vcpu, REG_A0);
 
     sbi_set_timer(stime_value);  // assumes always success
+    cpu.vcpu->arch.stime_value = stime_value;
+    CSRC(CSR_HVIP, HIP_VSTIP);
+    CSRS(sie, SIE_STIE);
     CSRC(CSR_HVIP, HIP_VSTIP);
     CSRS(sie, SIE_STIE);
 
@@ -479,6 +482,7 @@ size_t sbi_vs_handler()
             break;
         case SBI_EXTID_BAO:
             ret = sbi_bao_handler(fid);
+	    goto out;
             break;
         default:
             WARNING("guest issued unsupport sbi extension call (%d)",
@@ -489,6 +493,7 @@ size_t sbi_vs_handler()
     vcpu_writereg(calling_cpu, REG_A0, ret.error);
     vcpu_writereg(calling_cpu, REG_A1, ret.value);
 
+out:
     return 4;
 }
 

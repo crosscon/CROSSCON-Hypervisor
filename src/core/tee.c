@@ -23,12 +23,19 @@
 #define OPTEE_MSG_FUNCID_CALL_WITH_ARG	U(0x0004)
 
 #define TEEHC_FUNCID_CLIENT_FLAG     (0x80000000)
-#define TEE_NUM_ARGS    (4)
+#define TEE_NUM_ARGS    (6)
 
 static inline void tee_copy_args(struct vcpu *vcpu_dst, struct vcpu *vcpu_src, size_t num_args) {
     for (size_t i = 0; i < num_args; i++) {
         size_t regid = HYPCALL_ARG_REG(i);
         vcpu_writereg(vcpu_dst, regid, vcpu_readreg(vcpu_src, regid));
+    }
+}
+
+static inline void tee_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu *vcpu_src, size_t num_args) {
+    for (size_t i = 0; i < num_args; i++) {
+        size_t regid = HYPCALL_ARG_REG(i);
+        vcpu_writereg(vcpu_dst, regid, vcpu_readreg(vcpu_src, regid+1));
     }
 }
 
@@ -45,10 +52,10 @@ int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) 
 
     struct vcpu *calling_vcpu = cpu.vcpu;
 
-    if (id & TEEHC_FUNCID_CLIENT_FLAG) {
+    if (calling_vcpu->vm->id == 2) {
         if (vmstack_pop() != NULL) {
-            tee_copy_args(cpu.vcpu, calling_vcpu, TEE_NUM_ARGS);
-            tee_clear_arg0_client_flag(cpu.vcpu);
+            tee_copy_args(cpu.vcpu, calling_vcpu, 6);
+            /* tee_clear_arg0_client_flag(cpu.vcpu); */
             ret = HC_E_SUCCESS;
         }
     } else {
@@ -57,7 +64,7 @@ int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) 
         if (ree_vcpu != NULL) {
             switch (id) {
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
-                    tee_copy_args(ree_vcpu, cpu.vcpu, TEE_NUM_ARGS);
+                    tee_copy_args_call_done(ree_vcpu, cpu.vcpu, 5);
                     /* fallthough */
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);

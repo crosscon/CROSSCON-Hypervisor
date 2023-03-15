@@ -1,14 +1,18 @@
 #include <platform.h>
 
+#define KB(x) ((x)*1024UL)
+#define MB(x) (KB(x)*1024UL)
+#define GB(x) (MB(x)*1024UL)
+
 struct platform_desc platform = {
 
-    .cpu_num = 4,
+    .cpu_num = 1,
 
     .region_num = 1,
     .regions =  (struct mem_region[]) {
         {
-            .base = 0x80200000,
-            .size = 0x100000000 - 0x200000
+            .base = GB(2) + MB(2), /* offset for SBI(?) */
+            .size = GB(4) - MB(2)
         }
     },
 

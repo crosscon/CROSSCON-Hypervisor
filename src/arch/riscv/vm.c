@@ -36,6 +36,7 @@ void vm_arch_init(struct vm *vm, const struct vm_config *config)
 void vcpu_arch_init(struct vcpu *vcpu, struct vm *vm) {
     vcpu->arch.sbi_ctx.lock = SPINLOCK_INITVAL;
     vcpu->arch.sbi_ctx.state = vcpu->id == 0 ?  STARTED : STOPPED;
+    vcpu->arch.stime_value = -1;
 }
 
 void vcpu_arch_reset(struct vcpu *vcpu, vaddr_t entry)
@@ -136,4 +137,9 @@ void vcpu_restore_state(struct vcpu* vcpu){
     CSRW(CSR_HIE, vcpu->regs->hie);
 
     CSRW(CSR_HGATP, vcpu->vm->arch.hgatp);
+    
+    /* TODO */
+    sbi_set_timer(vcpu->arch.stime_value);  // assumes always success
+    CSRC(CSR_HVIP, HIP_VSTIP);
+    CSRS(sie, SIE_STIE);
 }

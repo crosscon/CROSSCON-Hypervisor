@@ -42,6 +42,7 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     as_init(&vm->as, AS_VM, vm->id, NULL, config->colors);
 
     list_init(&vm->emul_list);
+    list_init(&vm->vcpu_list);
     objcache_init(&vm->emul_oc, sizeof(struct emul_node), SEC_HYP_VM, false);
 }
 
@@ -455,6 +456,15 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
     struct vcpu* child = NULL;
+    /*
+    list_foreach(vcpu->children, struct vcpu, _vcpu)
+    {
+        if (i++ == index) {
+            child = _vcpu;
+            break;
+        }
+    }
+    /*/
     list_foreach(vcpu->children, struct node_data, node)
     {
         if (i++ == index) {
@@ -462,5 +472,6 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
             break;
         }
     }
+    //*/
     return child;
 }

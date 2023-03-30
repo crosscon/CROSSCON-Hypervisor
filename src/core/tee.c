@@ -39,13 +39,6 @@ static inline void tee_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu *v
     }
 }
 
-static inline void tee_clear_arg0_client_flag(struct vcpu *vcpu) {
-    // Clear the clint flag from the first argument
-    unsigned long a0 =
-        vcpu_readreg(vcpu, HYPCALL_ARG_REG(0)) & ~(TEEHC_FUNCID_CLIENT_FLAG);
-    vcpu_writereg(vcpu, HYPCALL_ARG_REG(0), a0);
-}
-
 int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
 
     int64_t ret = -HC_E_FAILURE;

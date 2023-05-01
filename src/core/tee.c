@@ -40,7 +40,7 @@ static inline void tee_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu *v
     }
 }
 
-int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) {
+int64_t tee_handler(uint64_t id) {
 
     int64_t ret = -HC_E_FAILURE;
 
@@ -66,7 +66,7 @@ int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) 
 		    tee_arch_interrupt_enable();
                     break;
                 default:
-                    WARNING("unknown tee hypercal %d", id);
+                    WARNING("unknown tee call %d", id);
             }
             ret = HC_E_SUCCESS;
         }

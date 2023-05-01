@@ -120,7 +120,11 @@ struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
     vm_init_dynamic(enclave, enclave_config, vm_addr, vmid);
 
     /* TODO */
-    list_push(&cpu.vcpu->children, (void*)list_peek(&enclave->vcpu_list));
+    struct node_data* node = objcache_alloc(&partition->nodes);
+    /* TODO if more than one CPU is created obtain the vcpu for the current cpu */
+    struct vcpu* child = (struct vcpu*)list_peek(&enclave->vcpu_list);
+    node->data = child;
+    list_push(&cpu.vcpu->vmstack_children, (node_t*)node);
 
     return enclave;
 }

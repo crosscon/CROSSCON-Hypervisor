@@ -458,22 +458,12 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
     struct vcpu* child = NULL;
-    /*
-    list_foreach(vcpu->children, struct vcpu, _vcpu)
-    {
-        if (i++ == index) {
-            child = _vcpu;
-            break;
-        }
-    }
-    /*/
-    list_foreach(vcpu->children, struct node_data, node)
+    list_foreach(vcpu->vmstack_children, struct node_data, node)
     {
         if (i++ == index) {
             child = node->data;
             break;
         }
     }
-    //*/
     return child;
 }

@@ -139,7 +139,7 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
         case HC_IPC:
             ret = ipc_hypercall(x1, x2, x3);
 	    vcpu_writereg(cpu.vcpu, 0, ret);
-        break;
+	    break;
         case HC_VMSTACK:
             ret = vmstack_hypercall(x0 & 0xffff, x1, x2, x3);
 	    vcpu_writereg(cpu.vcpu, 0, ret);
@@ -147,11 +147,7 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
         case HC_ENCLAVE:
             baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
             break;
-        case HC_TEE:
-            ret = tee_hypercall(x0 & 0xffff, x1, x2, x3);
-            break;
     }
-
 }
 
 void sysreg_handler(uint64_t iss, uint64_t far, uint64_t il)

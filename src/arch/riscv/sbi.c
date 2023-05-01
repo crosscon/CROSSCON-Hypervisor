@@ -247,8 +247,6 @@ struct sbiret sbi_time_handler(unsigned long fid)
     cpu.vcpu->arch.stime_value = stime_value;
     CSRC(CSR_HVIP, HIP_VSTIP);
     CSRS(sie, SIE_STIE);
-    CSRC(CSR_HVIP, HIP_VSTIP);
-    CSRS(sie, SIE_STIE);
 
     return (struct sbiret){SBI_SUCCESS};
 }

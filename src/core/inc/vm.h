@@ -73,7 +73,7 @@ struct vcpu {
     enum { VCPU_OFF, VCPU_INACTIVE, VCPU_ACTIVE, VCPU_STACKED } state;
 
     struct vm* vm;
-    struct list children;
+    struct list vmstack_children;
     struct vcpu* parent;
     struct {
 	bool initialized;

@@ -101,7 +101,7 @@ static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent
             if(child != NULL){
                 struct node_data* node = objcache_alloc(&partition->nodes);
                 node->data = child;
-                list_push(&vcpu->children, (node_t*)node);
+                list_push(&vcpu->vmstack_children, (node_t*)node);
             }
             cpu_sync_barrier(&vm->sync);
         }

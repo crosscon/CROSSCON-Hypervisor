@@ -83,11 +83,13 @@ struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     vcpu->state = VCPU_INACTIVE;
     vcpu->parent = NULL;
 
-    list_init(&vcpu->children);
     list_push(&vm->vcpu_list, (node_t*)vcpu);
 
     vcpu_arch_init(vcpu, vm);
     vcpu_arch_reset(vcpu, config->entry);
+
+    /* vmstacking */
+    list_init(&vcpu->vmstack_children);
 
     cpu_add_vcpu(vcpu);
 

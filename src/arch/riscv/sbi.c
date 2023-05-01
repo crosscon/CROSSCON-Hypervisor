@@ -443,9 +443,6 @@ struct sbiret sbi_bao_handler(unsigned long fid){
         case HC_ENCLAVE:
             ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3);
             break;
-        case HC_TEE:
-            ret.value = tee_hypercall(arg0, arg1, arg2, arg3);
-            break;
         default:
             ret.error = -HC_E_INVAL_ID;
    }
@@ -482,6 +479,10 @@ size_t sbi_vs_handler()
             ret = sbi_bao_handler(fid);
 	    goto out;
             break;
+        case SBI_EXTID_TEE:
+            ret.value = tee_handler(fid);
+            break;
+
         default:
             WARNING("guest issued unsupport sbi extension call (%d)",
                     extid);

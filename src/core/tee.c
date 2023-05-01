@@ -1,6 +1,7 @@
 #include <tee.h>
 #include <hypercall.h>
 #include <vmstack.h>
+#include <arch/tee.h>
 
 #define TEEHC_FUNCID_RETURN_ENTRY_DONE          0
 #define TEEHC_FUNCID_RETURN_ON_DONE             1
@@ -47,6 +48,7 @@ int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) 
 
     if (calling_vcpu->vm->id == 2) {
         if (vmstack_pop() != NULL) {
+	    tee_arch_interrupt_disable();
             tee_copy_args(cpu.vcpu, calling_vcpu, 6);
             /* tee_clear_arg0_client_flag(cpu.vcpu); */
             ret = HC_E_SUCCESS;
@@ -61,6 +63,7 @@ int64_t tee_hypercall(uint64_t id, uint64_t arg0, uint64_t arg1, uint64_t arg2) 
                     /* fallthough */
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);
+		    tee_arch_interrupt_enable();
                     break;
                 default:
                     WARNING("unknown tee hypercal %d", id);

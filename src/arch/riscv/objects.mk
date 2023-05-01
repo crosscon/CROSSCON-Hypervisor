@@ -15,3 +15,4 @@ cpu-objs-y+=cache.o
 cpu-objs-y+=config.o
 cpu-objs-y+=iommu.o
 cpu-objs-y+=relocate.o
+cpu-objs-y+=tee.o

@@ -26,9 +26,10 @@ void as_arch_init(struct addr_space* as)
      * If the address space is a copy of an existing hypervisor space it's not
      * possible to use the PT_CPU_REC index to navigate it, so we have to use
      * the PT_VM_REC_IND.
+     * By using id dependent index we can host more than one VM per pcpu.
      */
     if (as->type == AS_HYP_CPY || as->type == AS_VM) {
-        index = PT_VM_REC_IND;
+        index = PT_VM_REC_IND - (8*(as->id-1)); /* LPAE is 8bytes per entry */
     } else {
         index = PT_CPU_REC_IND;
     }

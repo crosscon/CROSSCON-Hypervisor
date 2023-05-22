@@ -38,28 +38,6 @@ size_t gich_num_lrs()
     return ((gich.VTR & GICH_VTR_MSK) >> GICH_VTR_OFF) + 1;
 }
 
-/* TODO Begin */
-inline uint64_t gich_read_lr(size_t i)
-{
-    if (i < NUM_LRS) {
-        return gich.LR[i];
-    } else {
-        ERROR("gic: trying to read inexistent list register");
-    }
-}
-
-inline void gich_write_lr(size_t i, uint64_t val)
-{
-    if (i < NUM_LRS) {
-        gich.LR[i] = val;
-    } else {
-        ERROR("gic: trying to write inexistent list register");
-    }
-}
-
-
-
-
 uint32_t gich_get_apr(size_t i) 
 {
      if(i == 0) {

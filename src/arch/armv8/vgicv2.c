@@ -22,13 +22,6 @@
 #include <interrupts.h>
 #include <vm.h>
 
-bool vgic_int_vcpu_is_target(struct vcpu *vcpu, struct vgic_int *interrupt)
-{
-    bool priv = gic_is_priv(interrupt->id);
-    bool target = interrupt->targets & (1 << cpu.id);
-    return priv || target;
-}
-
 bool vgic_int_has_other_target(struct vcpu *vcpu, struct vgic_int *interrupt)
 {
     bool priv = gic_is_priv(interrupt->id);
@@ -212,6 +205,6 @@ void vgic_cpu_init(struct vcpu *vcpu)
 
     list_init(&vcpu->arch.vgic_spilled);
     /* TODO */
-    bitmap_set_consecutive((bitmap_t)&vcpu->arch.vgic_priv.gich.ELSR, 0,
+    bitmap_set_consecutive((bitmap_t*)&vcpu->arch.vgic_priv.gich.ELSR, 0,
                            NUM_LRS);
 }

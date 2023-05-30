@@ -131,7 +131,7 @@ override CPPFLAGS+=$(addprefix -I, $(inc_dirs)) $(arch-cppflags) $(platform-cppf
 vpath:.=CPPFLAGS
 
 ifeq ($(DEBUG), y)
-	debug_flags:=-g
+	debug_flags:=-gdwarf-4
 endif
 
 override CFLAGS+=-O$(OPTIMIZATIONS) -Wall -Werror -ffreestanding -std=gnu11 \

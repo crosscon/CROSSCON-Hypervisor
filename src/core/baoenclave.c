@@ -12,6 +12,19 @@
 
 struct config* enclave_cfg_ptr;
 
+enum {
+    BAOENCLAVE_CREATE  = 0,
+    BAOENCLAVE_ECALL   = 1,
+    BAOENCLAVE_OCALL   = 2,
+    BAOENCLAVE_RESUME  = 3,
+    BAOENCLAVE_GOTO    = 4,
+    BAOENCLAVE_EXIT    = 5,
+    BAOENCLAVE_DELETE  = 6,
+    BAOENCLAVE_ADD_RGN = 7,
+    BAOENCLAVE_INFO    = 8,
+    BAOENCLAVE_FAULT   = 9,
+};
+
 vaddr_t alloc_baoenclave_struct(uint64_t physical_address, size_t size)
 {
     struct ppages ppages = mem_ppages_get(physical_address, size);

@@ -80,6 +80,9 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
             ERROR("data abort emulation failed (0x%x)", far);
         }
     } else {
+	if(!baoenclave_handle_abort(addr)){
+	    return;
+	}
         ERROR("no emulation handler for abort(0x%x at 0x%x)", far,
               //cpu.vcpu->regs->elr_el2);
               vcpu_readpc(cpu.vcpu));

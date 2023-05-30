@@ -97,17 +97,6 @@ void alloc_baoenclave(void* vm_ptr, uint64_t donor_va)
     }
 }
 
-enum {
-    BAOENCLAVE_CREATE  = 0,
-    BAOENCLAVE_CALL    = 1,
-    BAOENCLAVE_RESUME  = 2,
-    BAOENCLAVE_GOTO    = 3,
-    BAOENCLAVE_EXIT    = 4,
-    BAOENCLAVE_DELETE  = 5,
-    BAOENCLAVE_ADD_RGN = 6,
-    BAOENCLAVE_INFO = 7,
-};
-
 void baoenclave_create(uint64_t doner_ipa)
 {
     uint64_t physical_address = 0;
@@ -165,8 +154,6 @@ void baoenclave_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t enclav
     if (!mem_map(&child->vm->as, va, &ppages, 1, PTE_VM_FLAGS)) {
 	ERROR("mem_map failed %s", __func__);
     }
-    /* invalidate donor TLBs */
-    tlb_vm_inv_all(cpu.vcpu->vm->id);
     /* invalidate enclave TLBs */
     tlb_vm_inv_all(child->vm->id);
 
@@ -216,16 +203,34 @@ void baoenclave_delete(uint64_t enclave_id, uint64_t arg1)
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
 
-void baoenclave_call(uint64_t enclave_id, uint64_t args)
+void baoenclave_ecall(uint64_t enclave_id, uint64_t args_addr, uint64_t sp_el0)
 {
     /* TODO: handle multiple child */
     int64_t res = HC_E_SUCCESS;
     struct vcpu* child = NULL;
     if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
-	uint64_t sp_el0 = cpu.vcpu->arch.sysregs.vm.sp_el0;
 	child->arch.sysregs.vm.sp_el0 = sp_el0;
 	vmstack_push(child);
-	vcpu_writereg(cpu.vcpu, 1, args);
+	vcpu_writereg(cpu.vcpu, 1, args_addr);
+	vcpu_writereg(cpu.vcpu, 2, sp_el0);
+    } else {
+	res = -HC_E_INVAL_ARGS;
+	vcpu_writereg(cpu.vcpu, 0, res);
+    }
+}
+
+
+void baoenclave_ocall(uint64_t idx, uint64_t ms)
+{
+    /* TODO: handle multiple child */
+    int64_t res = HC_E_SUCCESS;
+    struct vcpu* enclave = NULL;
+
+    enclave = vmstack_pop();
+    if(enclave != NULL){
+	vcpu_writereg(cpu.vcpu, 0, BAOENCLAVE_OCALL);
+	vcpu_writereg(cpu.vcpu, 1, enclave->regs->x[1]); /* SP to be updated */
+	vcpu_writereg(cpu.vcpu, 2, enclave->regs->x[2]); /* calloc size */
     } else {
 	res = -HC_E_INVAL_ARGS;
 	vcpu_writereg(cpu.vcpu, 0, res);
@@ -236,9 +241,10 @@ void baoenclave_resume(uint64_t enclave_id)
 {
     /* TODO: handle multiple child */
     int64_t res = HC_E_SUCCESS;
-    struct vcpu* child = NULL;
-    if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
-	vmstack_push(child);
+    struct vcpu* enclave = NULL;
+    if((enclave = vcpu_get_child(cpu.vcpu, 0)) != NULL){
+	/* vcpu_writereg(enclave, 2, cpu.vcpu->regs->x[2]); /1* calloc size *1/ */
+	vmstack_push(enclave);
     } else {
 	res = -HC_E_INVAL_ARGS;
 	vcpu_writereg(cpu.vcpu, 0, res);
@@ -275,9 +281,14 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 	    baoenclave_resume(arg0);
             break;
 
-	case BAOENCLAVE_CALL:
+	case BAOENCLAVE_ECALL:
 	    n_calls++;
-	    baoenclave_call(arg0, arg1);
+	    baoenclave_ecall(arg0, arg1, arg2);
+            break;
+
+	case BAOENCLAVE_OCALL:
+	    n_calls++;
+	    baoenclave_ocall(arg0, arg1);
             break;
 
         case BAOENCLAVE_EXIT:
@@ -314,4 +325,22 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
     }
 
     return res;
+}
+
+int baoenclave_handle_abort(unsigned long addr)
+{
+    int64_t res = HC_E_SUCCESS;
+    struct vcpu* enclave = NULL;
+    /* TODO: validate address space */
+
+    enclave = vmstack_pop();
+    if(enclave != NULL){
+	vcpu_writereg(cpu.vcpu, 0, BAOENCLAVE_FAULT);
+	vcpu_writereg(cpu.vcpu, 1, enclave->vm->id);
+	vcpu_writereg(cpu.vcpu, 2, addr);
+    } else {
+	res = -HC_E_INVAL_ARGS;
+	vcpu_writereg(cpu.vcpu, 0, res);
+    }
+    return 0;
 }

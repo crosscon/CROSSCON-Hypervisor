@@ -19,6 +19,7 @@
 #include <string.h>
 #include <mem.h>
 #include <cache.h>
+#include <baoenclave.h>
 
 enum emul_type {EMUL_MEM, EMUL_REG};
 struct emul_node {
@@ -277,18 +278,21 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* config)
       
 }
 
-void vm_init_dynamic(struct vm* vm, const struct vm_config* config, uint64_t vm_addr, vmid_t vmid)
+void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmid_t vmid)
 {
-    vm_master_init(vm, config, vmid);
+    vm_master_init(vm, config->vmlist[0], vmid);
     vm_cpu_init(vm);
 
-    vm_vcpu_init(vm, config);
-    vm_arch_init(vm, config);
+    vm_vcpu_init(vm, config->vmlist[0]);
+    vm_arch_init(vm, config->vmlist[0]);
 
-    alloc_baoenclave(vm, vm_addr);
+    baoenclave_donate(vm, config, vm_addr);
 
-    vm_init_dev(vm, config);
-    vm_init_ipc(vm, config);
+    vm_init_dev(vm, config->vmlist[0]);
+    vm_init_ipc(vm, config->vmlist[0]);
+
+    vm->enclave_house_keeping.donor_va = vm_addr;
+    vm->enclave_house_keeping.config = config;
 }
 
 struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)

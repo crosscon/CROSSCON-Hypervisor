@@ -7,10 +7,11 @@
 #include <string.h>
 #include <vmstack.h>
 #include <hypercall.h>
+#include "arch/page_table.h"
+#include "config.h"
+#include "util.h"
 
 #define MASK 3
-
-struct config* enclave_cfg_ptr;
 
 enum {
     BAOENCLAVE_CREATE  = 0,
@@ -25,102 +26,110 @@ enum {
     BAOENCLAVE_FAULT   = 9,
 };
 
-vaddr_t alloc_baoenclave_struct(uint64_t physical_address, size_t size)
+void baoenclave_donate(struct vm *nclv,  struct config *config, uint64_t donor_ipa)
 {
-    struct ppages ppages = mem_ppages_get(physical_address, size);
-    vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, (vaddr_t)NULL, size);
-    if (!mem_map(&cpu.as, va, &ppages, size, PTE_HYP_FLAGS)) {
-        ERROR("mem_map failed %s", __func__);
-    }
+    struct vm_config* nclv_cfg = config->vmlist[0];
 
-    return va;
-}
+    struct mem_region img_rgn = {
+	.phys = nclv_cfg->image.load_addr,
+	.base = nclv_cfg->image.base_addr,
+	.size = ALIGN(nclv_cfg->image.size, PAGE_SIZE),
+	.place_phys = true,
+	.colors = 0,
+    };
+    vm_map_mem_region(nclv, &img_rgn);
 
-void alloc_baoenclave(void* vm_ptr, uint64_t donor_va)
-{
-    struct vm* vm = vm_ptr;
-    struct vm_config* vm_cfg = enclave_cfg_ptr->vmlist[0];
-
-    struct mem_region img_reg;
-    struct mem_region mem_reg;
-
-    uint64_t physical_address = 0;
-
-    uint64_t mem_pos = 0;
-
-    img_reg.phys = vm_cfg->image.load_addr;
-    img_reg.base = vm_cfg->image.base_addr;
-    img_reg.size = ALIGN(vm_cfg->image.size, PAGE_SIZE);
-    img_reg.place_phys = true;
-    img_reg.colors = 0;
-
-    vm_copy_img_to_rgn(vm_ptr, vm_cfg, &img_reg);
-    vm_map_mem_region(vm_ptr, &img_reg);
-
-    mem_free_vpage(&cpu.vcpu->vm->as, donor_va,
-                   NUM_PAGES(enclave_cfg_ptr->config_size), false);
+    mem_free_vpage(&cpu.vcpu->vm->as,
+		    donor_ipa,
+		    NUM_PAGES(config->config_size),
+		    false);
 
     /* mem region 0 is special because it comes from the application */
-    struct mem_region* reg = &vm_cfg->platform.regions[0];
+    struct mem_region* reg = &nclv_cfg->platform.regions[0];
 
     /* we already mapped the image from base to image.size */
-    uintptr_t vm_mem_after_img = reg->base + ALIGN(vm_cfg->image.size, PAGE_SIZE);
+    uintptr_t vm_mem_after_img = reg->base + ALIGN(nclv_cfg->image.size, PAGE_SIZE);
 
     /* leftover memory we need to map (discounting image size) */
-    uintptr_t leftover_to_map_vm = reg->size - ALIGN(vm_cfg->image.size, PAGE_SIZE);;
+    uintptr_t leftover_to_map_vm = reg->size - ALIGN(nclv_cfg->image.size, PAGE_SIZE);
 
     /* could be optimized if(physical_address), guardando */
     for (size_t i = 0; i < NUM_PAGES(leftover_to_map_vm); i++) {
-        mem_pos =
-            (size_t)(donor_va + (i * PAGE_SIZE) + enclave_cfg_ptr->config_size);
-        mem_guest_ipa_translate((void*)mem_pos, &physical_address);
+	size_t offset = (i * PAGE_SIZE) + config->config_size;
+	vaddr_t mem_pos = (size_t)(donor_ipa + offset);
+	paddr_t physical_address = 0;
+	mem_guest_ipa_translate((void*)mem_pos, &physical_address);
 
-        mem_reg.phys = physical_address;
-        mem_reg.base = vm_mem_after_img + (i * PAGE_SIZE);
-        mem_reg.size = PAGE_SIZE;
-        mem_reg.place_phys = true;
-        mem_reg.colors = 0;
+	struct mem_region rgn = {
+	    .phys = physical_address,
+	    .base = vm_mem_after_img + (i * PAGE_SIZE),
+	    .size = PAGE_SIZE,
+	    .place_phys = true,
+	    .colors = 0,
+	};
 
-        vm_map_mem_region(vm, &mem_reg);
-        mem_free_vpage(&cpu.vcpu->vm->as, mem_pos, 1, false);
+	vm_map_mem_region(nclv, &rgn);
+	mem_free_vpage(&cpu.vcpu->vm->as, mem_pos, 1, false);
     }
 
-    tlb_vm_inv_all(cpu.vcpu->vm->id);
-    tlb_vm_inv_all(vm->id);
+    /*     tlb_vm_inv_all(cpu.vcpu->vm->id); */
+    /*     tlb_vm_inv_all(vm->id); */
 
-    /* TODO: All memory should be given by the donor VM, this is temporary to test
-     * MPK domains */
+    /* TODO: All memory should be given by the donor VM, this is temporary to
+     * test MPK domains */
     /* we start at 1 because region 0 (including image) already mapped */
-    for (size_t i = 1; i < vm_cfg->platform.region_num; i++) {
-        struct mem_region* reg = &vm_cfg->platform.regions[i];
-	vm_map_mem_region(vm, reg);
+    for (size_t i = 1; i < nclv_cfg->platform.region_num; i++) {
+	struct mem_region* reg = &nclv_cfg->platform.regions[i];
+	vm_map_mem_region(nclv, reg);
     }
 }
 
-void baoenclave_create(uint64_t doner_ipa)
+struct config* baoenclave_get_cfg_from_host(vaddr_t host_ipa)
 {
-    uint64_t physical_address = 0;
-    vaddr_t va = (vaddr_t)NULL;
+    uint64_t paddr = 0;
+    vaddr_t nclv_cfg_va = (vaddr_t)NULL;
+    struct config* nclv_cfg;
     size_t cfg_size;
     /* TODO: handle multiple child */
-    mem_guest_ipa_translate((void*)doner_ipa, &physical_address);
 
     /* One page */
-    va = alloc_baoenclave_struct(physical_address, 1);
-    enclave_cfg_ptr = (struct config *)va;
-    cfg_size = enclave_cfg_ptr->config_size;
+    mem_guest_ipa_translate((void*)(host_ipa), &paddr);
+    nclv_cfg_va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, (vaddr_t)NULL, 1);
+    struct ppages pp = mem_ppages_get(paddr, 1);
+    if (!mem_map(&cpu.as, (vaddr_t)nclv_cfg_va, &pp, 1, PTE_HYP_FLAGS)) {
+	ERROR("mem_map failed %s", __func__);
+    }
+    nclv_cfg = (struct config*)nclv_cfg_va;
+    cfg_size = nclv_cfg->config_header_size;
 
-    /* Free the page */
-    mem_free_vpage(&cpu.as, va, 1, true);
+    if(cfg_size > PAGE_SIZE){
+	/* Entire config minus the page we already mapped, page by page */
+	if(mem_alloc_vpage(&cpu.as,
+		    SEC_HYP_GLOBAL,
+		    nclv_cfg_va+PAGE_SIZE,
+		    NUM_PAGES(nclv_cfg->config_size)-1) == NULL_VA){
+	    ERROR("Mapping config %s", __func__);
+	}
+	for(int i = 1; i < NUM_PAGES(cfg_size); i++){
+	    size_t offset = i * PAGE_SIZE;
+	    mem_guest_ipa_translate((void*)(host_ipa + offset), &paddr);
+	    struct ppages pp = mem_ppages_get(paddr, 1);
+	    if (!mem_map(&cpu.as, nclv_cfg_va + offset, &pp, 1, PTE_HYP_FLAGS)) {
+		ERROR("mem_map failed %s", __func__);
+	    }
+	}
+    }
+    config_adjust_to_va(nclv_cfg, paddr);
 
-    /* Entire config */
-    va = alloc_baoenclave_struct(physical_address, NUM_PAGES(cfg_size));
-    enclave_cfg_ptr = (struct config *)va;
+    return nclv_cfg;
+}
 
-    config_adjust_to_va(enclave_cfg_ptr, physical_address);
+void baoenclave_create(uint64_t host_ipa)
+{
+    struct config *nclv_cfg = baoenclave_get_cfg_from_host(host_ipa);
 
     /* Create enclave */
-    struct vm *enclave = vmm_init_dynamic(enclave_cfg_ptr, doner_ipa);
+    struct vm *enclave = vmm_init_dynamic(nclv_cfg, host_ipa);
     /* return the enclave id to the creator */
     vcpu_writereg(cpu.vcpu, 1, enclave->id);
     cpu.vcpu->nclv_data.initialized = false;
@@ -160,46 +169,86 @@ void baoenclave_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t enclav
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
 
+void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
+{
+    struct config *config = nclv->vm->enclave_house_keeping.config;
+    struct vm_config* nclv_cfg = config->vmlist[0];
+    vaddr_t host_base_nclv_ipa = nclv->vm->enclave_house_keeping.donor_va;
+
+    struct mem_region* reg = &nclv_cfg->platform.regions[0];
+
+    /* from host POV layout is config_hader -> image -> rgn */
+    for (size_t i = 0; i < NUM_PAGES(reg->size); i++) {
+        vaddr_t nclv_ipa = reg->base + (i * PAGE_SIZE);
+	size_t offset = (i * PAGE_SIZE) + config->config_header_size;
+        vaddr_t host_ipa = host_base_nclv_ipa + offset;
+
+	/* only works because enclave is the current vcpu */
+	paddr_t paddr;
+        mem_guest_ipa_translate((void*)nclv_ipa, &paddr);
+
+	/* remove page from enclave's AS */
+        mem_free_vpage(&nclv->vm->as, nclv_ipa, 1, false);
+
+	/* clear the memory */
+	struct ppages pp = mem_ppages_get(paddr, 1);
+	vaddr_t tmp = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, 1);
+	mem_map(&cpu.as, tmp, &pp, 1, PTE_HYP_FLAGS);
+	memset((void*)tmp, 0, PAGE_SIZE);
+	mem_free_vpage(&cpu.as, tmp, 1, false);
+
+	/* give back memory to host VM */
+	struct mem_region rgn = {
+	    .phys       = paddr,
+	    .base       = host_ipa,
+	    .size       = PAGE_SIZE,
+	    .place_phys = true,
+	    .colors     = 0,
+	};
+        vm_map_mem_region(host->vm, &rgn);
+    }
+
+    size_t hdr_sz = config->config_header_size;
+    for (size_t i = 0; i < NUM_PAGES(hdr_sz); i++) {
+	memset((void*)config, 0, hdr_sz);
+        vaddr_t host_ipa = host_base_nclv_ipa + i*PAGE_SIZE;
+
+	paddr_t paddr;
+	mem_translate(&cpu.as, (vaddr_t)config, &paddr);
+	struct mem_region rgn = {
+	    .phys       = paddr,
+	    .base       = host_ipa,
+	    .size       = PAGE_SIZE,
+	    .place_phys = true,
+	    .colors     = 0,
+	};
+	vm_map_mem_region(host->vm, &rgn);
+
+	mem_free_vpage(&cpu.as, (vaddr_t)config, NUM_PAGES(hdr_sz), false);
+    }
+}
+
 void baoenclave_delete(uint64_t enclave_id, uint64_t arg1)
 {
     /* TODO: handle multiple child */
-    struct vcpu* child = NULL;
-    uint64_t physical_address = 0;
-    size_t full_size;
-    vaddr_t va = (vaddr_t)NULL;
 
-    /* optimizar com o adress space vttbr e assim*/
-    if ((child = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
-	vmstack_push(child);
+    struct vcpu* nclv = NULL;
+    struct vcpu* host = cpu.vcpu;
+
+    if ((nclv = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
+	ERROR("non host invoked enclaved destruction");
     }
+    vmstack_push(nclv);
 
-    mem_guest_ipa_translate(
-	    (void*)enclave_cfg_ptr->vmlist[0]->platform.regions->base,
-	    &physical_address);
-
-
-    full_size = //config_ptr->vmlist[0]->platform.ipcs->size +
-	enclave_cfg_ptr->vmlist[0]->platform.regions->size +
-	enclave_cfg_ptr->config_header_size;
-
-    /* Clear memory */
-    va =
-	alloc_baoenclave_struct(physical_address, NUM_PAGES(full_size));
-    memset((void*)va, 0, full_size);
-    mem_free_vpage(&cpu.as, va, NUM_PAGES(full_size), true);
+    baoenclave_reclaim(host, nclv);
 
     vmstack_pop();
 
-    /* Map in primary VM again, mapear pagina a pagina */
-    if (!mem_map(&cpu.vcpu->vm->as,
-		(vaddr_t)arg1 /*+ config_ptr->config_header_size*/, NULL,
-		NUM_PAGES(full_size), PTE_VM_FLAGS)) {
-	ERROR("mem_map failed %s", __func__);
-    }
-    /* invalidate donor TLBs */
-    tlb_vm_inv_all(cpu.vcpu->vm->id);
-    /* invalidate:G enclave TLBs */
-    tlb_vm_inv_all(child->vm->id);
+
+    /* /1* invalidate donor TLBs *1/ */
+    /* tlb_vm_inv_all(cpu.vcpu->vm->id); */
+    /* /1* invalidate:G enclave TLBs *1/ */
+    /* tlb_vm_inv_all(nclv->vm->id); */
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
 
@@ -209,7 +258,8 @@ void baoenclave_ecall(uint64_t enclave_id, uint64_t args_addr, uint64_t sp_el0)
     int64_t res = HC_E_SUCCESS;
     struct vcpu* child = NULL;
     if((child = vcpu_get_child(cpu.vcpu, 0)) != NULL){
-	child->arch.sysregs.vm.sp_el0 = sp_el0;
+	/* TODO separate architecture specific details. only works for Arm */
+	/* child->arch.sysregs.vm.sp_el0 = sp_el0; */
 	vmstack_push(child);
 	vcpu_writereg(cpu.vcpu, 1, args_addr);
 	vcpu_writereg(cpu.vcpu, 2, sp_el0);
@@ -256,10 +306,10 @@ void baoenclave_exit()
     /* this is just a hack */
     if (!cpu.vcpu->nclv_data.initialized){
 	cpu.vcpu->nclv_data.initialized = true;
-	INFO("VM %d initialized\n", cpu.vcpu->vm->id);
     }
 
     vmstack_pop();
+    vcpu_writereg(cpu.vcpu, 0, 0);
 }
 
 int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
@@ -300,7 +350,6 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
         case BAOENCLAVE_DELETE: //ver alloc
 	    /* TODO: handle multiple child */
 	    baoenclave_delete(arg0, arg1);
-            INFO("Enclave Destroyed");
             break;
 
         case BAOENCLAVE_ADD_RGN:

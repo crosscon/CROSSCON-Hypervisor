@@ -114,10 +114,9 @@ struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
 {
     vmid_t vmid = 0;
     struct vm* enclave = vmm_alloc_vm_struct();
-    struct vm_config* enclave_config = ptr_vm_config->vmlist[0];
 
     vmid = vmm_alloc_vmid();
-    vm_init_dynamic(enclave, enclave_config, vm_addr, vmid);
+    vm_init_dynamic(enclave, ptr_vm_config, vm_addr, vmid);
 
     /* TODO */
     struct node_data* node = objcache_alloc(&partition->nodes);

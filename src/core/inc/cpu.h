@@ -122,6 +122,7 @@ void cpu_msg_set_handler(cpuid_t id, cpu_msg_handler_t handler);
 void cpu_idle();
 void cpu_idle_wakeup();
 void cpu_add_vcpu(struct vcpu * vcpu);
+void cpu_remove_vcpu(struct vcpu * vcpu);
 			/* TODO */
 struct vcpu* cpu_get_vcpu(uint64_t vmid);
 

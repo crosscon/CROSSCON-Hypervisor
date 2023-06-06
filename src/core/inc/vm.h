@@ -92,6 +92,7 @@ extern struct config* vm_config_ptr;
 
 struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id);
 void vm_init_dynamic(struct vm*, struct config*, uint64_t, vmid_t vmid);
+void vm_destroy_dynamic(struct vm* vm);
 void vm_start(struct vm* vm, vaddr_t entry);
 struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid);
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu);

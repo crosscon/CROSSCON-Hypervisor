@@ -627,7 +627,13 @@ bool mem_map(struct addr_space *as, vaddr_t va, struct ppages *ppages,
                     } else if (!pte_valid(pte)) {
                         mem_alloc_pt(as, pte, lvl, vaddr);
                     } else if (!pte_table(&as->pt, pte, lvl)) {
-                        ERROR("trying to override previous mapping");
+                        /* WARNING("trying to override previous mapping"); */
+			/* in Bao enclave we use this to optimize the memory
+			 * zeroying process */
+			/* since we are overriding we need to invalidate this
+			 * TLB */
+			tlb_inv_va(as, va);
+			break;
                     }
                 }
             }
@@ -1409,6 +1415,14 @@ void as_init(struct addr_space *as, enum AS_TYPE type, asid_t id,
     as->pt.root = root_pt;
 
     as_arch_init(as);
+}
+
+void as_destroy(struct addr_space *as)
+{
+    size_t n = pt_size(&as->pt, 0) / PAGE_SIZE;
+    memset((void*)as->pt.root, 0, n * PAGE_SIZE);
+    mem_free_vpage(as, (vaddr_t)as->pt.root, n, true);
+    /* we trust that any other allocations have been undone */
 }
 
 void mem_init(paddr_t load_addr, paddr_t config_addr)

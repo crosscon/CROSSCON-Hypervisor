@@ -24,6 +24,9 @@
 #include <string.h>
 #include <ipc.h>
 #include <vmstack.h>
+#include "list.h"
+#include "objcache.h"
+#include "util.h"
 
 struct config* vm_config_ptr;
 
@@ -31,11 +34,18 @@ struct partition* const partition = (struct partition*)BAO_VM_BASE;
 
 static void* vmm_alloc_vm_struct()
 {
-    size_t vm_npages = ALIGN(sizeof(struct vm), PAGE_SIZE) / PAGE_SIZE;
+    size_t vm_npages = NUM_PAGES(sizeof(struct vm));
     vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, (vaddr_t)NULL, vm_npages);
     mem_map(&cpu.as, va, NULL, vm_npages, PTE_HYP_FLAGS);
     memset((void*)va, 0, vm_npages * PAGE_SIZE);
     return (void*)va;
+}
+
+static void vmm_free_vm_struct(struct vm* vm)
+{
+    size_t n = NUM_PAGES(sizeof(struct vm));
+    memset((void*)vm, 0, n * PAGE_SIZE);
+    mem_free_vpage(&cpu.as, (vaddr_t)vm, n, true);
 }
 
 uint64_t vmm_alloc_vmid()
@@ -113,19 +123,33 @@ static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent
 struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
 {
     vmid_t vmid = 0;
-    struct vm* enclave = vmm_alloc_vm_struct();
+    struct vm* vm = vmm_alloc_vm_struct();
 
     vmid = vmm_alloc_vmid();
-    vm_init_dynamic(enclave, ptr_vm_config, vm_addr, vmid);
+    vm_init_dynamic(vm, ptr_vm_config, vm_addr, vmid);
 
     /* TODO */
     struct node_data* node = objcache_alloc(&partition->nodes);
     /* TODO if more than one CPU is created obtain the vcpu for the current cpu */
-    struct vcpu* child = (struct vcpu*)list_peek(&enclave->vcpu_list);
+    struct vcpu* child = (struct vcpu*)list_peek(&vm->vcpu_list);
     node->data = child;
     list_push(&cpu.vcpu->vmstack_children, (node_t*)node);
 
-    return enclave;
+    return vm;
+}
+
+void vmm_destroy_dynamic(struct vm *vm)
+{
+    list_foreach(cpu.vcpu->vmstack_children, struct node_data, node){
+	struct vcpu* child = node->data;
+	if(child->vm == vm){
+	    list_rm(&cpu.vcpu->vmstack_children, (node_t*)node);
+	    objcache_free(&partition->nodes, node);
+	}
+    }
+
+    vm_destroy_dynamic(vm);
+    vmm_free_vm_struct(vm);
 }
 
 void vmm_init()

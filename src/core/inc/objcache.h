@@ -37,6 +37,7 @@ struct objcache {
 };
 
 void objcache_init(struct objcache* oc, size_t osize, enum AS_SEC sec, bool prime);
+void objcache_destroy(struct objcache* oc);
 void* objcache_alloc();
 bool objcache_free(struct objcache* oc, void* obj);
 

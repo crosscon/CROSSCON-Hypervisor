@@ -84,7 +84,7 @@ void baoenclave_donate(struct vm *nclv,  struct config *config, uint64_t donor_i
     }
 }
 
-struct config* baoenclave_get_cfg_from_host(vaddr_t host_ipa)
+struct config* baoenclave_get_cfg_from_host(struct vm* host, vaddr_t host_ipa)
 {
     uint64_t paddr = 0;
     vaddr_t nclv_cfg_va = (vaddr_t)NULL;
@@ -119,6 +119,9 @@ struct config* baoenclave_get_cfg_from_host(vaddr_t host_ipa)
 	    }
 	}
     }
+    /* Assumes the laste of the page of the config does not map anything other
+     * than the config */
+    mem_free_vpage(&host->as, host_ipa, NUM_PAGES(cfg_size), false);
     config_adjust_to_va(nclv_cfg, paddr);
 
     return nclv_cfg;
@@ -126,7 +129,7 @@ struct config* baoenclave_get_cfg_from_host(vaddr_t host_ipa)
 
 void baoenclave_create(uint64_t host_ipa)
 {
-    struct config *nclv_cfg = baoenclave_get_cfg_from_host(host_ipa);
+    struct config *nclv_cfg = baoenclave_get_cfg_from_host(cpu.vcpu->vm, host_ipa);
 
     /* Create enclave */
     struct vm *enclave = vmm_init_dynamic(nclv_cfg, host_ipa);
@@ -171,12 +174,15 @@ void baoenclave_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t enclav
 
 void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 {
+    vmstack_push(nclv);
+
     struct config *config = nclv->vm->enclave_house_keeping.config;
     struct vm_config* nclv_cfg = config->vmlist[0];
     vaddr_t host_base_nclv_ipa = nclv->vm->enclave_house_keeping.donor_va;
 
     struct mem_region* reg = &nclv_cfg->platform.regions[0];
 
+    vaddr_t tmp = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, 1);
     /* from host POV layout is config_hader -> image -> rgn */
     for (size_t i = 0; i < NUM_PAGES(reg->size); i++) {
         vaddr_t nclv_ipa = reg->base + (i * PAGE_SIZE);
@@ -192,10 +198,8 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 
 	/* clear the memory */
 	struct ppages pp = mem_ppages_get(paddr, 1);
-	vaddr_t tmp = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, 1);
 	mem_map(&cpu.as, tmp, &pp, 1, PTE_HYP_FLAGS);
 	memset((void*)tmp, 0, PAGE_SIZE);
-	mem_free_vpage(&cpu.as, tmp, 1, false);
 
 	/* give back memory to host VM */
 	struct mem_region rgn = {
@@ -207,7 +211,9 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 	};
         vm_map_mem_region(host->vm, &rgn);
     }
+    mem_free_vpage(&cpu.as, tmp, 1, false);
 
+    /* we are done with everything, give the last piece of memory to the host */
     size_t hdr_sz = config->config_header_size;
     for (size_t i = 0; i < NUM_PAGES(hdr_sz); i++) {
 	memset((void*)config, 0, hdr_sz);
@@ -226,29 +232,22 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 
 	mem_free_vpage(&cpu.as, (vaddr_t)config, NUM_PAGES(hdr_sz), false);
     }
+    vmstack_pop();
 }
 
 void baoenclave_delete(uint64_t enclave_id, uint64_t arg1)
 {
+    INFO("Destroying enclave %d", enclave_id);
     /* TODO: handle multiple child */
 
     struct vcpu* nclv = NULL;
-    struct vcpu* host = cpu.vcpu;
 
     if ((nclv = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
 	ERROR("non host invoked enclaved destruction");
     }
-    vmstack_push(nclv);
 
-    baoenclave_reclaim(host, nclv);
+    vmm_destroy_dynamic(nclv->vm);
 
-    vmstack_pop();
-
-
-    /* /1* invalidate donor TLBs *1/ */
-    /* tlb_vm_inv_all(cpu.vcpu->vm->id); */
-    /* /1* invalidate:G enclave TLBs *1/ */
-    /* tlb_vm_inv_all(nclv->vm->id); */
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
 

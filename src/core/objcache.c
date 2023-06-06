@@ -15,6 +15,7 @@
 
 #include <objcache.h>
 #include <string.h>
+#include <cpu.h>
 
 union slab {
     union {
@@ -63,6 +64,11 @@ static union slab* slab_create(struct objcache* oc, enum AS_SEC sec)
         }
     }
     return slab;
+}
+
+void slab_destroy(union slab* slab)
+{
+    mem_free_vpage(&cpu.as, (vaddr_t)slab, 1, true);
 }
 
 static void* slab_alloc(union slab* slab)
@@ -130,6 +136,12 @@ void objcache_init(struct objcache* oc, size_t osize, enum AS_SEC sec, bool prim
         list_push(&oc->slabs, &slab->header.next);
         oc->last_free = slab;
     }
+}
+
+void objcache_destroy(struct objcache* oc)
+{
+    /* TODO */
+    (void)oc;
 }
 
 void* objcache_alloc(struct objcache* oc)

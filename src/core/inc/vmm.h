@@ -43,6 +43,7 @@ struct partition {
 
 void vmm_init();
 struct vm* vmm_init_dynamic(struct config*, uint64_t);
+void vmm_destroy_dynamic(struct vm *vm);
 void vmm_arch_init();
 uint64_t vmm_alloc_vmid();
 

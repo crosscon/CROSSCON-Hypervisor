@@ -125,6 +125,10 @@ void cpu_add_vcpu(struct vcpu * vcpu){
     list_push(&cpu.vcpus, (node_t*) vcpu);  
 }
 
+void cpu_remove_vcpu(struct vcpu * vcpu){
+    list_rm(&cpu.vcpus, (node_t*) vcpu);  
+}
+
 struct vcpu* cpu_get_vcpu(uint64_t vmid){
     list_foreach(cpu.vcpus, struct vcpu, vcpu){
         if(vcpu->vm->id == vmid){

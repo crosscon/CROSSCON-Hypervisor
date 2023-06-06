@@ -20,6 +20,8 @@
 #include <mem.h>
 #include <cache.h>
 #include <baoenclave.h>
+#include "inc/ipc.h"
+#include "list.h"
 
 enum emul_type {EMUL_MEM, EMUL_REG};
 struct emul_node {
@@ -47,6 +49,15 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     objcache_init(&vm->emul_oc, sizeof(struct emul_node), SEC_HYP_VM, false);
 }
 
+static void vm_master_destroy(struct vm* vm)
+{
+    cpu_sync_init(&vm->sync, vm->cpu_num);
+
+    objcache_destroy(&vm->emul_oc);
+
+    as_destroy(&vm->as);
+}
+
 void vm_cpu_init(struct vm* vm)
 {
     spin_lock(&vm->lock);
@@ -54,7 +65,7 @@ void vm_cpu_init(struct vm* vm)
     spin_unlock(&vm->lock);
 }
 
-struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* config)
+struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_cfg)
 {
     size_t n = NUM_PAGES(sizeof(struct vcpu));
     struct vcpu* vcpu = (struct vcpu*)mem_alloc_page(n, SEC_HYP_VM, false);
@@ -87,12 +98,28 @@ struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* config)
     list_push(&vm->vcpu_list, (node_t*)vcpu);
 
     vcpu_arch_init(vcpu, vm);
-    vcpu_arch_reset(vcpu, config->entry);
+    vcpu_arch_reset(vcpu, vm->config->entry);
 
     /* vmstacking */
     list_init(&vcpu->vmstack_children);
 
     cpu_add_vcpu(vcpu);
+
+    return vcpu;
+}
+
+struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
+{
+    cpu_remove_vcpu(vcpu);
+
+    list_rm(&vm->vcpu_list, (node_t*)vcpu);
+
+    memset(vcpu->stack, 0, sizeof(vcpu->stack));
+
+    size_t n = NUM_PAGES(sizeof(struct vcpu));
+    memset(vcpu, 0, n * PAGE_SIZE);
+
+    mem_free_vpage(&cpu.as, (vaddr_t)vcpu, n, true);
 
     return vcpu;
 }
@@ -224,8 +251,8 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* config)
 {
     vm->ipc_num = config->platform.ipc_num;
     vm->ipcs = config->platform.ipcs;
-    for (size_t i = 0; i < config->platform.ipc_num; i++) {
-        struct ipc *ipc = &config->platform.ipcs[i];
+    for (size_t i = 0; i < vm->ipc_num; i++) {
+        struct ipc *ipc = &vm->ipcs[i];
         struct shmem *shmem = ipc_get_shmem(ipc->shmem_id);
         if(shmem == NULL) {
             WARNING("Invalid shmem id in configuration. Ignored.");
@@ -248,10 +275,19 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* config)
     }
 }
 
-static void vm_init_dev(struct vm* vm, const struct vm_config* config)
+static void vm_destroy_ipc(struct vm* vm)
 {
-    for (size_t i = 0; i < config->platform.dev_num; i++) {
-        struct dev_region* dev = &config->platform.devs[i];
+    for (size_t i = 0; i < vm->ipc_num; i++) {
+        struct ipc *ipc = &vm->ipcs[i];
+        struct shmem *shmem = ipc_get_shmem(ipc->shmem_id);
+	mem_free_vpage(&vm->as, ipc->base, shmem->size, true);
+    }
+}
+
+static void vm_init_dev(struct vm* vm, const struct vm_config* vm_cfg)
+{
+    for (size_t i = 0; i < vm->config->platform.dev_num; i++) {
+        struct dev_region* dev = &vm->config->platform.devs[i];
 
         size_t n = ALIGN(dev->size, PAGE_SIZE) / PAGE_SIZE;
 
@@ -265,9 +301,9 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* config)
     }
 
     /* iommu */
-    if (iommu_vm_init(vm, config)) {
-        for (size_t i = 0; i < config->platform.dev_num; i++) {
-            struct dev_region* dev = &config->platform.devs[i];
+    if (iommu_vm_init(vm, vm->config)) {
+        for (size_t i = 0; i < vm->config->platform.dev_num; i++) {
+            struct dev_region* dev = &vm->config->platform.devs[i];
             if (dev->id) {
                 if(!iommu_vm_add_device(vm, dev->id)){
                     ERROR("Failed to add device to iommu");
@@ -275,7 +311,11 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* config)
             }
         }
     }
-      
+}
+
+static void vm_destroy_dev(struct vm* vm, const struct vm_config* config)
+{
+    /* TODO */
 }
 
 void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmid_t vmid)
@@ -293,6 +333,19 @@ void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmi
 
     vm->enclave_house_keeping.donor_va = vm_addr;
     vm->enclave_house_keeping.config = config;
+}
+
+void vm_destroy_dynamic(struct vm* vm)
+{
+    vm_destroy_ipc(vm);
+    vm_destroy_dev(vm, vm->config);
+
+    baoenclave_reclaim(cpu.vcpu, (struct vcpu*)list_peek(&vm->vcpu_list));
+
+    vm_vcpu_destroy(vm, (struct vcpu*)list_peek(&vm->vcpu_list));
+    /* vm_arch_destroy(vm, vm->config); */
+
+    vm_master_destroy(vm);
 }
 
 struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)

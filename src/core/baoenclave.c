@@ -193,9 +193,6 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 	paddr_t paddr;
         mem_guest_ipa_translate((void*)nclv_ipa, &paddr);
 
-	/* remove page from enclave's AS */
-        mem_free_vpage(&nclv->vm->as, nclv_ipa, 1, false);
-
 	/* clear the memory */
 	struct ppages pp = mem_ppages_get(paddr, 1);
 	mem_map(&cpu.as, tmp, &pp, 1, PTE_HYP_FLAGS);
@@ -209,8 +206,11 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 	    .place_phys = true,
 	    .colors     = 0,
 	};
+	/* TODO optimize undoing the mapping */
         vm_map_mem_region(host->vm, &rgn);
     }
+    /* remove page from enclave's AS */
+    mem_free_vpage(&nclv->vm->as, reg->base, NUM_PAGES(reg->size), false);
     mem_free_vpage(&cpu.as, tmp, 1, false);
 
     /* we are done with everything, give the last piece of memory to the host */

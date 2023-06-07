@@ -48,32 +48,60 @@ void baoenclave_donate(struct vm *nclv,  struct config *config, uint64_t donor_i
     struct mem_region* reg = &nclv_cfg->platform.regions[0];
 
     /* we already mapped the image from base to image.size */
-    uintptr_t vm_mem_after_img = reg->base + ALIGN(nclv_cfg->image.size, PAGE_SIZE);
+    uintptr_t nclv_mem_after_img = reg->base + ALIGN(nclv_cfg->image.size, PAGE_SIZE);
 
     /* leftover memory we need to map (discounting image size) */
     uintptr_t leftover_to_map_vm = reg->size - ALIGN(nclv_cfg->image.size, PAGE_SIZE);
 
-    /* could be optimized if(physical_address), guardando */
-    for (size_t i = 0; i < NUM_PAGES(leftover_to_map_vm); i++) {
-	size_t offset = (i * PAGE_SIZE) + config->config_size;
-	vaddr_t mem_pos = (size_t)(donor_ipa + offset);
-	paddr_t physical_address = 0;
-	mem_guest_ipa_translate((void*)mem_pos, &physical_address);
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_nclv_ipa = 0;
 
+    vaddr_t nclv_ipa = nclv_mem_after_img;
+    vaddr_t host_ipa = donor_ipa + config->config_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(leftover_to_map_vm);
+    size_t i = 1;
+    while(i <= n) {
+	bool last_page = (i == n);
+
+	mem_guest_ipa_translate((void*)host_ipa, &pa);
+	if(contiguous_pages == 0){
+	    contiguous_pages = 1;
+	    base_cont_pa = pa;
+	    base_nclv_ipa = nclv_ipa;
+	    if(!last_page){
+		goto skip;
+	    }
+	} else if(pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)){
+	    contiguous_pages++;
+	    if(!last_page){
+		goto skip;
+	    }
+	}
+
+	/* give memory to nclv VM */
 	struct mem_region rgn = {
-	    .phys = physical_address,
-	    .base = vm_mem_after_img + (i * PAGE_SIZE),
-	    .size = PAGE_SIZE,
+	    .phys       = base_cont_pa,
+	    .base       = base_nclv_ipa,
+	    .size       = contiguous_pages * PAGE_SIZE,
 	    .place_phys = true,
-	    .colors = 0,
+	    .colors     = 0,
 	};
-
 	vm_map_mem_region(nclv, &rgn);
-	mem_free_vpage(&cpu.vcpu->vm->as, mem_pos, 1, false);
-    }
 
-    /*     tlb_vm_inv_all(cpu.vcpu->vm->id); */
-    /*     tlb_vm_inv_all(vm->id); */
+	contiguous_pages = 1;
+	base_cont_pa = pa;
+	base_nclv_ipa = nclv_ipa;
+skip:
+	nclv_ipa += PAGE_SIZE;
+	host_ipa += PAGE_SIZE;
+	i++;
+    }
+    mem_free_vpage(&cpu.vcpu->vm->as,
+	    donor_ipa + config->config_size,
+	    NUM_PAGES(leftover_to_map_vm),
+	    false);
 
     /* TODO: All memory should be given by the donor VM, this is temporary to
      * test MPK domains */

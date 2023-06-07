@@ -182,47 +182,80 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 
     struct mem_region* reg = &nclv_cfg->platform.regions[0];
 
-    vaddr_t tmp = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, 1);
-    /* from host POV layout is config_hader -> image -> rgn */
-    for (size_t i = 0; i < NUM_PAGES(reg->size); i++) {
-        vaddr_t nclv_ipa = reg->base + (i * PAGE_SIZE);
-	size_t offset = (i * PAGE_SIZE) + config->config_header_size;
-        vaddr_t host_ipa = host_base_nclv_ipa + offset;
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_host_ipa = 0;
+    vaddr_t base_hyp = 0;
 
-	/* only works because enclave is the current vcpu */
-	paddr_t paddr;
-        mem_guest_ipa_translate((void*)nclv_ipa, &paddr);
+    vaddr_t nclv_ipa = reg->base;
+    vaddr_t host_ipa = host_base_nclv_ipa + config->config_header_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(reg->size);
+    const vaddr_t hyp_va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, n);
+    vaddr_t hyp_va_tmp = hyp_va;
+    size_t i = 1;
+    while(i <= n) {
+	bool last_page = (i == n);
+
+	mem_guest_ipa_translate((void*)nclv_ipa, &pa);
+	if(contiguous_pages == 0){
+	    contiguous_pages = 1;
+	    base_cont_pa = pa;
+	    base_host_ipa = host_ipa;
+	    base_hyp = hyp_va_tmp;
+	    if(!last_page){
+		goto skip;
+	    }
+	} else if(pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)){
+	    contiguous_pages++;
+	    if(!last_page){
+		goto skip;
+	    }
+	}
 
 	/* clear the memory */
-	struct ppages pp = mem_ppages_get(paddr, 1);
-	mem_map(&cpu.as, tmp, &pp, 1, PTE_HYP_FLAGS);
-	memset((void*)tmp, 0, PAGE_SIZE);
+	struct ppages pp = mem_ppages_get(base_cont_pa, contiguous_pages);
+	mem_map(&cpu.as, base_hyp, &pp, contiguous_pages, PTE_HYP_FLAGS);
+	memset((void*)base_hyp, 0, contiguous_pages * PAGE_SIZE);
 
+	/* TODO optimize undoing the mapping */
 	/* give back memory to host VM */
 	struct mem_region rgn = {
-	    .phys       = paddr,
-	    .base       = host_ipa,
-	    .size       = PAGE_SIZE,
+	    .phys       = base_cont_pa,
+	    .base       = base_host_ipa,
+	    .size       = contiguous_pages * PAGE_SIZE,
 	    .place_phys = true,
 	    .colors     = 0,
 	};
-	/* TODO optimize undoing the mapping */
-        vm_map_mem_region(host->vm, &rgn);
+	vm_map_mem_region(host->vm, &rgn);
+
+	contiguous_pages = 1;
+	base_cont_pa = pa;
+	base_host_ipa = host_ipa;
+	base_hyp = hyp_va_tmp;
+skip:
+	nclv_ipa += PAGE_SIZE;
+	host_ipa += PAGE_SIZE;
+	hyp_va_tmp += PAGE_SIZE;
+	i++;
     }
     /* remove page from enclave's AS */
-    mem_free_vpage(&nclv->vm->as, reg->base, NUM_PAGES(reg->size), false);
-    mem_free_vpage(&cpu.as, tmp, 1, false);
+    mem_free_vpage(&nclv->vm->as, reg->base, n, false);
+    /* unmap memory from hypervisor */
+    mem_free_vpage(&cpu.as, hyp_va, n, false);
 
+    /* restore */
+    host_ipa = host_base_nclv_ipa;
     /* we are done with everything, give the last piece of memory to the host */
     size_t hdr_sz = config->config_header_size;
     for (size_t i = 0; i < NUM_PAGES(hdr_sz); i++) {
 	memset((void*)config, 0, hdr_sz);
-        vaddr_t host_ipa = host_base_nclv_ipa + i*PAGE_SIZE;
+	vaddr_t host_ipa = host_base_nclv_ipa + i*PAGE_SIZE;
 
-	paddr_t paddr;
-	mem_translate(&cpu.as, (vaddr_t)config, &paddr);
+	paddr_t pa;
+	mem_translate(&cpu.as, (vaddr_t)config, &pa);
 	struct mem_region rgn = {
-	    .phys       = paddr,
+	    .phys       = pa,
 	    .base       = host_ipa,
 	    .size       = PAGE_SIZE,
 	    .place_phys = true,

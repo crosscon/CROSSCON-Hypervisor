@@ -102,28 +102,29 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler(smc_fid, x1, x2, x3);
         vcpu_writereg(vcpu, 0, ret);
-    } else {
-        if (vcpu->parent) {
-            /**
-             * TODO: we should somehow signal the the parent the child is
-             * returning do to an unhandled system call
-             */
-            vmstack_pop();
-	} else {
-	    INFO("passing through smc_fid 0x%lx", smc_fid);
-	    struct smc_res res;
-	    ret = smc_call(smc_fid, cpu.vcpu->regs->x[1], cpu.vcpu->regs->x[2],
-		    cpu.vcpu->regs->x[3], &res);
-	    vcpu_writereg(cpu.vcpu, 0, res.x0);
-	    vcpu_writereg(cpu.vcpu, 1, res.x1);
-	    vcpu_writereg(cpu.vcpu, 2, res.x2);
-	    vcpu_writereg(cpu.vcpu, 3, res.x3);
-	    WARNING("SMC returned 0x%lx", ret);
-	}
-    }
+    } else
+	ret = tee_handler(smc_fid);
+    /*} else { */
+    /*    if (vcpu->parent) { */
+    /*        /1** */
+    /*         * TODO: we should somehow signal the the parent the child is */
+    /*         * returning do to an unhandled system call */
+    /*         *1/ */
+    /*        vmstack_pop(); */
+	/*} else { */
+	    /*INFO("passing through smc_fid 0x%lx", smc_fid); */
+	    /*struct smc_res res; */
+	    /*ret = smc_call(smc_fid, cpu.vcpu->regs->x[1], cpu.vcpu->regs->x[2], */
+		    /*cpu.vcpu->regs->x[3], &res); */
+	    /*vcpu_writereg(cpu.vcpu, 0, res.x0); */
+	    /*vcpu_writereg(cpu.vcpu, 1, res.x1); */
+	    /*vcpu_writereg(cpu.vcpu, 2, res.x2); */
+	    /*vcpu_writereg(cpu.vcpu, 3, res.x3); */
+	    /*WARNING("SMC returned 0x%lx", ret); */
+	/*} */
+    /* } */
 
     /* TODO */
-    vcpu_writereg(cpu.vcpu, 0, ret);
     uint64_t pc_step = 2 + (2 * il);
     vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
 }

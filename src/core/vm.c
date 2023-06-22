@@ -65,6 +65,26 @@ void vm_cpu_init(struct vm* vm)
     spin_unlock(&vm->lock);
 }
 
+void vm_add_vcpu(struct vm* vm, struct vcpu* vcpu)
+{
+    struct node_data* node = objcache_alloc(&partition->nodes);
+    node->data = vcpu;
+    list_push(&vm->vcpu_list, (node_t*) node);
+}
+
+struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid)
+{
+    list_foreach(vm->vcpu_list, struct node_data, node){
+	struct vcpu* vcpu = node->data;
+        if(vcpu->id == vcpuid){
+            return vcpu;
+        }
+    }
+
+    return NULL;
+}
+
+
 struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_cfg)
 {
     size_t n = NUM_PAGES(sizeof(struct vcpu));
@@ -95,7 +115,7 @@ struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_cfg)
     vcpu->state = VCPU_INACTIVE;
     vcpu->parent = NULL;
 
-    list_push(&vm->vcpu_list, (node_t*)vcpu);
+    vm_add_vcpu(vm, vcpu);
 
     vcpu_arch_init(vcpu, vm);
     vcpu_arch_reset(vcpu, vm->config->entry);
@@ -123,6 +143,7 @@ struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
 
     return vcpu;
 }
+
 
 void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
                                struct mem_region* reg)
@@ -340,9 +361,11 @@ void vm_destroy_dynamic(struct vm* vm)
     vm_destroy_ipc(vm);
     vm_destroy_dev(vm, vm->config);
 
-    baoenclave_reclaim(cpu.vcpu, (struct vcpu*)list_peek(&vm->vcpu_list));
+    /* TODO: This is not making much sense right now. We need to reclaim
+     * resources from the vm, not from the cpu */
+    baoenclave_reclaim(cpu.vcpu, vm_get_vcpu(vm, 0));
 
-    vm_vcpu_destroy(vm, (struct vcpu*)list_peek(&vm->vcpu_list));
+    vm_vcpu_destroy(vm, vm_get_vcpu(vm, 0));
     /* vm_arch_destroy(vm, vm->config); */
 
     vm_master_destroy(vm);
@@ -391,16 +414,6 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
     cpu_sync_barrier(&vm->sync);
 
     return vcpu;
-}
-
-struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid)
-{
-    list_foreach(vm->vcpu_list, struct vcpu, vcpu)
-    {
-        if (vcpu->id == vcpuid) return vcpu;
-    }
-
-    return NULL;
 }
 
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu)

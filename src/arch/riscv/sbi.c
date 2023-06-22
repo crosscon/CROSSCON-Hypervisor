@@ -257,6 +257,8 @@ void sbi_timer_irq_handler()
     CSRC(sie, SIE_STIE);
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 struct sbiret sbi_ipi_handler(unsigned long fid)
 {
     if (fid != SBI_SEND_IPI_FID) return (struct sbiret){SBI_ERR_NOT_SUPPORTED};
@@ -279,6 +281,7 @@ struct sbiret sbi_ipi_handler(unsigned long fid)
 
     return (struct sbiret){SBI_SUCCESS};
 }
+#pragma GCC pop_options
 
 struct sbiret sbi_base_handler(unsigned long fid)
 {
@@ -440,8 +443,8 @@ struct sbiret sbi_bao_handler(unsigned long fid){
         case HC_VMSTACK:
             ret.value  = vmstack_hypercall(arg0, arg1, arg2, arg3);
             break;
-        case HC_ENCLAVE:
-            ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3);
+        /* case HC_ENCLAVE: */
+        /*     ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3); */
             break;
         default:
             ret.error = -HC_E_INVAL_ID;

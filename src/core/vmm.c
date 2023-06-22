@@ -131,7 +131,7 @@ struct vm* vmm_init_dynamic(struct config* ptr_vm_config, uint64_t vm_addr)
     /* TODO */
     struct node_data* node = objcache_alloc(&partition->nodes);
     /* TODO if more than one CPU is created obtain the vcpu for the current cpu */
-    struct vcpu* child = (struct vcpu*)list_peek(&vm->vcpu_list);
+    struct vcpu* child = vm_get_vcpu(vm, 0);
     node->data = child;
     list_push(&cpu.vcpu->vmstack_children, (node_t*)node);
 

@@ -38,7 +38,8 @@ extern uint8_t _ipi_cpumsg_handlers_size;
 extern uint8_t _ipi_cpumsg_handlers_id_start;
 cpu_msg_handler_t *ipi_cpumsg_handlers;
 size_t ipi_cpumsg_handler_num;
-
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
 {
     cpu_arch_init(cpu_id, load_addr);
@@ -61,6 +62,7 @@ void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
 
     cpu_sync_barrier(&cpu_glb_sync);
 }
+#pragma GCC pop_options
 
 void cpu_send_msg(cpuid_t trgtcpu, struct cpu_msg *msg)
 {
@@ -122,15 +124,18 @@ void cpu_idle_wakeup()
 }
 
 void cpu_add_vcpu(struct vcpu * vcpu){
-    list_push(&cpu.vcpus, (node_t*) vcpu);  
+    struct node_data* node = objcache_alloc(&partition->nodes);
+    node->data = vcpu;
+    list_push(&cpu.vcpus, (node_t*) node);
 }
 
 void cpu_remove_vcpu(struct vcpu * vcpu){
-    list_rm(&cpu.vcpus, (node_t*) vcpu);  
+    list_rm(&cpu.vcpus, (node_t*) vcpu);
 }
 
 struct vcpu* cpu_get_vcpu(uint64_t vmid){
-    list_foreach(cpu.vcpus, struct vcpu, vcpu){
+    list_foreach(cpu.vcpus, struct node_data, node){
+	struct vcpu* vcpu = node->data;
         if(vcpu->vm->id == vmid){
             return vcpu;
         }

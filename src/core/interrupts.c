@@ -69,11 +69,11 @@ inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id)
    interrupts_arch_vm_inject(vcpu, id);
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
        /* TODO */
-       if(cpu.vcpu->nclv_data.initialized == false)
-	   return;
-       vmstack_unwind(vcpu);
+       /* if(cpu.vcpu->nclv_data.initialized == false) */
+	   /* return; */
+       vmstack_push(vcpu);
        /* Signal the parent of the interrupts vcpu that we were interrupted */
-       vcpu_writereg(cpu.vcpu, 0, 1);
+       /* vcpu_writereg(cpu.vcpu, 0, 1); */
    }
 }
 
@@ -85,6 +85,11 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 enum irq_res interrupts_handle(irqid_t int_id)
 {
     struct vcpu *vcpu = NULL;
+    volatile int x = 1;
+    if((int_id == 55 || int_id == 58) && cpu.vcpu->vm->id == 1)
+	x = 0;
+    (void)x;
+
     if(interrupts_is_shared(int_id) || (cpu.vcpu->vm->id == interrupts_get_vmid(int_id))){
         vcpu = cpu.vcpu;
     } else {

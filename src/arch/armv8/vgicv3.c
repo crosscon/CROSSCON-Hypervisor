@@ -283,8 +283,8 @@ void vgic_init(struct vm *vm, const struct gic_dscrp *gic_dscrp)
                            .handler = vgicd_emul_handler};
     vm_emul_add_mem(vm, &gicd_emu);
 
-    list_foreach(vm->vcpu_list, struct vcpu, vcpu)
-    {
+    list_foreach(vm->vcpu_list, struct node_data, node){
+	struct vcpu* vcpu = node->data;
         struct emul_mem gicr_emu = {
             .va_base = gic_dscrp->gicr_addr + sizeof(struct gicr_hw) * vcpu->id,
             .size = ALIGN(sizeof(struct gicr_hw), PAGE_SIZE),

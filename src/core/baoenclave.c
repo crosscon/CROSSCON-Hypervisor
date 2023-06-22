@@ -44,6 +44,8 @@ void baoenclave_donate(struct vm *nclv,  struct config *config, uint64_t donor_i
 		    NUM_PAGES(config->config_size),
 		    false);
 
+    /* TODO We should check enclaves integrity at this point */
+
     /* mem region 0 is special because it comes from the application */
     struct mem_region* reg = &nclv_cfg->platform.regions[0];
 
@@ -194,8 +196,6 @@ void baoenclave_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t enclav
     if (!mem_map(&child->vm->as, va, &ppages, 1, PTE_VM_FLAGS)) {
 	ERROR("mem_map failed %s", __func__);
     }
-    /* invalidate enclave TLBs */
-    tlb_vm_inv_all(child->vm->id);
 
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
@@ -298,7 +298,6 @@ skip:
 
 void baoenclave_delete(uint64_t enclave_id, uint64_t arg1)
 {
-    INFO("Destroying enclave %d", enclave_id);
     /* TODO: handle multiple child */
 
     struct vcpu* nclv = NULL;
@@ -382,7 +381,6 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
     switch (fid) {
         case BAOENCLAVE_CREATE:
 	    baoenclave_create(arg1);
-            INFO("Enclave Created");
             break;
 
         case BAOENCLAVE_RESUME:

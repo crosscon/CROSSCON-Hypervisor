@@ -93,37 +93,23 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
 void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 {
     uint64_t smc_fid = cpu.vcpu->regs->x[0];
-    uint64_t x1 = cpu.vcpu->regs->x[1];
-    uint64_t x2 = cpu.vcpu->regs->x[2];
-    uint64_t x3 = cpu.vcpu->regs->x[3];
 
-    int64_t ret = -1;
     struct vcpu* vcpu = cpu.vcpu;
 
-    if (is_psci_fid(smc_fid)) {
-        ret = psci_smc_handler(smc_fid, x1, x2, x3);
-        vcpu_writereg(vcpu, 0, ret);
-    } else {
-        list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
-        {
-            /* IF ... */
-            smc_handler_t handler = node->hdnl_smc.handler;
-            if (handler != NULL) {
-                if (!handler(smc_fid)) {
-                    uint64_t pc_step = 2 + (2 * il);
-                    vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
-                } else {
-                    ERROR("handler smc failed (0x%x)", far);
-                }
+
+    list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
+    {
+        /* IF ... */
+        smc_handler_t handler = node->hdnl_smc.handler;
+        if (handler != NULL) {
+            if (!handler(smc_fid)) {
+                /* uint64_t pc_step = 2 + (2 * il); */
+                /* vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step); */
+            } else {
+                ERROR("handler smc failed (0x%x)", far);
             }
         }
-        return;
     }
-	/* ret = tee_handler(smc_fid); */
-
-    /* TODO */
-    uint64_t pc_step = 2 + (2 * il);
-    vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
 }
 
 void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
@@ -136,6 +122,19 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     int64_t ret = -HC_E_INVAL_ID;
     /* struct vcpu* vcpu = cpu.vcpu; */
 
+    /* list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node) */
+    /* { */
+    /*     /1* IF ... *1/ */
+    /*     hvc_handler_t handler = node->hdnl_hvc.handler; */
+    /*     if (handler != NULL) { */
+    /*         if (!handler(x0 & 0xffff)) { */
+    /*             /1* uint64_t pc_step = 2 + (2 * il); *1/ */
+    /*             /1* vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step); *1/ */
+    /*         } else { */
+    /*             ERROR("handler hvc failed (0x%x)", far); */
+    /*         } */
+    /*     } */
+    /* } */
     switch(hvc_fid){
         case HC_IPC:
             ret = ipc_hypercall(x1, x2, x3);
@@ -146,7 +145,7 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 	    vcpu_writereg(cpu.vcpu, 0, ret);
             break;
         case HC_ENCLAVE:
-            baoenclave_dynamic_hypercall(x0 & 0xffff, x1, x2, x3);
+            baoenclave_dynamic_hypercall(x0 & 0xffff);
             break;
     }
 }

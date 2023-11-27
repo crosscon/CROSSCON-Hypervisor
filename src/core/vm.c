@@ -22,6 +22,7 @@
 #include <baoenclave.h>
 #include "inc/ipc.h"
 #include "list.h"
+#include <sdgpos.h>
 
 enum emul_type {EMUL_MEM, EMUL_REG};
 struct emul_node {
@@ -48,6 +49,8 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     list_init(&vm->vcpu_list);
     objcache_init(&vm->emul_oc, sizeof(struct emul_node), SEC_HYP_VM, false);
     objcache_init(&vm->smc_oc, sizeof(struct hndl_smc_node), SEC_HYP_VM, false);
+    objcache_init(&vm->hvc_oc, sizeof(struct hndl_hvc_node), SEC_HYP_VM, false);
+    objcache_init(&vm->irq_oc, sizeof(struct hndl_irq_node), SEC_HYP_VM, false);
 }
 
 static void vm_master_destroy(struct vm* vm)
@@ -415,6 +418,8 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
     }
 
     tee_handler_setup(vm);
+    sdgpos_handler_setup(vm);
+    sdsgx_handler_setup(vm);
 
     cpu_sync_barrier(&vm->sync);
 

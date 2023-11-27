@@ -3,6 +3,7 @@
 #include <vmstack.h>
 #include <arch/tee.h>
 #include <config.h>
+#include "types.h"
 #include "vm.h"
 #include "vmm.h"
 
@@ -46,17 +47,27 @@ static inline void tee_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu *v
     }
 }
 
-int64_t tee_handler(uint64_t id) {
+int64_t tee_handler(uint64_t smc_fid) {
 
     int64_t ret = -HC_E_FAILURE;
 
     struct vcpu *calling_vcpu = cpu.vcpu;
+
+    if (calling_vcpu->vm->id == 2) { /* normal world */
+        if (is_psci_fid(smc_fid)) {
+            /* potentially handle core going to sleep */
+            return HC_E_SUCCESS;
+        }
+        /* handled by sdgpos */
+    }
 
     if (calling_vcpu->vm->id == 2) {
 	/* normal world */
         if (vmstack_pop() != NULL) {
 	    tee_arch_interrupt_disable();
             tee_copy_args(cpu.vcpu, calling_vcpu, 7);
+            uint64_t pc_step = 2 + (2 * 1);
+            vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
             ret = HC_E_SUCCESS;
         }
     } else {
@@ -64,16 +75,18 @@ int64_t tee_handler(uint64_t id) {
         // in this model, the tee always has only 1 child vm, hence child = 0
         struct vcpu *ree_vcpu = vcpu_get_child(cpu.vcpu, 0);
         if (ree_vcpu != NULL) {
-            switch (ID_TO_FUNCID(id)) {
+            switch (ID_TO_FUNCID(smc_fid)) {
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
                     tee_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
                     /* fallthough */
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);
+                    uint64_t pc_step = 2 + (2 * 1);
+                    vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
 		    tee_arch_interrupt_enable();
                     break;
                 default:
-                    ERROR("unknown tee call %0lx", id);
+                    ERROR("unknown tee call %0lx", smc_fid);
             }
             ret = HC_E_SUCCESS;
         }
@@ -83,11 +96,32 @@ int64_t tee_handler(uint64_t id) {
 }
 
 
+extern uint64_t interrupt_owner[MAX_INTERRUPTS];
+static inline uint64_t interrupts_get_vmid(uint64_t int_id)
+{
+    return interrupt_owner[int_id];
+}
+void handle_tz_interrupt(irqid_t int_id)
+{
+    struct vcpu *vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
+   if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
+       if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
+           vmstack_push(vcpu); /* transition to normal world */
+       }
+   }
+}
+
 #include <vmm.h>
 static struct hndl_smc smc = {
     .end = 0xffff0000,
     .start = 0x00000000,
     .handler = tee_handler,
+};
+
+static struct hndl_irq irq = {
+    .num = 10,
+    .irqs = {27,33,72,73,74,75,76,77,78,79},
+    .handler = handle_tz_interrupt,
 };
 
 int64_t tee_handler_setup(struct vm *vm)
@@ -98,6 +132,7 @@ int64_t tee_handler_setup(struct vm *vm)
         return -1;
 
     vm_hndl_smc_add(vm, &smc);
+    vm_hndl_irq_add(vm, &irq);
 
     return ret;
 }

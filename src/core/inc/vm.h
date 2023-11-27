@@ -120,7 +120,7 @@ struct hndl_smc_node {
     struct hndl_smc hdnl_smc;
 };
 
-typedef int (*hvc_handler_t)(uint64_t hvc);
+typedef int64_t (*hvc_handler_t)(uint64_t hvc);
 struct hndl_hvc {
     size_t start;
     size_t end;

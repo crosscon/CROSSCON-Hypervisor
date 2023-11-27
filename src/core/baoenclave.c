@@ -374,13 +374,17 @@ void baoenclave_exit()
 
 extern uint64_t irqs;
 extern uint64_t enclv_aborts;
-int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
-                                     uint64_t arg2)
+int64_t baoenclave_dynamic_hypercall(uint64_t fid)
 {
     int64_t res = HC_E_SUCCESS;
     static unsigned int n_calls = 0;
     static unsigned int o_calls = 0;
     static unsigned int n_resumes = 0;
+
+    struct vcpu *vcpu = cpu.vcpu;
+    uint64_t arg0 = vcpu->regs->x[1];
+    uint64_t arg1 = vcpu->regs->x[2];
+    uint64_t arg2 = vcpu->regs->x[3];
 
     switch (fid) {
         case BAOENCLAVE_CREATE:
@@ -463,4 +467,54 @@ int baoenclave_handle_abort(unsigned long addr)
 	vcpu_writereg(cpu.vcpu, 0, res);
     }
     return 0;
+}
+
+#include <interrupts.h>
+extern uint64_t interrupt_owner[MAX_INTERRUPTS];
+static inline uint64_t interrupts_get_vmid(uint64_t int_id)
+{
+    return interrupt_owner[int_id];
+}
+
+uint64_t irqs = 0;
+void handle_sgx_interrupt(irqid_t int_id)
+{
+    struct vcpu *vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
+   if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
+       if(cpu.vcpu->vm->id == 3){ /* currently running enclave */
+           if(cpu.vcpu->nclv_data.initialized == false)
+               return;
+           vmstack_pop(); /* transition to normal world */
+           irqs++;
+           /* signal that enclave was interrupted */
+           vcpu_writereg(cpu.vcpu, 0, 1);
+       }
+   }
+}
+
+
+#include <vmm.h>
+static struct hndl_hvc hvc = {
+    .end = 0xffff0000,
+    .start = 0x00000000,
+    .handler = baoenclave_dynamic_hypercall,
+};
+
+static struct hndl_irq irq = {
+    .num = 10,
+    .irqs = {27,33,72,73,74,75,76,77,78,79},
+    .handler = handle_sgx_interrupt,
+};
+
+int64_t sdsgx_handler_setup(struct vm *vm)
+{
+    int64_t ret = 0;
+
+    if(vm == NULL)
+        return -1;
+
+    vm_hndl_hvc_add(vm, &hvc);
+    vm_hndl_irq_add(vm, &irq);
+
+    return ret;
 }

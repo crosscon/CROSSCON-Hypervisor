@@ -2,8 +2,11 @@
 #include <hypercall.h>
 #include <vmstack.h>
 #include <arch/tee.h>
+#include <config.h>
+#include "vm.h"
+#include "vmm.h"
 
-#define PREFIX_MASK 0xff000000 
+#define PREFIX_MASK 0xff000000
 #define ID_TO_FUNCID(x) (x & ~(PREFIX_MASK))
 #define PREFIX 0
 #define TEEHC_FUNCID_RETURN_ENTRY_DONE          (PREFIX | 0)
@@ -50,13 +53,15 @@ int64_t tee_handler(uint64_t id) {
     struct vcpu *calling_vcpu = cpu.vcpu;
 
     if (calling_vcpu->vm->id == 2) {
+	/* normal world */
         if (vmstack_pop() != NULL) {
 	    tee_arch_interrupt_disable();
             tee_copy_args(cpu.vcpu, calling_vcpu, 7);
             ret = HC_E_SUCCESS;
         }
     } else {
-        // in this model, the always has only 1 child vm, hence child = 0
+	/* secure world */
+        // in this model, the tee always has only 1 child vm, hence child = 0
         struct vcpu *ree_vcpu = vcpu_get_child(cpu.vcpu, 0);
         if (ree_vcpu != NULL) {
             switch (ID_TO_FUNCID(id)) {
@@ -73,6 +78,26 @@ int64_t tee_handler(uint64_t id) {
             ret = HC_E_SUCCESS;
         }
     }
+
+    return ret;
+}
+
+
+#include <vmm.h>
+static struct hndl_smc smc = {
+    .end = 0xffff0000,
+    .start = 0x00000000,
+    .handler = tee_handler,
+};
+
+int64_t tee_handler_setup(struct vm *vm)
+{
+    int64_t ret = 0;
+
+    if(vm == NULL)
+        return -1;
+
+    vm_hndl_smc_add(vm, &smc);
 
     return ret;
 }

@@ -47,6 +47,7 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     list_init(&vm->emul_list);
     list_init(&vm->vcpu_list);
     objcache_init(&vm->emul_oc, sizeof(struct emul_node), SEC_HYP_VM, false);
+    objcache_init(&vm->smc_oc, sizeof(struct hndl_smc_node), SEC_HYP_VM, false);
 }
 
 static void vm_master_destroy(struct vm* vm)
@@ -167,7 +168,7 @@ void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
 
     memcpy((void*)dst_va, (void*)src_va, n_img * PAGE_SIZE);
     cache_flush_range((vaddr_t)dst_va, n_img * PAGE_SIZE);
-    /*TODO: unmap */
+    /* TODO: unmap */
 }
 
 void vm_map_mem_region(struct vm* vm, struct mem_region* reg)
@@ -371,6 +372,8 @@ void vm_destroy_dynamic(struct vm* vm)
     vm_master_destroy(vm);
 }
 
+#include <tee.h>
+
 struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
 {
     /**
@@ -411,6 +414,8 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
         vm_init_ipc(vm, config);
     }
 
+    tee_handler_setup(vm);
+
     cpu_sync_barrier(&vm->sync);
 
     return vcpu;
@@ -443,7 +448,35 @@ void vm_emul_add_reg(struct vm* vm, struct emul_reg* emu)
         // page table.
     }
 
-}    
+}
+
+void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs)
+{
+    struct hndl_irq_node* ptr = objcache_alloc(&vm->irq_oc);
+    if (ptr != NULL) {
+        ptr->hdnl_irq = *irqs;
+        list_push(&vm->irq_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs)
+{
+    struct hndl_smc_node* ptr = objcache_alloc(&vm->smc_oc);
+    if (ptr != NULL) {
+        ptr->hdnl_smc = *smcs;
+        list_push(&vm->smc_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs)
+{
+    struct hndl_hvc_node* ptr = objcache_alloc(&vm->hvc_oc);
+    if (ptr != NULL) {
+        ptr->hdnl_hvc = *hvcs;
+        list_push(&vm->hvc_list, (node_t*)ptr);
+    }
+}
+
 
 static inline emul_handler_t vm_emul_get(struct vm* vm, enum emul_type type, vaddr_t addr)
 {

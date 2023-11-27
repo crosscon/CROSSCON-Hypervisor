@@ -21,6 +21,7 @@
 #include <bitmap.h>
 #include <string.h>
 #include <vmstack.h>
+#include "bao.h"
 
 BITMAP_ALLOC(hyp_interrupt_bitmap, MAX_INTERRUPTS);
 BITMAP_ALLOC(global_interrupt_bitmap, MAX_INTERRUPTS);
@@ -64,6 +65,8 @@ static inline bool interrupt_is_reserved(irqid_t int_id)
     return bitmap_get(hyp_interrupt_bitmap, int_id);
 }
 
+
+uint64_t irqs = 0;
 inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id) 
 {
    interrupts_arch_vm_inject(vcpu, id);
@@ -71,9 +74,13 @@ inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id)
        /* TODO */
        /* if(cpu.vcpu->nclv_data.initialized == false) */
 	   /* return; */
-       vmstack_push(vcpu);
        /* Signal the parent of the interrupts vcpu that we were interrupted */
+       /* vmstack_pop(); */
        /* vcpu_writereg(cpu.vcpu, 0, 1); */
+       /* irqs++; */
+       /* INFO("irq: %lu", id); */
+
+       /* vmstack_push(vcpu); */
    }
 }
 
@@ -85,10 +92,6 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 enum irq_res interrupts_handle(irqid_t int_id)
 {
     struct vcpu *vcpu = NULL;
-    volatile int x = 1;
-    if((int_id == 55 || int_id == 58) && cpu.vcpu->vm->id == 1)
-	x = 0;
-    (void)x;
 
     if(interrupts_is_shared(int_id) || (cpu.vcpu->vm->id == interrupts_get_vmid(int_id))){
         vcpu = cpu.vcpu;

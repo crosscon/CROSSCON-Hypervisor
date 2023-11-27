@@ -31,6 +31,7 @@
 #include <bitmap.h>
 #include <iommu.h>
 #include <ipc.h>
+#include <vmm.h>
 
 struct vm {
     node_t node;
@@ -52,6 +53,15 @@ struct vm {
 
     struct list emul_list;
     struct objcache emul_oc;
+
+    struct list irq_list;
+    struct objcache irq_oc;
+
+    struct list hvc_list;
+    struct objcache hvc_oc;
+
+    struct list smc_list;
+    struct objcache smc_oc;
 
     struct iommu_vm iommu;
 
@@ -85,6 +95,40 @@ struct vcpu {
     }nclv_data;
 
     uint8_t stack[STACK_SIZE] __attribute__((aligned(STACK_SIZE)));
+};
+
+typedef void (*irq_handler_t)(irqid_t int_id);
+struct hndl_irq {
+    size_t num;
+    uint64_t irqs[159];
+    irq_handler_t handler;
+};
+struct hndl_irq_node {
+    node_t node;
+    struct hndl_irq hdnl_irq;
+};
+
+typedef int64_t (*smc_handler_t)(uint64_t smc);
+struct hndl_smc {
+    size_t start;
+    size_t end;
+    smc_handler_t handler;
+};
+
+struct hndl_smc_node {
+    node_t node;
+    struct hndl_smc hdnl_smc;
+};
+
+typedef int (*hvc_handler_t)(uint64_t hvc);
+struct hndl_hvc {
+    size_t start;
+    size_t end;
+    hvc_handler_t handler;
+};
+struct hndl_hvc_node {
+    node_t node;
+    struct hndl_hvc hdnl_hvc;
 };
 
 extern struct vm vm;
@@ -162,5 +206,11 @@ void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
                         struct mem_region* reg);
 
 void vm_map_mem_region(struct vm* vm, struct mem_region* reg);
+
+void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs);
+
+void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs);
+
+void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs);
 
 #endif /* __VM_H__ */

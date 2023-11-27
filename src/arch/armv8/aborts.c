@@ -27,6 +27,7 @@
 #include <vmstack.h>
 #include <baoenclave.h>
 #include <tee.h>
+#include <vmm.h>
 
 typedef void (*abort_handler_t)(uint64_t, uint64_t, uint64_t);
 
@@ -44,9 +45,9 @@ void internal_abort_handler(uint64_t gprs[]) {
 
 void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
 {
-    if (!(iss & ESR_ISS_DA_ISV_BIT) || (iss & ESR_ISS_DA_FnV_BIT)) {
-        ERROR("no information to handle data abort (0x%x)", far);
-    }
+    /* if (!(iss & ESR_ISS_DA_ISV_BIT) || (iss & ESR_ISS_DA_FnV_BIT)) { */
+    /*     ERROR("no information to handle data abort (0x%x)", far); */
+    /* } */
 
     uint64_t DSFC =
         bit64_extract(iss, ESR_ISS_DA_DSFC_OFF, ESR_ISS_DA_DSFC_LEN) & (0xf << 2);
@@ -102,27 +103,23 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler(smc_fid, x1, x2, x3);
         vcpu_writereg(vcpu, 0, ret);
-    } else
-	ret = tee_handler(smc_fid);
-    /*} else { */
-    /*    if (vcpu->parent) { */
-    /*        /1** */
-    /*         * TODO: we should somehow signal the the parent the child is */
-    /*         * returning do to an unhandled system call */
-    /*         *1/ */
-    /*        vmstack_pop(); */
-	/*} else { */
-	    /*INFO("passing through smc_fid 0x%lx", smc_fid); */
-	    /*struct smc_res res; */
-	    /*ret = smc_call(smc_fid, cpu.vcpu->regs->x[1], cpu.vcpu->regs->x[2], */
-		    /*cpu.vcpu->regs->x[3], &res); */
-	    /*vcpu_writereg(cpu.vcpu, 0, res.x0); */
-	    /*vcpu_writereg(cpu.vcpu, 1, res.x1); */
-	    /*vcpu_writereg(cpu.vcpu, 2, res.x2); */
-	    /*vcpu_writereg(cpu.vcpu, 3, res.x3); */
-	    /*WARNING("SMC returned 0x%lx", ret); */
-	/*} */
-    /* } */
+    } else {
+        list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
+        {
+            /* IF ... */
+            smc_handler_t handler = node->hdnl_smc.handler;
+            if (handler != NULL) {
+                if (!handler(smc_fid)) {
+                    uint64_t pc_step = 2 + (2 * il);
+                    vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
+                } else {
+                    ERROR("handler smc failed (0x%x)", far);
+                }
+            }
+        }
+        return;
+    }
+	/* ret = tee_handler(smc_fid); */
 
     /* TODO */
     uint64_t pc_step = 2 + (2 * il);

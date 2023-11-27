@@ -245,6 +245,7 @@ void baoenclave_reclaim(struct vcpu* host, struct vcpu* nclv)
 	struct ppages pp = mem_ppages_get(base_cont_pa, contiguous_pages);
 	mem_map(&cpu.as, base_hyp, &pp, contiguous_pages, PTE_HYP_FLAGS);
 	memset((void*)base_hyp, 0, contiguous_pages * PAGE_SIZE);
+	/* TODO: must flush */
 
 	/* TODO optimize undoing the mapping */
 	/* give back memory to host VM */
@@ -371,11 +372,14 @@ void baoenclave_exit()
     vcpu_writereg(cpu.vcpu, 0, 0);
 }
 
+extern uint64_t irqs;
+extern uint64_t enclv_aborts;
 int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
                                      uint64_t arg2)
 {
     int64_t res = HC_E_SUCCESS;
     static unsigned int n_calls = 0;
+    static unsigned int o_calls = 0;
     static unsigned int n_resumes = 0;
 
     switch (fid) {
@@ -395,7 +399,7 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
             break;
 
 	case BAOENCLAVE_OCALL:
-	    n_calls++;
+	    o_calls++;
 	    baoenclave_ocall(arg0, arg1);
             break;
 
@@ -414,11 +418,18 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
 	    baoenclave_add_rgn(arg0, arg1, arg2);
 	    break;
 	case BAOENCLAVE_INFO:
-	    vcpu_writereg(cpu.vcpu, 1, n_calls);
+	    vcpu_writereg(cpu.vcpu, 1, enclv_aborts);
 	    vcpu_writereg(cpu.vcpu, 2, n_resumes);
+	    vcpu_writereg(cpu.vcpu, 3, irqs);
+	    vcpu_writereg(cpu.vcpu, 4, n_calls);
+	    vcpu_writereg(cpu.vcpu, 5, o_calls);
 	    vcpu_writereg(cpu.vcpu, 0, res);
+            enclv_aborts = 0;
 	    n_calls = 0;
+	    o_calls = 0;
 	    n_resumes = 0;
+	    irqs = 0;
+	    enclv_aborts = 0;
 	    break;
 
         default:
@@ -434,10 +445,12 @@ int64_t baoenclave_dynamic_hypercall(uint64_t fid, uint64_t arg0, uint64_t arg1,
     return res;
 }
 
+uint64_t enclv_aborts = 0;
 int baoenclave_handle_abort(unsigned long addr)
 {
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
+    enclv_aborts++;
     /* TODO: validate address space */
 
     enclave = vmstack_pop();

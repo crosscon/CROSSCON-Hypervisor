@@ -66,7 +66,7 @@ static inline bool interrupt_is_reserved(irqid_t int_id)
 }
 
 
-uint64_t irqs = 0;
+
 inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id) 
 {
    interrupts_arch_vm_inject(vcpu, id);
@@ -101,8 +101,14 @@ enum irq_res interrupts_handle(irqid_t int_id)
 
     /* TODO */
     if((vcpu != NULL) && vm_has_interrupt(vcpu->vm, int_id)){
-
-        interrupts_vm_inject(vcpu, int_id);
+        list_foreach(vcpu->vm->irq_list, struct hndl_irq_node, node)
+        {
+            /* IF ... */
+            irq_handler_t handler = node->hdnl_irq.handler;
+            if (handler != NULL) {
+                handler(int_id);
+            }
+        }
 
         return FORWARD_TO_VM;
 

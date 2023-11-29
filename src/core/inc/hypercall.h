@@ -21,6 +21,7 @@
 enum {
     HC_INVAL = 0,
     HC_IPC = 1,
+    /* TODO: Remove */
     HC_VMSTACK = 2,
     HC_ENCLAVE = 3,
     HC_TEE = 4,

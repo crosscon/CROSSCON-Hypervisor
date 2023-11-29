@@ -51,6 +51,7 @@ struct vm {
 
     struct vm_arch arch;
 
+    /* TODO: OCs should be global */
     struct list emul_list;
     struct objcache emul_oc;
 

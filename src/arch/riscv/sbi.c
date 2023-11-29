@@ -259,6 +259,7 @@ void sbi_timer_irq_handler()
 
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
+/* TODO */
 struct sbiret sbi_ipi_handler(unsigned long fid)
 {
     if (fid != SBI_SEND_IPI_FID) return (struct sbiret){SBI_ERR_NOT_SUPPORTED};
@@ -436,15 +437,13 @@ struct sbiret sbi_bao_handler(unsigned long fid){
     unsigned long arg2 = vcpu_readreg(cpu.vcpu, REG_A2);
     unsigned long arg3 = vcpu_readreg(cpu.vcpu, REG_A3);
 
+    /* TODO: sdee */
     switch(fid) {
         case HC_IPC:
             ret.value = ipc_hypercall(arg0, arg1, arg2);
             break;
         case HC_VMSTACK:
             ret.value  = vmstack_hypercall(arg0, arg1, arg2, arg3);
-            break;
-        /* case HC_ENCLAVE: */
-        /*     ret.value = sdsgx_dynamic_hypercall(arg0, arg1, arg2, arg3); */
             break;
         default:
             ret.error = -HC_E_INVAL_ID;

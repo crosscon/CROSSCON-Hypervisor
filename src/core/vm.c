@@ -354,6 +354,7 @@ void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmi
     vm_vcpu_init(vm, config->vmlist[0]);
     vm_arch_init(vm, config->vmlist[0]);
 
+    /* TODO: init dynamic from config not like this */
     sdsgx_donate(vm, config, vm_addr);
 
     vm_init_dev(vm, config->vmlist[0]);

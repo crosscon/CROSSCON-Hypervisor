@@ -49,15 +49,14 @@ static inline void sdtz_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu
     }
 }
 
-int64_t sdtz_handler(uint64_t fid) {
-    struct vcpu *calling_vcpu = cpu.vcpu;
+int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     int64_t ret = -HC_E_FAILURE;
 
-    if (calling_vcpu->vm->id == 2) {
+    if (vcpu->vm->id == 2) {
 	/* normal world */
         if (vmstack_pop() != NULL) {
 	    tee_arch_interrupt_disable();
-            sdtz_copy_args(cpu.vcpu, calling_vcpu, 7);
+            sdtz_copy_args(cpu.vcpu, vcpu, 7);
             uint64_t pc_step = 2 + (2 * 1);
             vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
             ret = HC_E_SUCCESS;
@@ -65,7 +64,7 @@ int64_t sdtz_handler(uint64_t fid) {
     } else {
 	/* secure world */
         /* TODO: get parent */
-        struct vcpu *ree_vcpu = vcpu_get_child(cpu.vcpu, 0);
+        struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
         if (ree_vcpu != NULL) {
             switch (ID_TO_FUNCID(fid)) {
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
@@ -84,13 +83,10 @@ int64_t sdtz_handler(uint64_t fid) {
     return ret;
 }
 
-int64_t sdtz_sbi_handler(uint64_t smc_fid) {
+int64_t sdtz_sbi_handler(struct vcpu* vcpu, uint64_t smc_fid) {
     int64_t ret = -HC_E_FAILURE;
-    struct vcpu *calling_vcpu = cpu.vcpu;
 
-    (void)calling_vcpu;
-
-    ret = sdtz_handler(smc_fid);
+    ret = sdtz_handler(vcpu, smc_fid);
     return ret;
 }
 
@@ -104,11 +100,14 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
         if (is_psci_fid(smc_fid)) {
             /* potentially handle core going to sleep */
             return HC_E_SUCCESS;
+        } else {
+            ret = sdtz_handler(vcpu, smc_fid);
         }
         /* handled by sdgpos */
+    }else{
+            ret = sdtz_handler(vcpu, smc_fid);
     }
 
-    ret = sdtz_handler(smc_fid);
 
     return ret;
 }
@@ -122,7 +121,6 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
     /* TODO: check current active handler */
-    struct vcpu *vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
        if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
            vmstack_push(vcpu); /* transition to normal world */

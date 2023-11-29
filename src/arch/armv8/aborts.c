@@ -77,11 +77,12 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
             ERROR("data abort emulation failed (0x%x)", far);
         }
     } else {
-        list_foreach(cpu.vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
+        struct vcpu* vcpu = cpu.vcpu;
+        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
         {
             mem_abort_handler_t handler = node->hndl_mem_abort.handler;
             if (handler != NULL) {
-                if (handler(addr)) {
+                if (handler(vcpu, addr)) {
                     ERROR("handler smc failed (0x%x)", far);
                 }
             }

@@ -25,8 +25,6 @@
 /** hypercall handler declarations */
 #include <ipc.h>
 #include <vmstack.h>
-#include <baoenclave.h>
-#include <tee.h>
 #include <vmm.h>
 
 typedef void (*abort_handler_t)(uint64_t, uint64_t, uint64_t);
@@ -45,9 +43,9 @@ void internal_abort_handler(uint64_t gprs[]) {
 
 void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
 {
-    /* if (!(iss & ESR_ISS_DA_ISV_BIT) || (iss & ESR_ISS_DA_FnV_BIT)) { */
-    /*     ERROR("no information to handle data abort (0x%x)", far); */
-    /* } */
+    if (!(iss & ESR_ISS_DA_ISV_BIT) || (iss & ESR_ISS_DA_FnV_BIT)) {
+        ERROR("no information to handle data abort (0x%x)", far);
+    }
 
     uint64_t DSFC =
         bit64_extract(iss, ESR_ISS_DA_DSFC_OFF, ESR_ISS_DA_DSFC_LEN) & (0xf << 2);
@@ -72,21 +70,22 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
 
         // TODO: check if the access is aligned. If not, inject an exception in
         // the vm
-
         if (handler(&emul)) {
             uint64_t pc_step = 2 + (2 * il);
-            //cpu.vcpu->regs->elr_el2 += pc_step;
             vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
         } else {
             ERROR("data abort emulation failed (0x%x)", far);
         }
     } else {
-	if(!baoenclave_handle_abort(addr)){
-	    return;
-	}
-        ERROR("no emulation handler for abort(0x%x at 0x%x)", far,
-              //cpu.vcpu->regs->elr_el2);
-              vcpu_readpc(cpu.vcpu));
+        list_foreach(cpu.vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
+        {
+            mem_abort_handler_t handler = node->hndl_mem_abort.handler;
+            if (handler != NULL) {
+                if (handler(addr)) {
+                    ERROR("handler smc failed (0x%x)", far);
+                }
+            }
+        }
     }
 }
 
@@ -99,13 +98,10 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 
     list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
     {
-        /* IF ... */
-        smc_handler_t handler = node->hdnl_smc.handler;
+        /* TODO: match range */
+        smc_handler_t handler = node->hndl_smc.handler;
         if (handler != NULL) {
-            if (!handler(smc_fid)) {
-                /* uint64_t pc_step = 2 + (2 * il); */
-                /* vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step); */
-            } else {
+            if (handler(vcpu, smc_fid)) {
                 ERROR("handler smc failed (0x%x)", far);
             }
         }
@@ -115,38 +111,18 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
 {
     uint64_t x0 = cpu.vcpu->regs->x[0];
-    uint64_t x1 = cpu.vcpu->regs->x[1];
-    uint64_t x2 = cpu.vcpu->regs->x[2];
-    uint64_t x3 = cpu.vcpu->regs->x[3];
-    uint64_t hvc_fid = (x0 >> 16) & 0xffff;
-    int64_t ret = -HC_E_INVAL_ID;
-    /* struct vcpu* vcpu = cpu.vcpu; */
 
-    /* list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node) */
-    /* { */
-    /*     /1* IF ... *1/ */
-    /*     hvc_handler_t handler = node->hdnl_hvc.handler; */
-    /*     if (handler != NULL) { */
-    /*         if (!handler(x0 & 0xffff)) { */
-    /*             /1* uint64_t pc_step = 2 + (2 * il); *1/ */
-    /*             /1* vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step); *1/ */
-    /*         } else { */
-    /*             ERROR("handler hvc failed (0x%x)", far); */
-    /*         } */
-    /*     } */
-    /* } */
-    switch(hvc_fid){
-        case HC_IPC:
-            ret = ipc_hypercall(x1, x2, x3);
-	    vcpu_writereg(cpu.vcpu, 0, ret);
-	    break;
-        case HC_VMSTACK:
-            ret = vmstack_hypercall(x0 & 0xffff, x1, x2, x3);
-	    vcpu_writereg(cpu.vcpu, 0, ret);
-            break;
-        case HC_ENCLAVE:
-            baoenclave_dynamic_hypercall(x0 & 0xffff);
-            break;
+    struct vcpu* vcpu = cpu.vcpu;
+
+    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
+    {
+        /* TODO: match range */
+        hvc_handler_t handler = node->hndl_hvc.handler;
+        if (handler != NULL) {
+            if (handler(vcpu, x0 & 0xffff)) {
+                ERROR("handler hvc failed (0x%x)", far);
+            }
+        }
     }
 }
 
@@ -165,14 +141,11 @@ void sysreg_handler(uint64_t iss, uint64_t far, uint64_t il)
 
         if (handler(&emul)) {
             uint64_t pc_step = 2 + (2 * il);
-            //cpu.vcpu->regs->elr_el2 += pc_step;
             vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
         } else {
             ERROR("register access emulation failed (0x%x)", reg_addr);
         }
     } else {
-        //ERROR("no emulation handler for register access (0x%x at 0x%x)", reg_addr,
-        //      cpu.vcpu->regs->elr_el2);
         ERROR("no emulation handler for register access (0x%x at 0x%x)",
               reg_addr, vcpu_readpc(cpu.vcpu));
     }

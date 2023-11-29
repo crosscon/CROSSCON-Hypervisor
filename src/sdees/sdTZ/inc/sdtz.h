@@ -6,7 +6,6 @@
 
 #define SBI_EXTID_TEE (0x544545)
 
-int64_t tee_handler(uint64_t id);
-int64_t tee_handler_setup(struct vm *vm);
+int64_t sdtz_handler_setup(struct vm *vm);
 
 #endif /* TEE_H_ */

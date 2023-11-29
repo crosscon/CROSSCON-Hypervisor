@@ -19,10 +19,12 @@
 #include <string.h>
 #include <mem.h>
 #include <cache.h>
-#include <baoenclave.h>
 #include "inc/ipc.h"
 #include "list.h"
+
+#include <sdtz.h>
 #include <sdgpos.h>
+#include <sdsgx.h>
 
 enum emul_type {EMUL_MEM, EMUL_REG};
 struct emul_node {
@@ -51,6 +53,7 @@ static void vm_master_init(struct vm* vm, const struct vm_config* config, vmid_t
     objcache_init(&vm->smc_oc, sizeof(struct hndl_smc_node), SEC_HYP_VM, false);
     objcache_init(&vm->hvc_oc, sizeof(struct hndl_hvc_node), SEC_HYP_VM, false);
     objcache_init(&vm->irq_oc, sizeof(struct hndl_irq_node), SEC_HYP_VM, false);
+    objcache_init(&vm->mem_abort_oc, sizeof(struct hndl_mem_abort_node), SEC_HYP_VM, false);
 }
 
 static void vm_master_destroy(struct vm* vm)
@@ -351,10 +354,12 @@ void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmi
     vm_vcpu_init(vm, config->vmlist[0]);
     vm_arch_init(vm, config->vmlist[0]);
 
-    baoenclave_donate(vm, config, vm_addr);
+    sdsgx_donate(vm, config, vm_addr);
 
     vm_init_dev(vm, config->vmlist[0]);
     vm_init_ipc(vm, config->vmlist[0]);
+
+    sdsgx_handler_setup(vm);
 
     vm->enclave_house_keeping.donor_va = vm_addr;
     vm->enclave_house_keeping.config = config;
@@ -367,7 +372,7 @@ void vm_destroy_dynamic(struct vm* vm)
 
     /* TODO: This is not making much sense right now. We need to reclaim
      * resources from the vm, not from the cpu */
-    baoenclave_reclaim(cpu.vcpu, vm_get_vcpu(vm, 0));
+    sdsgx_reclaim(cpu.vcpu, vm_get_vcpu(vm, 0));
 
     vm_vcpu_destroy(vm, vm_get_vcpu(vm, 0));
     /* vm_arch_destroy(vm, vm->config); */
@@ -375,7 +380,7 @@ void vm_destroy_dynamic(struct vm* vm)
     vm_master_destroy(vm);
 }
 
-#include <tee.h>
+#include <sdtz.h>
 
 struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master, vmid_t vm_id)
 {
@@ -417,7 +422,8 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
         vm_init_ipc(vm, config);
     }
 
-    tee_handler_setup(vm);
+    /* TODO: use linker table */
+    sdtz_handler_setup(vm);
     sdgpos_handler_setup(vm);
     sdsgx_handler_setup(vm);
 
@@ -459,7 +465,7 @@ void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs)
 {
     struct hndl_irq_node* ptr = objcache_alloc(&vm->irq_oc);
     if (ptr != NULL) {
-        ptr->hdnl_irq = *irqs;
+        ptr->hndl_irq = *irqs;
         list_push(&vm->irq_list, (node_t*)ptr);
     }
 }
@@ -468,7 +474,7 @@ void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs)
 {
     struct hndl_smc_node* ptr = objcache_alloc(&vm->smc_oc);
     if (ptr != NULL) {
-        ptr->hdnl_smc = *smcs;
+        ptr->hndl_smc = *smcs;
         list_push(&vm->smc_list, (node_t*)ptr);
     }
 }
@@ -477,8 +483,17 @@ void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs)
 {
     struct hndl_hvc_node* ptr = objcache_alloc(&vm->hvc_oc);
     if (ptr != NULL) {
-        ptr->hdnl_hvc = *hvcs;
+        ptr->hndl_hvc = *hvcs;
         list_push(&vm->hvc_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_mem_abort_add(struct vm* vm, struct hndl_mem_abort* mem_aborts)
+{
+    struct hndl_mem_abort_node* ptr = objcache_alloc(&vm->hvc_oc);
+    if (ptr != NULL) {
+        ptr->hndl_mem_abort = *mem_aborts;
+        list_push(&vm->mem_abort_list, (node_t*)ptr);
     }
 }
 
@@ -498,7 +513,7 @@ static inline emul_handler_t vm_emul_get(struct vm* vm, enum emul_type type, vad
             struct emul_reg *emu = &node->emu_reg;
             if(emu->addr == addr) {
                 handler = emu->handler;
-                break; 
+                break;
             }
         }
     }

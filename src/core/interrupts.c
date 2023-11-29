@@ -67,7 +67,7 @@ static inline bool interrupt_is_reserved(irqid_t int_id)
 
 
 
-inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id) 
+inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id)
 {
    interrupts_arch_vm_inject(vcpu, id);
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
@@ -104,9 +104,9 @@ enum irq_res interrupts_handle(irqid_t int_id)
         list_foreach(vcpu->vm->irq_list, struct hndl_irq_node, node)
         {
             /* IF ... */
-            irq_handler_t handler = node->hdnl_irq.handler;
+            sdirq_handler_t handler = node->hndl_irq.handler;
             if (handler != NULL) {
-                handler(int_id);
+                handler(vcpu, int_id);
             }
         }
 
@@ -127,7 +127,7 @@ void interrupts_vm_assign(struct vm *vm, irqid_t id)
     if (interrupts_arch_conflict(global_interrupt_bitmap, id)) {
         ERROR("Interrupts conflict, id = %d\n", id);
     }
-    if(bitmap_get(hyp_interrupt_bitmap, id) || 
+    if(bitmap_get(hyp_interrupt_bitmap, id) ||
         (!interrupts_is_shared(id) && interrupt_owner[id] != 0)){
         ERROR("Trying to assign cpu interrupt multiple times\n", id);
     }

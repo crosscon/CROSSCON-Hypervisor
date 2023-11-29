@@ -63,6 +63,9 @@ struct vm {
     struct list smc_list;
     struct objcache smc_oc;
 
+    struct list mem_abort_list;
+    struct objcache mem_abort_oc;
+
     struct iommu_vm iommu;
 
     BITMAP_ALLOC(interrupt_bitmap, MAX_INTERRUPTS);
@@ -97,18 +100,18 @@ struct vcpu {
     uint8_t stack[STACK_SIZE] __attribute__((aligned(STACK_SIZE)));
 };
 
-typedef void (*irq_handler_t)(irqid_t int_id);
+typedef void (*sdirq_handler_t)(struct vcpu* vcpu, irqid_t int_id);
 struct hndl_irq {
     size_t num;
     uint64_t irqs[159];
-    irq_handler_t handler;
+    sdirq_handler_t handler;
 };
 struct hndl_irq_node {
     node_t node;
-    struct hndl_irq hdnl_irq;
+    struct hndl_irq hndl_irq;
 };
 
-typedef int64_t (*smc_handler_t)(uint64_t smc);
+typedef int64_t (*smc_handler_t)(struct vcpu* vcpu, uint64_t smc);
 struct hndl_smc {
     size_t start;
     size_t end;
@@ -117,10 +120,10 @@ struct hndl_smc {
 
 struct hndl_smc_node {
     node_t node;
-    struct hndl_smc hdnl_smc;
+    struct hndl_smc hndl_smc;
 };
 
-typedef int64_t (*hvc_handler_t)(uint64_t hvc);
+typedef int64_t (*hvc_handler_t)(struct vcpu* vcpu, uint64_t hvc);
 struct hndl_hvc {
     size_t start;
     size_t end;
@@ -128,7 +131,16 @@ struct hndl_hvc {
 };
 struct hndl_hvc_node {
     node_t node;
-    struct hndl_hvc hdnl_hvc;
+    struct hndl_hvc hndl_hvc;
+};
+
+typedef int64_t (*mem_abort_handler_t)(struct vcpu* vcpu, uint64_t addr);
+struct hndl_mem_abort {
+    mem_abort_handler_t handler;
+};
+struct hndl_mem_abort_node {
+    node_t node;
+    struct hndl_mem_abort hndl_mem_abort;
 };
 
 extern struct vm vm;
@@ -212,5 +224,7 @@ void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs);
 void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs);
 
 void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs);
+
+void vm_hndl_mem_abort_add(struct vm* vm, struct hndl_mem_abort* mem_aborts);
 
 #endif /* __VM_H__ */

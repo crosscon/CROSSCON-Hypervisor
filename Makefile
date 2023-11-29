@@ -48,6 +48,11 @@ platforms_dir=$(src_dir)/platform
 configs_dir=$(cur_dir)/configs
 CONFIG_REPO?=$(configs_dir)
 
+sdees_dir=$(src_dir)/sdees
+sdgpos_dir=$(sdees_dir)/sdGPOS
+sdtz_dir=$(sdees_dir)/sdTZ
+sdsgx_dir=$(sdees_dir)/sdSGX
+
 ifeq ($(CONFIG_BUILTIN), y)
 ifeq ($(CONFIG),)
  $(error Buil-in configuration enabled but no configuration (CONFIG) specified)
@@ -83,7 +88,7 @@ endif
 directories:=$(build_dir) $(bin_dir) $(builtin_build_dir) 
 
 src_dirs:= $(cpu_arch_dir) $(cpu_impl_dir) $(lib_dir) $(core_dir)\
-	$(platform_dir) $(addprefix $(drivers_dir)/, $(drivers))
+	$(platform_dir) $(sdsgx_dir) $(sdgpos_dir) $(sdtz_dir) $(addprefix $(drivers_dir)/, $(drivers))
 inc_dirs:=$(addsuffix /inc, $(src_dirs))
 
 # Setup list of objects for compilation
@@ -95,6 +100,10 @@ objs-y+=$(addprefix $(lib_dir)/, $(lib-objs-y))
 objs-y+=$(addprefix $(core_dir)/, $(core-objs-y))
 objs-y+=$(addprefix $(platform_dir)/, $(boards-objs-y))
 objs-y+=$(addprefix $(drivers_dir)/, $(drivers-objs-y))
+objs-y+=$(addprefix $(sdgpos_dir)/, $(sdgpos-objs-y))
+objs-y+=$(addprefix $(sdtz_dir)/, $(sdtz-objs-y))
+objs-y+=$(addprefix $(sdsgx_dir)/, $(sdsgx-objs-y))
+
 ifeq ($(CONFIG_BUILTIN), y)
 builtin-config-obj:=$(builtin_build_dir)/$(CONFIG).o
 objs-y+=$(builtin-config-obj)

@@ -477,7 +477,7 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 }
 
 uint64_t irqs = 0;
-void handle_sgx_interrupt(irqid_t int_id)
+void sdsgx_handle_interrupt(irqid_t int_id)
 {
     struct vcpu *vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
@@ -503,7 +503,7 @@ static struct hndl_hvc hvc = {
 static struct hndl_irq irq = {
     .num = 10,
     .irqs = {27,33,72,73,74,75,76,77,78,79},
-    .handler = handle_sgx_interrupt,
+    .handler = sdsgx_handle_interrupt,
 };
 
 int64_t sdsgx_handler_setup(struct vm *vm)

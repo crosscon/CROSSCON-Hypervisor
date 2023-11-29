@@ -21,7 +21,7 @@
 #include <fences.h>
 #include <hypercall.h>
 #include <vmstack.h>
-#include <tee.h>
+#include <sdtz.h>
 
 #define SBI_EXTID_BASE (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID (0)
@@ -188,19 +188,19 @@ struct sbiret sbi_hart_start(unsigned long hartid, unsigned long start_addr,
                              unsigned long priv)
 {
     return sbi_ecall(SBI_EXTID_HSM, SBI_HART_START_FID, hartid,
-                     start_addr, priv, 0, 0, 0);    
+                     start_addr, priv, 0, 0, 0);
 }
 
 struct sbiret sbi_hart_stop()
 {
     return sbi_ecall(SBI_EXTID_HSM, SBI_HART_STOP_FID, 0,
-                     0, 0, 0, 0, 0);   
+                     0, 0, 0, 0, 0);
 }
 
 struct sbiret sbi_hart_status(unsigned long hartid)
 {
     return sbi_ecall(SBI_EXTID_HSM, SBI_HART_STATUS_FID, hartid,
-                     0, 0, 0, 0, 0);   
+                     0, 0, 0, 0, 0);
 }
 
 static unsigned long ext_table[] = {SBI_EXTID_BASE,
@@ -226,9 +226,9 @@ void sbi_msg_handler(uint32_t event, uint64_t data)
             spin_lock(&cpu.vcpu->arch.sbi_ctx.lock);
             if(cpu.vcpu->arch.sbi_ctx.state == START_PENDING) {
                 vcpu_arch_reset(cpu.vcpu, cpu.vcpu->arch.sbi_ctx.start_addr);
-                vcpu_writereg(cpu.vcpu, REG_A1, cpu.vcpu->arch.sbi_ctx.priv); 
+                vcpu_writereg(cpu.vcpu, REG_A1, cpu.vcpu->arch.sbi_ctx.priv);
                 cpu.vcpu->arch.sbi_ctx.state = STARTED;
-            } 
+            }
             spin_unlock(&cpu.vcpu->arch.sbi_ctx.lock);
         } break;
         default:
@@ -351,17 +351,17 @@ struct sbiret sbi_rfence_handler(unsigned long fid)
 }
 
 struct sbiret sbi_hsm_start_handler() {
-    
+
     struct sbiret ret;
     vcpuid_t vhart_id = vcpu_readreg(cpu.vcpu, REG_A0);
-    
+
     if(vhart_id == cpu.vcpu->id){
         ret.error = SBI_ERR_ALREADY_AVAILABLE;
     } else {
         struct vcpu *vcpu = vm_get_vcpu(cpu.vcpu->vm, vhart_id);
         if(vcpu == NULL) {
             ret.error = SBI_ERR_INVALID_PARAM;
-        } else { 
+        } else {
             spin_lock(&vcpu->arch.sbi_ctx.lock);
             if (vcpu->arch.sbi_ctx.state == STARTED) {
                 ret.error = SBI_ERR_ALREADY_AVAILABLE;
@@ -382,8 +382,8 @@ struct sbiret sbi_hsm_start_handler() {
                     .data = 0xdeadbeef
                 };
                 cpu_send_msg(vcpu->phys_id, &msg);
-               
-                ret.error = SBI_SUCCESS; 
+
+                ret.error = SBI_SUCCESS;
             }
             spin_unlock(&vcpu->arch.sbi_ctx.lock);
        }
@@ -398,7 +398,7 @@ struct sbiret sbi_hsm_status_handler() {
     vcpuid_t vhart_id = vcpu_readreg(cpu.vcpu, REG_A0);
     struct vcpu *vhart = vm_get_vcpu(cpu.vcpu->vm, vhart_id);
 
-    if(vhart != NULL) { 
+    if(vhart != NULL) {
         ret.error = SBI_SUCCESS;
         ret.value = vhart->arch.sbi_ctx.state;
     } else {
@@ -417,13 +417,13 @@ struct sbiret sbi_hsm_handler(unsigned long fid){
             ret = sbi_hsm_start_handler();
         break;
         case SBI_HART_STATUS_FID:
-            ret = sbi_hsm_status_handler(); 
+            ret = sbi_hsm_status_handler();
         break;
         default:
             ret.error = SBI_ERR_NOT_SUPPORTED;
    }
 
-   return ret; 
+   return ret;
 }
 
 
@@ -444,7 +444,7 @@ struct sbiret sbi_bao_handler(unsigned long fid){
             ret.value  = vmstack_hypercall(arg0, arg1, arg2, arg3);
             break;
         /* case HC_ENCLAVE: */
-        /*     ret.value = baoenclave_dynamic_hypercall(arg0, arg1, arg2, arg3); */
+        /*     ret.value = sdsgx_dynamic_hypercall(arg0, arg1, arg2, arg3); */
             break;
         default:
             ret.error = -HC_E_INVAL_ID;

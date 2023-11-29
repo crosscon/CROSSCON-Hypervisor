@@ -88,7 +88,7 @@ struct vm_config {
      * the virtual machine itself.
      */
 
-    // --- BaoEnclave --- //
+    // --- Sdsgx --- //
     uint64_t alloc_vm;
 
     struct platform_desc platform;

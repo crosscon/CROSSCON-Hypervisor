@@ -64,6 +64,34 @@ static inline void list_push(struct list* list, node_t* node)
     }
 }
 
+static inline node_t* list_pop_end(struct list* list)
+{
+    node_t* temp = NULL;
+    if (list != NULL && list->head != NULL) {
+        spin_lock(&list->lock);
+
+        temp = list->head;
+        if (list->head == list->tail) {
+            list->head = NULL;
+            list->tail = NULL;
+            *temp = NULL;
+        } else {
+            node_t* temp_prev= NULL;
+            while (temp != list->tail) {
+                temp_prev = temp;
+                temp = *temp;
+            }
+            list->tail = temp_prev;
+            *temp_prev = NULL;
+        }
+
+        if (list->head == NULL) list->tail = NULL;
+
+        spin_unlock(&list->lock);
+    }
+    return temp;
+}
+
 static inline node_t* list_pop(struct list* list)
 {
     node_t* temp = NULL;

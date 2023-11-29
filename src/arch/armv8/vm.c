@@ -26,7 +26,7 @@ void vm_arch_init(struct vm* vm, const struct vm_config* config)
         vgic_init(vm, &config->platform.arch.gic);
     }
     /* TODO */
-    as_arch_init(&vm->as);
+    /* as_arch_init(&vm->as); */
 }
 
 struct vcpu* vm_get_vcpu_by_mpidr(struct vm* vm, unsigned long mpidr)

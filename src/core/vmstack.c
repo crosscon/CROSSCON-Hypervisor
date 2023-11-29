@@ -19,6 +19,7 @@
 #include <vm.h>
 #include <cpu.h>
 #include <string.h>
+#include "list.h"
 
 void vmstack_push(struct vcpu* vcpu){
 
@@ -40,7 +41,7 @@ void vmstack_push(struct vcpu* vcpu){
 
 struct vcpu* vmstack_pop(){
 
-    struct vcpu* vcpu = (struct vcpu*) list_pop(&cpu.vcpu_stack);
+    struct vcpu* vcpu = (struct vcpu*) list_pop_end(&cpu.vcpu_stack);
 
     if(vcpu != NULL){
         vcpu->parent = NULL;

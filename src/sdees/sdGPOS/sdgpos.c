@@ -39,6 +39,7 @@ void sdgpos_interrupt_handle(struct vcpu* vcpu, irqid_t int_id)
 }
 
 static struct hndl_smc smc = {
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .end = 0xffff0000,
     .start = 0x00000000,
     .handler = sdgpos_smc_handler,
@@ -46,6 +47,7 @@ static struct hndl_smc smc = {
 
 static struct hndl_irq irq = {
     /* TODO: obtain this from config file */
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
     .irqs = {27,33,72,73,74,75,76,77,78,79},
     .handler = sdgpos_interrupt_handle,

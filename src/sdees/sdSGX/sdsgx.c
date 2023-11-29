@@ -494,6 +494,7 @@ void sdsgx_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 
 #include <vmm.h>
 static struct hndl_hvc hvc = {
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .end = 0xffff0000,
     .start = 0x00000000,
     .handler = sdsgx_handle_hypercall,
@@ -501,6 +502,7 @@ static struct hndl_hvc hvc = {
 
 static struct hndl_irq irq = {
     /* TODO: obtain this from config file */
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
     .irqs = {27, 33, 72, 73, 74, 75, 76, 77, 78, 79},
     .handler = sdsgx_handle_interrupt,

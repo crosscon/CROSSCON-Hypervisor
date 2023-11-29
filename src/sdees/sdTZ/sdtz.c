@@ -57,6 +57,7 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
         if (vmstack_pop() != NULL) {
 	    tee_arch_interrupt_disable();
             sdtz_copy_args(cpu.vcpu, vcpu, 7);
+            /* TODO: more generic stepping */
             uint64_t pc_step = 2 + (2 * 1);
             vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
             ret = HC_E_SUCCESS;
@@ -98,16 +99,16 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
 
     if (calling_vcpu->vm->id == 2) { /* normal world */
         if (is_psci_fid(smc_fid)) {
+            /* TODO: signal trusted OS a PSCI event is comming up */
             /* potentially handle core going to sleep */
             return HC_E_SUCCESS;
         } else {
+            /* TODO: If SMC call is for trusted OS */
             ret = sdtz_handler(vcpu, smc_fid);
         }
-        /* handled by sdgpos */
     }else{
             ret = sdtz_handler(vcpu, smc_fid);
     }
-
 
     return ret;
 }
@@ -128,8 +129,8 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
    }
 }
 
-#include <vmm.h>
 static struct hndl_smc smc = {
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .end = 0xffff0000,
     .start = 0x00000000,
     .handler = sdtz_smc_handler,
@@ -137,6 +138,7 @@ static struct hndl_smc smc = {
 
 static struct hndl_irq irq = {
     /* TODO: obtain this from config file */
+    /* TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
     .irqs = {27,33,72,73,74,75,76,77,78,79},
     .handler = sdtz_handle_interrupt,

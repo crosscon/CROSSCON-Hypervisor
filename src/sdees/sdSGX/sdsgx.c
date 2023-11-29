@@ -15,16 +15,16 @@
 #define MASK 3
 
 enum {
-    SDSGX_CREATE = 0,
-    SDSGX_ECALL = 1,
-    SDSGX_OCALL = 2,
-    SDSGX_RESUME = 3,
-    SDSGX_GOTO = 4,
-    SDSGX_EXIT = 5,
-    SDSGX_DELETE = 6,
+    SDSGX_CREATE  = 0,
+    SDSGX_ECALL   = 1,
+    SDSGX_OCALL   = 2,
+    SDSGX_RESUME  = 3,
+    SDSGX_GOTO    = 4,
+    SDSGX_EXIT    = 5,
+    SDSGX_DELETE  = 6,
     SDSGX_ADD_RGN = 7,
-    SDSGX_INFO = 8,
-    SDSGX_FAULT = 9,
+    SDSGX_INFO    = 8,
+    SDSGX_FAULT   = 9,
 };
 
 /* TODO: this should be done in two steps:

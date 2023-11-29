@@ -41,6 +41,11 @@ void vmstack_push(struct vcpu* vcpu){
 
 struct vcpu* vmstack_pop(){
 
+    /* TODO: pop end must iterate the list, so it is slow
+     * we should have a true stack where we insert in the front and remove
+     * from the front. Right now insert is done at the end so we must remove
+     * at the end. I didn't check but I assume swithching the list logic may
+     * have implications, so i just added a list_pop_end */
     struct vcpu* vcpu = (struct vcpu*) list_pop_end(&cpu.vcpu_stack);
 
     if(vcpu != NULL){
@@ -66,7 +71,7 @@ void vmstack_unwind(struct vcpu* vcpu){
     struct vcpu* temp_vcpu = NULL;
 
     do {
-        temp_vcpu = (struct vcpu*) list_pop(&cpu.vcpu_stack);
+        temp_vcpu = (struct vcpu*) list_pop_end(&cpu.vcpu_stack);
         temp_vcpu->state = VCPU_INACTIVE;
         temp_vcpu->parent = NULL;
     } while(temp_vcpu != vcpu);

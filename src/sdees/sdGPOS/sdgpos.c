@@ -7,7 +7,7 @@
 
 int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
-    if(cpu.vcpu->vm->id != 2)
+    if(vcpu->vm->id != 2)
         return 0;
     int64_t ret = -HC_E_FAILURE;
     uint64_t x1 = vcpu->regs->x[1];
@@ -17,11 +17,12 @@ int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler(smc_fid, x1, x2, x3);
         ret = 0;
+        vcpu_writereg(vcpu, 0, ret);
     }
     /* every smc call here increments pc */
-    vcpu_writereg(vcpu, 0, ret);
     uint64_t pc_step = 2 + (2 * 1);
     vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
+    ret = 0;
     return ret;
 }
 

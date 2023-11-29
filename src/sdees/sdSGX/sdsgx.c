@@ -385,7 +385,6 @@ int64_t sdsgx_handle_hypercall(struct vcpu* vcpu, uint64_t fid)
     static unsigned int o_calls = 0;
     static unsigned int n_resumes = 0;
 
-    struct vcpu* vcpu = cpu.vcpu;
     uint64_t arg0 = vcpu->regs->x[1];
     uint64_t arg1 = vcpu->regs->x[2];
     uint64_t arg2 = vcpu->regs->x[3];
@@ -482,7 +481,6 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 uint64_t irqs = 0;
 void sdsgx_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
-    struct vcpu* vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
     if (vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED) {
         if (cpu.vcpu->vm->id == 3) { /* currently running enclave */
             if (cpu.vcpu->nclv_data.initialized == false) return;

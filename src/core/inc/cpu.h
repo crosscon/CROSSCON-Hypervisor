@@ -42,7 +42,9 @@ struct cpu {
     struct addr_space as;
 
     struct vcpu* vcpu;
+    /* this cpus execution stack */
     struct list vcpu_stack;
+    /* all the vcpus this cpu can run */
     struct list vcpus;
 
     struct cpu_arch arch;

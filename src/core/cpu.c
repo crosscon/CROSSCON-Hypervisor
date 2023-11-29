@@ -40,6 +40,7 @@ cpu_msg_handler_t *ipi_cpumsg_handlers;
 size_t ipi_cpumsg_handler_num;
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
+/* TODO: Doesn't work with O2 on RISC-V */
 void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
 {
     cpu_arch_init(cpu_id, load_addr);

@@ -70,18 +70,6 @@ static inline bool interrupt_is_reserved(irqid_t int_id)
 inline void interrupts_vm_inject(struct vcpu* vcpu, uint64_t id)
 {
    interrupts_arch_vm_inject(vcpu, id);
-   if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
-       /* TODO */
-       /* if(cpu.vcpu->nclv_data.initialized == false) */
-	   /* return; */
-       /* Signal the parent of the interrupts vcpu that we were interrupted */
-       /* vmstack_pop(); */
-       /* vcpu_writereg(cpu.vcpu, 0, 1); */
-       /* irqs++; */
-       /* INFO("irq: %lu", id); */
-
-       /* vmstack_push(vcpu); */
-   }
 }
 
 static inline uint64_t interrupts_get_vmid(uint64_t int_id)

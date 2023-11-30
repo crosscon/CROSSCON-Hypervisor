@@ -43,6 +43,9 @@ struct cpu {
 
     struct vcpu* vcpu;
     /* this cpus execution stack */
+    /* TODO: vcpus can not be stacked arbitrarily
+     * because we are using the vcpus as nodes in themselves.
+     */
     struct list vcpu_stack;
     /* all the vcpus this cpu can run */
     struct list vcpus;

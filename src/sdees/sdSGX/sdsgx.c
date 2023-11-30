@@ -19,7 +19,7 @@ enum {
     SDSGX_ECALL   = 1,
     SDSGX_OCALL   = 2,
     SDSGX_RESUME  = 3,
-    SDSGX_GOTO    = 4,
+    /* SDSGX_GOTO    = 4, */
     SDSGX_EXIT    = 5,
     SDSGX_DELETE  = 6,
     SDSGX_ADD_RGN = 7,
@@ -356,8 +356,6 @@ void sdsgx_resume(uint64_t enclave_id)
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
     if ((enclave = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
-        /* vcpu_writereg(enclave, 2, cpu.vcpu->regs->x[2]); /1* calloc size *1/
-         */
         vmstack_push(enclave);
     } else {
         res = -HC_E_INVAL_ARGS;

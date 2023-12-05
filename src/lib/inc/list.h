@@ -50,13 +50,19 @@ static inline void list_init(struct list* list)
 
 static inline void list_push(struct list* list, node_t* node)
 {
+    node_t* temp = NULL;
     if (list != NULL && node != NULL) {
         *node = NULL;
         spin_lock(&list->lock);
 
         if (list->tail != NULL) *list->tail = node;
 
+        temp = node;
         list->tail = node;
+        while (*temp != NULL) {
+            temp = *temp;
+        }
+        list->tail = temp;
 
         if (list->head == NULL) list->head = node;
 

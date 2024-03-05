@@ -482,7 +482,16 @@ size_t sbi_vs_handler()
 	    goto out;
             break;
         case SBI_EXTID_TEE:
-            ret.value = tee_handler(fid);
+            list_foreach(calling_cpu->vm->smc_list, struct hndl_smc_node, node)
+            {
+                /* TODO: match range */
+                smc_handler_t handler = node->hndl_smc.handler;
+                if (handler != NULL) {
+                    if (handler(calling_cpu, fid)) {
+                        /* ERROR("handler smc failed (0x%x)", calling_cpu->); */
+                    }
+                }
+            }
             break;
 
         default:

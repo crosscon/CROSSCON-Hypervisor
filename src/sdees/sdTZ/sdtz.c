@@ -1,37 +1,12 @@
 #include <sdtz.h>
 #include <hypercall.h>
 #include <vmstack.h>
-#include <arch/tee.h>
 #include <config.h>
 #include "types.h"
 #include "vm.h"
 #include "vmm.h"
+#include <arch/sdtz.h>
 
-#define PREFIX_MASK 0xff000000
-#define ID_TO_FUNCID(x) (x & ~(PREFIX_MASK))
-#define PREFIX 0
-#define TEEHC_FUNCID_RETURN_ENTRY_DONE          (PREFIX | 0)
-#define TEEHC_FUNCID_RETURN_ON_DONE             (PREFIX | 1)
-#define TEEHC_FUNCID_RETURN_OFF_DONE            (PREFIX | 2)
-#define TEEHC_FUNCID_RETURN_SUSPEND_DONE        (PREFIX | 3)
-#define TEEHC_FUNCID_RETURN_RESUME_DONE         (PREFIX | 4)
-#define TEEHC_FUNCID_RETURN_CALL_DONE           (PREFIX | 5)
-#define TEEHC_FUNCID_RETURN_FIQ_DONE            (PREFIX | 6)
-#define TEEHC_FUNCID_RETURN_SYSTEM_OFF_DONE     (PREFIX | 7)
-#define TEEHC_FUNCID_RETURN_SYSTEM_RESET_DONE   (PREFIX | 8)
-
-#define OPTEE_MSG_CMD_OPEN_SESSION	    U(0)
-#define OPTEE_MSG_CMD_INVOKE_COMMAND	U(1)
-#define OPTEE_MSG_CMD_CLOSE_SESSION	    U(2)
-#define OPTEE_MSG_CMD_CANCEL		    U(3)
-#define OPTEE_MSG_CMD_REGISTER_SHM	    U(4)
-#define OPTEE_MSG_CMD_UNREGISTER_SHM	U(5)
-#define OPTEE_MSG_CMD_DO_BOTTOM_HALF	U(6)
-#define OPTEE_MSG_CMD_STOP_ASYNC_NOTIF	U(7)
-#define OPTEE_MSG_FUNCID_CALL_WITH_ARG	U(0x0004)
-
-#define TEEHC_FUNCID_CLIENT_FLAG     (0x80000000)
-#define TEE_NUM_ARGS    (6)
 
 static inline void sdtz_copy_args(struct vcpu *vcpu_dst, struct vcpu *vcpu_src,
         size_t num_args) {
@@ -84,41 +59,12 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     return ret;
 }
 
-int64_t sdtz_sbi_handler(struct vcpu* vcpu, uint64_t smc_fid) {
-    int64_t ret = -HC_E_FAILURE;
-
-    ret = sdtz_handler(vcpu, smc_fid);
-    return ret;
-}
-
-int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
-
-    int64_t ret = -HC_E_FAILURE;
-
-    struct vcpu *calling_vcpu = cpu.vcpu;
-
-    if (calling_vcpu->vm->id == 2) { /* normal world */
-        if (is_psci_fid(smc_fid)) {
-            /* TODO: signal trusted OS a PSCI event is comming up */
-            /* potentially handle core going to sleep */
-            return HC_E_SUCCESS;
-        } else {
-            /* TODO: If SMC call is for trusted OS */
-            ret = sdtz_handler(vcpu, smc_fid);
-        }
-    }else{
-            ret = sdtz_handler(vcpu, smc_fid);
-    }
-
-    return ret;
-}
-
-
 extern uint64_t interrupt_owner[MAX_INTERRUPTS];
 static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 {
     return interrupt_owner[int_id];
 }
+
 void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
     /* TODO: check current active handler */
@@ -128,13 +74,6 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
        }
    }
 }
-
-static struct hndl_smc smc = {
-    /* TODO: obtain this to decide whether to invoke handler early on */
-    .end = 0xffff0000,
-    .start = 0x00000000,
-    .handler = sdtz_smc_handler,
-};
 
 static struct hndl_irq irq = {
     /* TODO: obtain this from config file */
@@ -151,9 +90,10 @@ int64_t sdtz_handler_setup(struct vm *vm)
     if(vm == NULL)
         return -1;
 
+    sdtz_arch_handler_setup(vm);
+
     /* TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
-    vm_hndl_smc_add(vm, &smc);
     vm_hndl_irq_add(vm, &irq);
 
     return ret;

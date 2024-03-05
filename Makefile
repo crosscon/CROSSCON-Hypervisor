@@ -34,6 +34,7 @@ OPTIMIZATIONS:=2
 CONFIG_BUILTIN=n
 CONFIG=
 PLATFORM=
+_SDEES = sdGPOS $(SDEES)
 
 # List existing submakes
 submakes:=config
@@ -48,10 +49,8 @@ platforms_dir=$(src_dir)/platform
 configs_dir=$(cur_dir)/configs
 CONFIG_REPO?=$(configs_dir)
 
-sdees_dir=$(src_dir)/sdees
-sdgpos_dir=$(sdees_dir)/sdGPOS
-sdtz_dir=$(sdees_dir)/sdTZ
-sdsgx_dir=$(sdees_dir)/sdSGX
+sdees_base_dir=$(src_dir)/sdees
+sdees_dir:=$(addprefix $(sdees_base_dir)/, $(_SDEES))
 
 ifeq ($(CONFIG_BUILTIN), y)
 ifeq ($(CONFIG),)
@@ -78,6 +77,10 @@ cpu_arch_dir=$(src_dir)/arch/$(ARCH)
 cpu_impl_dir=$(cpu_arch_dir)/impl/$(CPU)
 -include $(cpu_arch_dir)/arch.mk
 
+sdees_arch_dir:=$(addsuffix /arch/$(ARCH), $(sdees_dir))
+
+# MAYBE NOT NEED
+-include $(sdees_base_dir)/sdees.mk
 
 build_dir:=$(cur_dir)/build/$(PLATFORM)
 builtin_build_dir:=$(build_dir)/builtin-configs
@@ -88,21 +91,19 @@ endif
 directories:=$(build_dir) $(bin_dir) $(builtin_build_dir) 
 
 src_dirs:= $(cpu_arch_dir) $(cpu_impl_dir) $(lib_dir) $(core_dir)\
-	$(platform_dir) $(sdsgx_dir) $(sdgpos_dir) $(sdtz_dir) $(addprefix $(drivers_dir)/, $(drivers))
+	$(platform_dir) $(sdees_dir) $(sdees_arch_dir) $(addprefix $(drivers_dir)/, $(drivers))
 inc_dirs:=$(addsuffix /inc, $(src_dirs))
 
 # Setup list of objects for compilation
 -include $(addsuffix /objects.mk, $(src_dirs))
 
 objs-y:=
+objs-y+=$(addprefix $(sdees_base_dir)/, $(sdee-objs-y))
 objs-y+=$(addprefix $(cpu_arch_dir)/, $(cpu-objs-y))
 objs-y+=$(addprefix $(lib_dir)/, $(lib-objs-y))
 objs-y+=$(addprefix $(core_dir)/, $(core-objs-y))
 objs-y+=$(addprefix $(platform_dir)/, $(boards-objs-y))
 objs-y+=$(addprefix $(drivers_dir)/, $(drivers-objs-y))
-objs-y+=$(addprefix $(sdgpos_dir)/, $(sdgpos-objs-y))
-objs-y+=$(addprefix $(sdtz_dir)/, $(sdtz-objs-y))
-objs-y+=$(addprefix $(sdsgx_dir)/, $(sdsgx-objs-y))
 
 ifeq ($(CONFIG_BUILTIN), y)
 builtin-config-obj:=$(builtin_build_dir)/$(CONFIG).o

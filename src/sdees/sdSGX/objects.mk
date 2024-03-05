@@ -13,6 +13,7 @@
  #
 ##
 
+sdee-objs-y+=sdSGX/sdsgx.o
 
-sdsgx-objs-y+=sdsgx.o
+-include $(addsuffix /objects.mk, $(arch))
 

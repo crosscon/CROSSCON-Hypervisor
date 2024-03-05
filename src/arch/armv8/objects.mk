@@ -33,7 +33,6 @@ cpu-objs-y+=smmuv2.o
 cpu-objs-y+=gic.o
 cpu-objs-y+=vgic.o
 cpu-objs-y+=config.o
-cpu-objs-y+=tee.o
 
 ifeq ($(GIC_VERSION), GICV2)
 	cpu-objs-y+=vgicv2.o

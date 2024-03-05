@@ -13,4 +13,5 @@
  #
 ##
 
-sdgpos-objs-y+=sdgpos.o
+sdee-objs-y+=sdGPOS/sdgpos.o
+

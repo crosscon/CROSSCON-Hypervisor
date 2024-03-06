@@ -21,7 +21,6 @@
 #include <fences.h>
 #include <hypercall.h>
 #include <vmstack.h>
-#include <sdtz.h>
 
 #define SBI_EXTID_BASE (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID (0)

@@ -25,6 +25,7 @@
 #include <sdtz.h>
 #include <sdgpos.h>
 #include <sdsgx.h>
+#include <vmstack.h>
 
 enum emul_type {EMUL_MEM, EMUL_REG};
 struct emul_node {
@@ -346,6 +347,98 @@ static void vm_destroy_dev(struct vm* vm, const struct vm_config* config)
     /* TODO */
 }
 
+
+/* TODO: this should be done in two steps:
+ * 1: create array of memory regions corresponding to physical mappings and
+ * include it this to the config file
+ * 2: create the enclave vm dynamically using core features
+ * 3: unmap physical memory
+ * there's a performance tradeoff though */
+static void vm_dynamic_donate(struct vm* newvm, struct config* config, uint64_t donor_ipa)
+{
+    struct vm_config* newvm_cfg = config->vmlist[0];
+
+    struct mem_region img_rgn = {
+        .phys = newvm_cfg->image.load_addr,
+        .base = newvm_cfg->image.base_addr,
+        .size = ALIGN(newvm_cfg->image.size, PAGE_SIZE),
+        .place_phys = true,
+        .colors = 0,
+    };
+    vm_map_mem_region(newvm, &img_rgn);
+
+    mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa, NUM_PAGES(config->config_size),
+                   false);
+
+    /* mem region 0 is special because it comes from the application */
+    struct mem_region* reg = &newvm_cfg->platform.regions[0];
+
+    /* we already mapped the image from base to image.size */
+    uintptr_t newvm_mem_after_img =
+        reg->base + ALIGN(newvm_cfg->image.size, PAGE_SIZE);
+
+    /* leftover memory we need to map (discounting image size) */
+    uintptr_t leftover_to_map_vm =
+        reg->size - ALIGN(newvm_cfg->image.size, PAGE_SIZE);
+
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_nclv_ipa = 0;
+
+    vaddr_t nclv_ipa = newvm_mem_after_img;
+    vaddr_t host_ipa = donor_ipa + config->config_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(leftover_to_map_vm);
+    size_t i = 1;
+    while (i <= n) {
+        bool last_page = (i == n);
+
+        mem_guest_ipa_translate((void*)host_ipa, &pa);
+        if (contiguous_pages == 0) {
+            contiguous_pages = 1;
+            base_cont_pa = pa;
+            base_nclv_ipa = nclv_ipa;
+            if (!last_page) {
+                goto skip;
+            }
+        } else if (pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)) {
+            contiguous_pages++;
+            if (!last_page) {
+                goto skip;
+            }
+        }
+
+        /* give memory to nclv VM */
+        struct mem_region rgn = {
+            .phys = base_cont_pa,
+            .base = base_nclv_ipa,
+            .size = contiguous_pages * PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(newvm, &rgn);
+
+        contiguous_pages = 1;
+        base_cont_pa = pa;
+        base_nclv_ipa = nclv_ipa;
+    skip:
+        nclv_ipa += PAGE_SIZE;
+        host_ipa += PAGE_SIZE;
+        i++;
+    }
+    mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa + config->config_size,
+                   NUM_PAGES(leftover_to_map_vm), false);
+
+    /* TODO: All memory should be given by the donor VM, this is temporary to
+     * test MPK domains */
+    /* we start at 1 because region 0 (including image) already mapped */
+    for (size_t i = 1; i < newvm_cfg->platform.region_num; i++) {
+        struct mem_region* reg = &newvm_cfg->platform.regions[i];
+        vm_map_mem_region(newvm, reg);
+    }
+}
+
+
 void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmid_t vmid)
 {
     vm_master_init(vm, config->vmlist[0], vmid);
@@ -355,16 +448,114 @@ void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmi
     vm_arch_init(vm, config->vmlist[0]);
 
     /* TODO: init dynamic from config not like this */
-    sdsgx_donate(vm, config, vm_addr);
+    vm_dynamic_donate(vm, config, vm_addr);
 
     vm_init_dev(vm, config->vmlist[0]);
     vm_init_ipc(vm, config->vmlist[0]);
 
     sdsgx_handler_setup(vm);
 
-    vm->enclave_house_keeping.donor_va = vm_addr;
-    vm->enclave_house_keeping.config = config;
+    vm->vmdyn_house_keeping.donor_va = vm_addr;
+    vm->vmdyn_house_keeping.config = config;
 }
+
+void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
+{
+    vmstack_push(newvm);
+
+    struct config* config = newvm->vm->vmdyn_house_keeping.config;
+    struct vm_config* newvm_cfg = config->vmlist[0];
+    vaddr_t host_base_newvm_ipa = newvm->vm->vmdyn_house_keeping.donor_va;
+
+    struct mem_region* reg = &newvm_cfg->platform.regions[0];
+
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_host_ipa = 0;
+    vaddr_t base_hyp = 0;
+
+    vaddr_t newvm_ipa = reg->base;
+    vaddr_t host_ipa = host_base_newvm_ipa + config->config_header_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(reg->size);
+    const vaddr_t hyp_va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, n);
+    vaddr_t hyp_va_tmp = hyp_va;
+    size_t i = 1;
+    while (i <= n) {
+        bool last_page = (i == n);
+
+        mem_guest_ipa_translate((void*)newvm_ipa, &pa);
+        if (contiguous_pages == 0) {
+            contiguous_pages = 1;
+            base_cont_pa = pa;
+            base_host_ipa = host_ipa;
+            base_hyp = hyp_va_tmp;
+            if (!last_page) {
+                goto skip;
+            }
+        } else if (pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)) {
+            contiguous_pages++;
+            if (!last_page) {
+                goto skip;
+            }
+        }
+
+        /* clear the memory */
+        struct ppages pp = mem_ppages_get(base_cont_pa, contiguous_pages);
+        mem_map(&cpu.as, base_hyp, &pp, contiguous_pages, PTE_HYP_FLAGS);
+        memset((void*)base_hyp, 0, contiguous_pages * PAGE_SIZE);
+        /* TODO: must flush */
+
+        /* TODO optimize undoing the mapping */
+        /* give back memory to host VM */
+        struct mem_region rgn = {
+            .phys = base_cont_pa,
+            .base = base_host_ipa,
+            .size = contiguous_pages * PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(host->vm, &rgn);
+
+        contiguous_pages = 1;
+        base_cont_pa = pa;
+        base_host_ipa = host_ipa;
+        base_hyp = hyp_va_tmp;
+    skip:
+        newvm_ipa += PAGE_SIZE;
+        host_ipa += PAGE_SIZE;
+        hyp_va_tmp += PAGE_SIZE;
+        i++;
+    }
+    /* remove page from enclave's AS */
+    mem_free_vpage(&newvm->vm->as, reg->base, n, false);
+    /* unmap memory from hypervisor */
+    mem_free_vpage(&cpu.as, hyp_va, n, false);
+
+    /* restore */
+    host_ipa = host_base_newvm_ipa;
+    /* we are done with everything, give the last piece of memory to the host */
+    size_t hdr_sz = config->config_header_size;
+    for (size_t i = 0; i < NUM_PAGES(hdr_sz); i++) {
+        memset((void*)config, 0, hdr_sz);
+        vaddr_t host_ipa = host_base_newvm_ipa + i * PAGE_SIZE;
+
+        paddr_t pa;
+        mem_translate(&cpu.as, (vaddr_t)config, &pa);
+        struct mem_region rgn = {
+            .phys = pa,
+            .base = host_ipa,
+            .size = PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(host->vm, &rgn);
+
+        mem_free_vpage(&cpu.as, (vaddr_t)config, NUM_PAGES(hdr_sz), false);
+    }
+    vmstack_pop();
+}
+
 
 void vm_destroy_dynamic(struct vm* vm)
 {
@@ -373,7 +564,7 @@ void vm_destroy_dynamic(struct vm* vm)
 
     /* TODO: This is not making much sense right now. We need to reclaim
      * resources from the vm, not from the cpu */
-    sdsgx_reclaim(cpu.vcpu, vm_get_vcpu(vm, 0));
+    vm_dynamic_reclaim(cpu.vcpu, vm_get_vcpu(vm, 0));
 
     vm_vcpu_destroy(vm, vm_get_vcpu(vm, 0));
     /* vm_arch_destroy(vm, vm->config); */

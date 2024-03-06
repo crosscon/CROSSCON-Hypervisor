@@ -77,8 +77,8 @@ static inline void list_push_front(struct list* list, node_t* node)
 
         if (list->head != NULL)
             *node = list->head;
-        else
-            list->head = node;
+
+        list->head = node;
 
         spin_unlock(&list->lock);
     }

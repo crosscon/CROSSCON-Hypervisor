@@ -143,6 +143,7 @@ void vmm_destroy_dynamic(struct vm *vm)
     list_foreach(cpu.vcpu->vmstack_children, struct node_data, node){
 	struct vcpu* child = node->data;
 	if(child->vm == vm){
+            /* TODO remove recursively */
 	    list_rm(&cpu.vcpu->vmstack_children, (node_t*)node);
 	    objcache_free(&partition->nodes, node);
 	}

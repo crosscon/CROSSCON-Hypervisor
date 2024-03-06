@@ -77,7 +77,7 @@ struct vm {
     struct {
 	vaddr_t donor_va;
 	struct config* config;
-    } enclave_house_keeping;
+    } vmdyn_house_keeping;
 };
 
 struct vcpu {

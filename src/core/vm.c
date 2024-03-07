@@ -358,37 +358,32 @@ static void vm_dynamic_donate(struct vm* newvm, struct config* config, uint64_t 
 {
     struct vm_config* newvm_cfg = config->vmlist[0];
 
-    struct mem_region img_rgn = {
-        .phys = newvm_cfg->image.load_addr,
-        .base = newvm_cfg->image.base_addr,
-        .size = ALIGN(newvm_cfg->image.size, PAGE_SIZE),
-        .place_phys = true,
-        .colors = 0,
-    };
-    vm_map_mem_region(newvm, &img_rgn);
+    /* struct mem_region img_rgn = { */
+    /*     .phys = newvm_cfg->image.load_addr, */
+    /*     .base = newvm_cfg->image.base_addr, */
+    /*     .size = ALIGN(newvm_cfg->image.size, PAGE_SIZE), */
+    /*     .place_phys = true, */
+    /*     .colors = 0, */
+    /* }; */
+    /* vm_map_mem_region(newvm, &img_rgn); */
 
-    mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa, NUM_PAGES(config->config_size),
-                   false);
+    /* mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa, NUM_PAGES(config->config_size), */
+    /*                false); */
 
     /* mem region 0 is special because it comes from the application */
     struct mem_region* reg = &newvm_cfg->platform.regions[0];
 
-    /* we already mapped the image from base to image.size */
-    uintptr_t newvm_mem_after_img =
-        reg->base + ALIGN(newvm_cfg->image.size, PAGE_SIZE);
-
-    /* leftover memory we need to map (discounting image size) */
-    uintptr_t leftover_to_map_vm =
-        reg->size - ALIGN(newvm_cfg->image.size, PAGE_SIZE);
+    uintptr_t newvm_mem_start = reg->base;
+    uintptr_t newvm_mem_size = reg->size;
 
     size_t contiguous_pages = 0;
     size_t base_cont_pa = 0;
     vaddr_t base_nclv_ipa = 0;
 
-    vaddr_t nclv_ipa = newvm_mem_after_img;
-    vaddr_t host_ipa = donor_ipa + config->config_size;
+    vaddr_t nclv_ipa = newvm_mem_start;
+    vaddr_t host_ipa = donor_ipa + config->config_header_size;
     paddr_t pa;
-    const size_t n = NUM_PAGES(leftover_to_map_vm);
+    const size_t n = NUM_PAGES(newvm_mem_size);
     size_t i = 1;
     while (i <= n) {
         bool last_page = (i == n);
@@ -426,8 +421,8 @@ static void vm_dynamic_donate(struct vm* newvm, struct config* config, uint64_t 
         host_ipa += PAGE_SIZE;
         i++;
     }
-    mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa + config->config_size,
-                   NUM_PAGES(leftover_to_map_vm), false);
+    mem_free_vpage(&cpu.vcpu->vm->as, donor_ipa + config->config_header_size,
+                   NUM_PAGES(newvm_mem_size), false);
 
     /* TODO: All memory should be given by the donor VM, this is temporary to
      * test MPK domains */
@@ -465,7 +460,7 @@ void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
 
     struct config* config = newvm->vm->vmdyn_house_keeping.config;
     struct vm_config* newvm_cfg = config->vmlist[0];
-    vaddr_t host_base_newvm_ipa = newvm->vm->vmdyn_house_keeping.donor_va;
+    vaddr_t host_base_ipa = newvm->vm->vmdyn_house_keeping.donor_va;
 
     struct mem_region* reg = &newvm_cfg->platform.regions[0];
 
@@ -475,7 +470,7 @@ void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
     vaddr_t base_hyp = 0;
 
     vaddr_t newvm_ipa = reg->base;
-    vaddr_t host_ipa = host_base_newvm_ipa + config->config_header_size;
+    vaddr_t host_ipa = host_base_ipa + config->config_header_size;
     paddr_t pa;
     const size_t n = NUM_PAGES(reg->size);
     const vaddr_t hyp_va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, n);
@@ -533,12 +528,12 @@ void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
     mem_free_vpage(&cpu.as, hyp_va, n, false);
 
     /* restore */
-    host_ipa = host_base_newvm_ipa;
+    host_ipa = host_base_ipa;
     /* we are done with everything, give the last piece of memory to the host */
     size_t hdr_sz = config->config_header_size;
     for (size_t i = 0; i < NUM_PAGES(hdr_sz); i++) {
         memset((void*)config, 0, hdr_sz);
-        vaddr_t host_ipa = host_base_newvm_ipa + i * PAGE_SIZE;
+        vaddr_t host_ipa = host_base_ipa + i * PAGE_SIZE;
 
         paddr_t pa;
         mem_translate(&cpu.as, (vaddr_t)config, &pa);

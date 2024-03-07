@@ -332,7 +332,8 @@ int64_t sdsgx_handler_setup(struct vm* vm)
     vm_hndl_hvc_add(vm, &hvc);
     vm_hndl_irq_add(vm, &irq);
 
-    if(vm->id == 3)
+    /* TODO */
+    if(vm->id >= 3)
         vm_hndl_mem_abort_add(vm, &mem_abort);
 
     return ret;

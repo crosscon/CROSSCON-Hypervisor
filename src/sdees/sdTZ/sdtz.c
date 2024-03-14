@@ -43,15 +43,23 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
         struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
         if (ree_vcpu != NULL) {
             switch (ID_TO_FUNCID(fid)) {
+                case TEEHC_FUNCID_RETURN_ON_DONE:
+                case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
+                    sdtz_copy_args(ree_vcpu, cpu.vcpu, 1);
+                    vmstack_push(ree_vcpu);
+		    tee_arch_interrupt_enable();
+                    break;
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
-                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
-                    /* fallthough */
+                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
+                    vmstack_push(ree_vcpu);
+		    tee_arch_interrupt_enable();
+                    break;
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);
 		    tee_arch_interrupt_enable();
                     break;
                 default:
-                    ERROR("unknown tee call %0lx", fid);
+                    ERROR("unknown tee call %0lx by vm %d", fid, cpu.vcpu->vm->id);
             }
             ret = HC_E_SUCCESS;
         }

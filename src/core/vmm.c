@@ -163,7 +163,7 @@ void vmm_init()
     
     vmm_arch_init();
 
-    volatile static struct vm_assignment {
+    static struct vm_assignment {
         spinlock_t lock;
         bool master;
         size_t ncpus;
@@ -279,12 +279,16 @@ void vmm_init()
 
     ipc_init(vm_config, master);
 
+    struct vcpu* root;
     if (assigned) {
-        struct vcpu* root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
-        vmstack_push(root);
+        root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
         cpu_sync_barrier(&partition->sync);
-        vcpu_run(root);
-    } else {
-        cpu_idle();
     }
+
+    if(master){
+        vmstack_push(root);
+        vcpu_run(root);
+    }
+
+    cpu_idle();
 }

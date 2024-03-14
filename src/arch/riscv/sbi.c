@@ -430,28 +430,37 @@ struct sbiret sbi_hsm_handler(unsigned long fid){
 struct sbiret sbi_bao_handler(unsigned long fid){
 
     struct sbiret ret;
+    struct vcpu* vcpu = cpu.vcpu;
 
-    unsigned long arg0 = vcpu_readreg(cpu.vcpu, REG_A0);
-    unsigned long arg1 = vcpu_readreg(cpu.vcpu, REG_A1);
-    unsigned long arg2 = vcpu_readreg(cpu.vcpu, REG_A2);
-    unsigned long arg3 = vcpu_readreg(cpu.vcpu, REG_A3);
+    unsigned long arg0 = vcpu_readreg(vcpu, REG_A0);
+    unsigned long arg1 = vcpu_readreg(vcpu, REG_A1);
+    unsigned long arg2 = vcpu_readreg(vcpu, REG_A2);
+    /* unsigned long arg3 = vcpu_readreg(vcpu, REG_A3); */
 
     /* TODO: sdee */
     switch(fid) {
         case HC_IPC:
             ret.value = ipc_hypercall(arg0, arg1, arg2);
             break;
-        case HC_VMSTACK:
-            ret.value  = vmstack_hypercall(arg0, arg1, arg2, arg3);
-            break;
         default:
-            ret.error = -HC_E_INVAL_ID;
+            list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
+            {
+                /* TODO: match range */
+                hvc_handler_t handler = node->hndl_hvc.handler;
+                if (handler != NULL) {
+                    if (handler(vcpu, arg0 & 0xffff)) {
+                        ERROR("handler hvc failed (0x%x)", vcpu->regs->sepc);
+                    }
+                }
+            }
    }
 
    ret.error = ret.value  < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
 
    return ret;
 }
+
+#include <arch/sdtz.h>
 
 size_t sbi_vs_handler()
 {

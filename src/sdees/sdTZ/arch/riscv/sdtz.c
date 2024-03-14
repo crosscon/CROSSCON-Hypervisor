@@ -49,40 +49,8 @@ static inline void sdtz_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu
     }
 }
 
-int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
-    int64_t ret = -HC_E_FAILURE;
-
-    if (vcpu->vm->id == 2) {
-	/* normal world */
-        if (vmstack_pop() != NULL) {
-	    tee_arch_interrupt_disable();
-            sdtz_copy_args(cpu.vcpu, vcpu, 7);
-            /* TODO: more generic stepping */
-            uint64_t pc_step = 2 + (2 * 1);
-            vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
-            ret = HC_E_SUCCESS;
-        }
-    } else {
-	/* secure world */
-        /* TODO: get parent */
-        struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
-        if (ree_vcpu != NULL) {
-            switch (ID_TO_FUNCID(fid)) {
-                case TEEHC_FUNCID_RETURN_CALL_DONE:
-                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
-                    /* fallthough */
-                case TEEHC_FUNCID_RETURN_ENTRY_DONE:
-                    vmstack_push(ree_vcpu);
-		    tee_arch_interrupt_enable();
-                    break;
-                default:
-                    ERROR("unknown tee call %0lx", fid);
-            }
-            ret = HC_E_SUCCESS;
-        }
-    }
-    return ret;
-}
+/* TODO Not good */
+extern int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid);
 
 int64_t sdtz_sbi_handler(struct vcpu* vcpu, uint64_t smc_fid) {
     int64_t ret = -HC_E_FAILURE;
@@ -98,14 +66,8 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
     struct vcpu *calling_vcpu = cpu.vcpu;
 
     if (calling_vcpu->vm->id == 2) { /* normal world */
-        if (is_psci_fid(smc_fid)) {
-            /* TODO: signal trusted OS a PSCI event is comming up */
-            /* potentially handle core going to sleep */
-            return HC_E_SUCCESS;
-        } else {
-            /* TODO: If SMC call is for trusted OS */
+            /* TODO: assumes call is for trusted OS */
             ret = sdtz_handler(vcpu, smc_fid);
-        }
     }else{
             ret = sdtz_handler(vcpu, smc_fid);
     }
@@ -121,7 +83,7 @@ static struct hndl_smc smc = {
 };
 
 
-int64_t sdtz_handler_setup(struct vm *vm)
+int64_t sdtz_arch_handler_setup(struct vm *vm)
 {
     int64_t ret = 0;
 

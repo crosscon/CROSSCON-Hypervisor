@@ -142,10 +142,38 @@ size_t guest_page_fault_handler()
     }
 }
 
+size_t guest_illegal_instr_handler()
+{
+    unsigned long ins = CSRR(CSR_HTINST);
+    size_t ins_size;
+    if(ins == 0) {
+        /**
+         * If htinst does not provide information about the trap,
+         * we must read the instruction from the guest's memory
+         * manually.
+         */
+        vaddr_t ins_addr = CSRR(sepc);
+        ins = read_ins(ins_addr);
+        ins_size = INS_SIZE(ins);
+    } else if (is_pseudo_ins(ins)) {
+        //TODO: we should reinject this in the guest as a fault access
+        ERROR("fault on 1st stage page table walk");
+    } else {
+        /**
+         * If htinst is valid and is not a pseudo isntruction make sure
+         * the opcode is valid even if it was a compressed instruction,
+         * but before save the real instruction size.
+         */
+        ins_size = TINST_INS_SIZE(ins);
+    }
+    return ins_size;
+}
+
 sync_handler_t sync_handler_table[] = {
     [SCAUSE_CODE_ECV] = sbi_vs_handler,
     [SCAUSE_CODE_LGPF] = guest_page_fault_handler,
     [SCAUSE_CODE_SGPF] = guest_page_fault_handler,
+    [SCAUSE_CODE_ILI] = guest_illegal_instr_handler,
 };
 
 static const size_t sync_handler_table_size =

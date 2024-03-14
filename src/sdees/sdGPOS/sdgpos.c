@@ -7,18 +7,21 @@
 #include <arch/sdgpos.h>
 
 
-extern uint64_t interrupt_owner[MAX_INTERRUPTS];
-static inline uint64_t interrupts_get_vmid(uint64_t int_id)
-{
-    return interrupt_owner[int_id];
-}
+/* extern uint64_t interrupt_owner[MAX_INTERRUPTS]; */
+/* static inline uint64_t interrupts_get_vmid(uint64_t int_id) */
+/* { */
+/*     return interrupt_owner[int_id]; */
+/* } */
+
+void sdgpos_interrupt_handle(struct vcpu* vcpu, irqid_t int_id);
+
 void sdgpos_interrupt_handle(struct vcpu* vcpu, irqid_t int_id)
 {
    interrupts_vm_inject(vcpu, int_id);
 }
 
 
-static struct hndl_irq irq = {
+struct hndl_irq irq = {
     /* TODO: obtain this from config file */
     /* TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,

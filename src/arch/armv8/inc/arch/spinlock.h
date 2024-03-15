@@ -24,7 +24,7 @@
 #include <bao.h>
 
 
-typedef struct {
+typedef volatile struct {
     uint32_t ticket;
     uint32_t next;
 } spinlock_t;

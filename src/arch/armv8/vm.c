@@ -26,7 +26,7 @@ void vm_arch_init(struct vm* vm, const struct vm_config* config)
         vgic_init(vm, &config->platform.arch.gic);
     }
     /* TODO */
-    /* as_arch_init(&vm->as); */
+    as_arch_init(&vm->as);
 }
 
 struct vcpu* vm_get_vcpu_by_mpidr(struct vm* vm, unsigned long mpidr)
@@ -34,7 +34,7 @@ struct vcpu* vm_get_vcpu_by_mpidr(struct vm* vm, unsigned long mpidr)
     list_foreach(vm->vcpu_list, struct node_data, node){
 	struct vcpu* vcpu = node->data;
         //if ((vcpu->arch.vmpidr & MPIDR_AFF_MSK) == (mpidr & MPIDR_AFF_MSK))  {
-/* TODO */
+        /* TODO */
         if ((vcpu->arch.sysregs.hyp.vmpidr_el2 & MPIDR_AFF_MSK) == (mpidr & MPIDR_AFF_MSK))  {
             return vcpu;
         }
@@ -50,7 +50,7 @@ static unsigned long vm_cpuid_to_mpidr(struct vm* vm, vcpuid_t cpuid)
 
 void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm)
 {
-    //vcpu->arch.vmpidr = vm_cpuid_to_mpidr(vm, vcpu->id);
+    /* vcpu->arch.vmpidr = vm_cpuid_to_mpidr(vm, vcpu->id); */
     //MSR(VMPIDR_EL2, vcpu->arch.vmpidr);
     /*  TODO */
     vcpu->arch.sysregs.hyp.vmpidr_el2 = vm_cpuid_to_mpidr(vm, vcpu->id);
@@ -90,7 +90,7 @@ void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
      * state at reset.
      */
     // MSR(SCTLR_EL1, SCTLR_RES1);
-/* TODO */
+    /* TODO */
     vcpu->arch.sysregs.vm.sctlr_el1 = SCTLR_RES1;
     MSR(CNTKCTL_EL1, 0);
     MSR(PMCR_EL0, 0);

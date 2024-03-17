@@ -2,6 +2,7 @@
 #include <hypercall.h>
 #include <vmstack.h>
 #include <config.h>
+#include "bao.h"
 #include "types.h"
 #include "vm.h"
 #include "vmm.h"
@@ -43,17 +44,14 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
         struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
         if (ree_vcpu != NULL) {
             switch (ID_TO_FUNCID(fid)) {
-                case TEEHC_FUNCID_RETURN_ON_DONE:
                 case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
+                case TEEHC_FUNCID_RETURN_ON_DONE:
                     sdtz_copy_args(ree_vcpu, cpu.vcpu, 1);
                     vmstack_push(ree_vcpu);
 		    tee_arch_interrupt_enable();
                     break;
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
                     sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
-                    vmstack_push(ree_vcpu);
-		    tee_arch_interrupt_enable();
-                    break;
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);
 		    tee_arch_interrupt_enable();
@@ -64,6 +62,7 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
             ret = HC_E_SUCCESS;
         }
     }
+
     return ret;
 }
 
@@ -78,7 +77,8 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     /* TODO: check current active handler */
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
        if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
-           vmstack_push(vcpu); /* transition to normal world */
+           /* TODO */
+           /* vmstack_push(vcpu); /1* transition to normal world *1/ */
        }
    }
 }

@@ -294,7 +294,7 @@ void vgic_init(struct vm *vm, const struct gic_dscrp *gic_dscrp)
         vcpu->arch.vgic_priv.vgicr.CTLR = 0;
 
         uint64_t typer = (uint64_t)vcpu->id << GICR_TYPER_PRCNUM_OFF;
-        typer |= (vcpu->arch.vmpidr & MPIDR_AFF_MSK) << GICR_TYPER_AFFVAL_OFF;
+        typer |= (vcpu->arch.sysregs.hyp.vmpidr_el2 & MPIDR_AFF_MSK) << GICR_TYPER_AFFVAL_OFF;
         typer |= !!(vcpu->id == vcpu->vm->cpu_num - 1) << GICR_TYPER_LAST_OFF;
         vcpu->arch.vgic_priv.vgicr.TYPER = typer;
 

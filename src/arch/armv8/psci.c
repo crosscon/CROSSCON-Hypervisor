@@ -34,23 +34,50 @@ extern void psci_boot_entry(unsigned long x0);
 	SMC Trapping
 --------------------------------- */
 
+static void update_vcpu_psci_ctx(struct vcpu* vcpu)
+{
+    spin_lock(&vcpu->arch.psci_ctx.lock);
+    if(vcpu->arch.psci_ctx.state == ON_PENDING){
+    vcpu_arch_reset(vcpu, vcpu->arch.psci_ctx.entrypoint);
+    vcpu->arch.psci_ctx.state = ON;
+    vcpu->regs->x[0] = vcpu->arch.psci_ctx.context_id;
+        if(vcpu == cpu.vcpu)
+            vcpu_restore_state(vcpu);
+    }
+    spin_unlock(&vcpu->arch.psci_ctx.lock);
+}
+
 void psci_wake_from_off(uint64_t vmid){
   
     struct vcpu *vcpu = cpu_get_vcpu(vmid);
 
-    if(cpu.vcpu == NULL){   
+    if(cpu.vcpu == NULL){
         return;
     }
 
-    /* update vcpu.psci_ctx */
-    spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
-    if(cpu.vcpu->arch.psci_ctx.state == ON_PENDING){
-        vcpu_arch_reset(cpu.vcpu, cpu.vcpu->arch.psci_ctx.entrypoint);
-        if(vcpu == cpu.vcpu) vcpu_restore_state(cpu.vcpu);
+    /* whether are note we are waking this vcpu, our current vcpu is off so
+     * wake it up */
+    if(cpu.vcpu->arch.psci_ctx.state == OFF){
+        spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
+        if(cpu.vcpu->vm->id == 1){
+            /* Secure World VM */
+            /* TODO identify VM type */
+            if(cpu.vcpu != vcpu){
+                /* we wouldn't be here otherwise, but whatever */
+                /* TODO register optee hooks */
+                vcpu_arch_reset(cpu.vcpu, 0x101017ec);
+                cpu.vcpu->arch.psci_ctx.state = ON;
+                vcpu_restore_state(cpu.vcpu);
+            }
+        }
         cpu.vcpu->arch.psci_ctx.state = ON;
-        cpu.vcpu->regs->x[0] = cpu.vcpu->arch.psci_ctx.context_id;
+        spin_unlock(&cpu.vcpu->arch.psci_ctx.lock);
     }
-    spin_unlock(&cpu.vcpu->arch.psci_ctx.lock);
+
+
+    /* finally update the state of the vm that asked to wake up */
+    update_vcpu_psci_ctx(vcpu);
+
 }
 
 void psci_cpumsg_handler(uint32_t event, uint64_t data){
@@ -143,15 +170,15 @@ int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entrypoint,
     if (target_vcpu != NULL){
 
         bool already_on = true;
-        spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
+        spin_lock(&target_vcpu->arch.psci_ctx.lock);
         if(target_vcpu->arch.psci_ctx.state == OFF){
-            /* TODO target_vcpu->arch.psci_ctx.state = ON_PENDING; */
+            target_vcpu->arch.psci_ctx.state = ON_PENDING;
             target_vcpu->arch.psci_ctx.entrypoint = entrypoint;
             target_vcpu->arch.psci_ctx.context_id = context_id;
             fence_sync_write();
             already_on = false;
         } 
-        spin_unlock(&cpu.vcpu->arch.psci_ctx.lock);
+        spin_unlock(&target_vcpu->arch.psci_ctx.lock);
 
         if(already_on){
             return PSCI_E_ALREADY_ON;
@@ -161,7 +188,7 @@ int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entrypoint,
         if (pcpuid == INVALID_CPUID) {
             ret = PSCI_E_INVALID_PARAMS;
         } else {
-            struct cpu_msg msg = {PSCI_CPUSMG_ID, PSCI_MSG_ON};
+            struct cpu_msg msg = {PSCI_CPUSMG_ID, PSCI_MSG_ON, target_vcpu->vm->id};
             cpu_send_msg(pcpuid, &msg);
             ret = PSCI_E_SUCCESS;
         }

@@ -104,7 +104,10 @@ static struct vcpu* vmm_create_vms(struct vm_config* config, struct vcpu* parent
     spin_unlock(&partition->lock);
 
     if(assigned){
-        vcpu = vm_init(vm, config, master, vmm_alloc_vmid());
+        size_t vm_id = -1;
+        if(master)
+            vm_id = vmm_alloc_vmid();
+        vcpu = vm_init(vm, config, master, vm_id);
         for(int i = 0; i < config->children_num; i++){
             struct vm_config* child_config = config->children[i];
             struct vcpu* child = vmm_create_vms(child_config, vcpu); //TODO: do this without recursion
@@ -250,19 +253,21 @@ void vmm_init()
         if (master) {
             //size_t vm_npages = NUM_PAGES(sizeof(struct vm));
             /* TODO */
+
+            /* Alloc partition memory (stack of VMs) */
             size_t vm_npages = NUM_PAGES(sizeof(struct partition));
-            vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM,
-                                            (vaddr_t)BAO_VM_BASE,
-                                            vm_npages);
+            vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, (vaddr_t)BAO_VM_BASE, vm_npages);
             mem_map(&cpu.as, va, NULL, vm_npages, PTE_HYP_FLAGS);
             memset((void*)va, 0, vm_npages * PAGE_SIZE);
+
+            /* Initialize partition */
             cpu_sync_init(&partition->sync, vm_assign[vm_id].ncpus);
             partition->master = cpu.id;
-            objcache_init(&partition->nodes, sizeof(struct node_data), SEC_HYP_VM,
-                          true);
+            objcache_init(&partition->nodes, sizeof(struct node_data), SEC_HYP_VM, true);
+
             fence_ord_write();
-            vm_assign[vm_id].vm_shared_table =
-                *pt_get_pte(&cpu.as.pt, 0, (vaddr_t)BAO_VM_BASE);
+
+            vm_assign[vm_id].vm_shared_table = *pt_get_pte(&cpu.as.pt, 0, (vaddr_t)BAO_VM_BASE);
         } else {
             while (vm_assign[vm_id].vm_shared_table == 0);
             pte_t* pte = pt_get_pte(&cpu.as.pt, 0, (vaddr_t)BAO_VM_BASE);
@@ -283,9 +288,6 @@ void vmm_init()
     if (assigned) {
         root = vmm_create_vms(vm_config_ptr->vmlist[vm_id], NULL);
         cpu_sync_barrier(&partition->sync);
-    }
-
-    if(master){
         vmstack_push(root);
         vcpu_run(root);
     }

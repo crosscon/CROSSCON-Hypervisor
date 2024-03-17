@@ -17,9 +17,9 @@
 #define __ARCH_BAO_H__
 
 #define BAO_VAS_BASE    (0xba0000000000)
-#define BAO_CPU_BASE    (0xbaa000000000)
-#define BAO_VM_BASE     (0xbab000000000)
-#define BAO_VAS_TOP     (0xff0000000000)
+#define BAO_CPU_BASE    (0xbb0000000000)
+#define BAO_VM_BASE     (0xbc0000000000)
+#define BAO_VAS_TOP     (0xbf0000000000)
 #define PAGE_SIZE       (0x1000)
 
 #ifndef __ASSEMBLER__

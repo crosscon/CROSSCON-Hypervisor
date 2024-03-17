@@ -1004,11 +1004,22 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
     uint16_t vgicr_id = VGIC_MSG_VGICRID(data);
     irqid_t int_id = VGIC_MSG_INTID(data);
     uint64_t val = VGIC_MSG_VAL(data);
+    struct vcpu* child = NULL;
 
     if (vm_id != cpu.vcpu->vm->id) {
-        ERROR("received vgic3 msg target to another vcpu");
         // TODO: need to fetch vcpu from other vm if the taget vm for this
         // is not active
+        list_foreach(cpu.vcpu->vmstack_children, struct node_data, node)
+        {
+            child = node->data;
+            if (child->vm->id == vm_id) {
+                vmstack_push(child);
+                break;
+            }
+        }
+
+        if(child == NULL)
+            ERROR("received vgic3 msg target to another vcpu");
     }
 
     switch (event) {
@@ -1045,6 +1056,13 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
             }
         } break;
     }
+
+    if(child != NULL){
+        /* this means vcpu is not for currently running vm, and we now the vcpu
+         * is child. so we return to the parent */
+        vmstack_pop();
+    }
+
 }
 
 /**

@@ -609,10 +609,12 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
         vm_init_ipc(vm, config);
     }
 
-    /* TODO: use linker table */
-    sdtz_handler_setup(vm);
-    sdgpos_handler_setup(vm);
-    sdsgx_handler_setup(vm);
+    if(master){
+        /* TODO: use linker table */
+        sdtz_handler_setup(vm);
+        sdgpos_handler_setup(vm);
+        sdsgx_handler_setup(vm);
+    }
 
     cpu_sync_barrier(&vm->sync);
 

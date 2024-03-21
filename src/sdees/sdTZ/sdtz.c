@@ -51,7 +51,11 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
 		    tee_arch_interrupt_enable();
                     break;
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
-                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
+                    if(vcpu_readreg(cpu.vcpu, 1) == 0xffff0004){
+                        /* interrupted */
+                        sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
+                    } else
+                        sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
                 case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                     vmstack_push(ree_vcpu);
 		    tee_arch_interrupt_enable();
@@ -75,10 +79,11 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
     /* TODO: check current active handler */
-   if(vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED){
+
+   if(vcpu != cpu.vcpu && vcpu->state == VCPU_INACTIVE){
        if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
            /* TODO */
-           /* vmstack_push(vcpu); /1* transition to normal world *1/ */
+           interrupts_vm_inject(cpu.vcpu, 40);
        }
    }
 }

@@ -80,3 +80,10 @@ void tee_arch_interrupt_enable()
 {
 
 }
+
+void tee_step(struct vcpu* vcpu)
+{
+    uint64_t pc_step = 2 + (2 * 1);
+    vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
+
+}

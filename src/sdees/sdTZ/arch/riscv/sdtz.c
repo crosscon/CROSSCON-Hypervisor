@@ -109,3 +109,7 @@ void tee_arch_interrupt_enable()
     CSRS(CSR_HIE, HIE_VSEIE);
     CSRS(CSR_HIDELEG, HIE_VSEIE);
 }
+void tee_step(struct vcpu* vcpu)
+{
+    (void)vcpu;
+}

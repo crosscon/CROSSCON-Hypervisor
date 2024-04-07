@@ -720,15 +720,15 @@ void vgic_int_set_field(struct vgic_reg_handler_info *handlers, struct vcpu *vcp
     if (vgic_get_ownership(vcpu, interrupt)) {
         vgic_remove_lr(vcpu, interrupt);
         if (handlers->update_field(vcpu, interrupt, data) &&
-            vgic_int_is_hw(interrupt)) {
+                vgic_int_is_hw(interrupt)) {
             handlers->update_hw(vcpu, interrupt);
         }
         vgic_route(vcpu, interrupt);
         vgic_yield_ownership(vcpu, interrupt);
     } else {
         struct cpu_msg msg = {VGIC_IPI_ID, VGIC_SET_REG,
-                         VGIC_MSG_DATA(vcpu->vm->id, 0, interrupt->id,
-                                       handlers->regid, data)};
+            VGIC_MSG_DATA(vcpu->vm->id, 0, interrupt->id,
+                    handlers->regid, data)};
         cpu_send_msg(interrupt->owner->phys_id, &msg);
     }
     spin_unlock(&interrupt->lock);

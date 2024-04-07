@@ -34,8 +34,8 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
 	    tee_arch_interrupt_disable();
             sdtz_copy_args(cpu.vcpu, vcpu, 7);
             /* TODO: more generic stepping */
-            uint64_t pc_step = 2 + (2 * 1);
-            vcpu_writepc(cpu.vcpu, vcpu_readpc(cpu.vcpu) + pc_step);
+            /* in arm steeping is done here, but in RISC-V it is done outside */
+            tee_step(cpu.vcpu);
             ret = HC_E_SUCCESS;
         }
     } else {
@@ -53,6 +53,7 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
                 case TEEHC_FUNCID_RETURN_CALL_DONE:
                     if(vcpu_readreg(cpu.vcpu, 1) == 0xffff0004){
                         /* interrupted */
+                        /* TODO Not sure if needed */
                         sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
                     } else
                         sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
@@ -83,7 +84,7 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_INACTIVE){
        if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
            /* TODO */
-           interrupts_vm_inject(cpu.vcpu, 40);
+           /* interrupts_vm_inject(cpu.vcpu, 40); */
        }
    }
 }

@@ -1,7 +1,7 @@
 #ifndef TEE_H_
 #define TEE_H_
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <vm.h>
 
 

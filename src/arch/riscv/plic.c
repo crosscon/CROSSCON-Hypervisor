@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -70,8 +70,8 @@ void plic_set_enbl(unsigned cntxt, irqid_t int_id, bool en)
     int reg_ind = int_id / (sizeof(uint32_t) * 8);
     uint32_t mask = 1U << (int_id % (sizeof(uint32_t) * 8));
 
-    
-    if (int_id <= PLIC_IMPL_INTERRUPTS && plic_cntxt_valid(cntxt)) { 
+
+    if (int_id <= PLIC_IMPL_INTERRUPTS && plic_cntxt_valid(cntxt)) {
         if (en) {
             plic_global.enbl[cntxt][reg_ind] |= mask;
         } else {
@@ -144,7 +144,7 @@ void plic_handle()
 }
 
 /**
- * Context organization is spec-out by the vendor, this is the default 
+ * Context organization is spec-out by the vendor, this is the default
  * mapping found in sifive's plic.
  */
 
@@ -159,7 +159,7 @@ struct plic_cntxt plic_plat_id_to_cntxt(int id){
     struct plic_cntxt cntxt;
     if(id < PLIC_PLAT_CNTXT_NUM){
         cntxt.hart_id = id/2;
-        cntxt.mode = (id%2) == 0 ? PRIV_M : PRIV_S; 
+        cntxt.mode = (id%2) == 0 ? PRIV_M : PRIV_S;
     } else {
         return (struct plic_cntxt){-1};
     }

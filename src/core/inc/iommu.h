@@ -1,12 +1,12 @@
 /**
- * baohu separation kernel
+ crossconhyphu separation kernel
  *
  * Copyright (c) Jose Martins, Sandro Pinto, David Cerdeira
  *
  * Authors:
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *
- * baohu is free software; you can redistribute it and/or modify it under the
+ crossconhyphu is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __IOMMU_H__
 #define __IOMMU_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/iommu.h>
 #include <objcache.h>
 #include <list.h>

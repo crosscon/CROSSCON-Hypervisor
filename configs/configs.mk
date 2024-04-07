@@ -1,20 +1,20 @@
-## 
- # Bao, a Lightweight Static Partitioning Hypervisor 
+##
+ # CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  #
- # Copyright (c) Bao Project (www.bao-project.org), 2019-
+ # Copyright (c) CROSSCONHyp Project (www.crossconhyp-project.org), 2019-
  #
  # Authors:
  #      Jose Martins <jose.martins@bao-project.org>
  #
- # Bao is free software; you can redistribute it and/or modify it under the
+ # CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  # terms of the GNU General Public License version 2 as published by the Free
  # Software Foundation, with a special exception exempting guest code from such
- # license. See the COPYING file in the top-level directory for details. 
+ # license. See the COPYING file in the top-level directory for details.
  #
 ##
 
 
-#Note: all directory, toolchain and flag variables are supposed to be 
+#Note: all directory, toolchain and flag variables are supposed to be
 # defined/passed by the main makefile
 
 ifeq ($(CONFIG),)
@@ -44,7 +44,7 @@ config: $(CONFIG_BIN)
 
 $(config_dep): $(config_src)
 	@$(cc) $(CPPFLAGS) -S $< -o temp.S
-	-@grep ".incbin" temp.S > $(patsubst %.d, %.S, $@) 
+	-@grep ".incbin" temp.S > $(patsubst %.d, %.S, $@)
 	@$(as) -MD $@ $(patsubst %.d, %.S, $@)  -o $(patsubst %.d, %.o, $@)
 	@rm temp.S $(patsubst %.d, %.S, $@)
 	@$(cc) -MM -MG -MT "$(patsubst %.d, %.o, $@) $@"  $(CPPFLAGS) $(filter %.c, $^) >> $@

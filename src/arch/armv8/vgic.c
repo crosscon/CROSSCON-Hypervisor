@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -21,7 +21,7 @@
 #elif (GIC_VERSION == GICV3)
 #include <arch/gicv3.h>
 #include <arch/vgicv3.h>
-#else 
+#else
 #error "unknown GIV version " GIC_VERSION
 #endif
 
@@ -84,7 +84,7 @@ static inline bool vgic_lr_empty(struct vcpu* vcpu, uint64_t lr){
         return bit_get(elsr, lr%64);
     } else {
         return bit_get(vcpu->arch.vgic_priv.gich.ELSR, lr%64);
-    }   
+    }
 }
 
 
@@ -93,7 +93,7 @@ static inline void vgic_hcr_set(struct vcpu* vcpu, uint64_t mask){
         gich_set_hcr(gich_get_hcr() | mask);
     } else {
         vcpu->arch.vgic_priv.gich.HCR |= mask;
-    }   
+    }
 }
 
 static inline void vgic_hcr_clear(struct vcpu* vcpu, uint64_t mask){
@@ -720,15 +720,15 @@ void vgic_int_set_field(struct vgic_reg_handler_info *handlers, struct vcpu *vcp
     if (vgic_get_ownership(vcpu, interrupt)) {
         vgic_remove_lr(vcpu, interrupt);
         if (handlers->update_field(vcpu, interrupt, data) &&
-            vgic_int_is_hw(interrupt)) {
+                vgic_int_is_hw(interrupt)) {
             handlers->update_hw(vcpu, interrupt);
         }
         vgic_route(vcpu, interrupt);
         vgic_yield_ownership(vcpu, interrupt);
     } else {
         struct cpu_msg msg = {VGIC_IPI_ID, VGIC_SET_REG,
-                         VGIC_MSG_DATA(vcpu->vm->id, 0, interrupt->id,
-                                       handlers->regid, data)};
+            VGIC_MSG_DATA(vcpu->vm->id, 0, interrupt->id,
+                    handlers->regid, data)};
         cpu_send_msg(interrupt->owner->phys_id, &msg);
     }
     spin_unlock(&interrupt->lock);
@@ -896,7 +896,7 @@ struct vgic_reg_handler_info *reg_handler_info_table[VGIC_REG_HANDLER_ID_NUM] =
      [VGIC_IPRIORITYR_ID] = &ipriorityr_info,
      [VGIC_ITARGETSR_ID] = &itargetr_info};
 
-struct vgic_reg_handler_info 
+struct vgic_reg_handler_info
     *vgic_get_reg_handler_info(enum vgic_reg_handler_info_id id)
 {
     if (id < VGIC_REG_HANDLER_ID_NUM) {
@@ -1068,9 +1068,9 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
 /**
  * Must be called holding the vgic_spilled_lock
  */
-static inline 
-struct vgic_int* vgic_highest_prio_spilled(struct vcpu *vcpu, 
-                                           unsigned flags, 
+static inline
+struct vgic_int* vgic_highest_prio_spilled(struct vcpu *vcpu,
+                                           unsigned flags,
                                            struct list** outlist) {
     struct vgic_int* irq = NULL;
     struct list* spilled_lists[] = {
@@ -1128,9 +1128,9 @@ static void vgic_refill_lrs(struct vcpu *vcpu, bool npie) {
 
 
 static void vgic_eoir_highest_spilled_active(struct vcpu *vcpu)
-{   
+{
     struct list* list = NULL;
-    struct vgic_int *interrupt = 
+    struct vgic_int *interrupt =
         vgic_highest_prio_spilled(vcpu, ACT, &list);
 
     if (interrupt != NULL) {
@@ -1201,7 +1201,7 @@ size_t vgic_get_itln(const struct gic_dscrp *gic_dscrp) {
 
     /**
      * By default the guest sees the real platforms interrupt line number
-     * in the virtual gic. However a user can control this using the 
+     * in the virtual gic. However a user can control this using the
      * interrupt_num in the platform description configuration which be at
      * least the number os ppis and a multiple of 32.
      */
@@ -1210,7 +1210,7 @@ size_t vgic_get_itln(const struct gic_dscrp *gic_dscrp) {
         bit32_extract(gicd.TYPER, GICD_TYPER_ITLN_OFF, GICD_TYPER_ITLN_LEN);
 
     if(gic_dscrp->interrupt_num > GIC_MAX_PPIS) {
-        vtyper_itln = (ALIGN(gic_dscrp->interrupt_num, 32)/32 - 1) & 
+        vtyper_itln = (ALIGN(gic_dscrp->interrupt_num, 32)/32 - 1) &
             BIT32_MASK(0, GICD_TYPER_ITLN_LEN);
     }
 
@@ -1250,7 +1250,7 @@ void vgic_set_hw(struct vm *vm, irqid_t id)
 
 bool vgic_int_get_enabled(struct vcpu* vcpu, uint64_t int_id) {
     struct vgic_int *interrupt = vgic_get_int(vcpu, int_id, vcpu->id);
-    return interrupt != NULL && interrupt->enabled; 
+    return interrupt != NULL && interrupt->enabled;
 }
 
 void vgic_hw_commit(struct vcpu* vcpu, uint64_t int_id) {
@@ -1259,7 +1259,7 @@ void vgic_hw_commit(struct vcpu* vcpu, uint64_t int_id) {
     if(interrupt != NULL && interrupt->hw) {
         // vgic_int_set_cfg_hw(vcpu, interrupt);
         vgic_int_set_prio_hw(vcpu, interrupt);
-        vgic_int_state_hw(vcpu, interrupt);    
+        vgic_int_state_hw(vcpu, interrupt);
         vgic_int_enable_hw(vcpu, interrupt);
     }
 }
@@ -1270,10 +1270,10 @@ void vgic_hw_commit(struct vcpu* vcpu, uint64_t int_id) {
  */
 
 void vgic_save_state(struct vcpu* vcpu){
-    
+
     vcpu->arch.vgic_priv.gich.HCR = gich_get_hcr();
     vcpu->arch.vgic_priv.gich.VMCR = gich_get_vmcr();
-    
+
     vcpu->arch.vgic_priv.gich.ELSR = gich_get_elrsr();
 
     // for(int i = 0; i < NUM_LRS; i++){
@@ -1288,7 +1288,7 @@ void vgic_save_state(struct vcpu* vcpu){
 
 void vgic_restore_state(struct vcpu* vcpu){
 
-    gich_set_hcr(vcpu->arch.vgic_priv.gich.HCR); 
+    gich_set_hcr(vcpu->arch.vgic_priv.gich.HCR);
     gich_set_vmcr(vcpu->arch.vgic_priv.gich.VMCR);
 
     // for(int i = 0; i < GIC_APR_MAX; i++){

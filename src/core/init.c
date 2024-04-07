@@ -1,20 +1,20 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Sandro Pinto <sandro.pinto@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #include <cpu.h>
 #include <mem.h>
@@ -37,7 +37,7 @@ void init(cpuid_t cpu_id, paddr_t load_addr, paddr_t config_addr)
 
     if (cpu.id == CPU_MASTER) {
         console_init();
-        printk("Bao Hypervisor\n\r");
+        printk("CROSSCONHyp Hypervisor\n\r");
     }
 
     interrupts_init();

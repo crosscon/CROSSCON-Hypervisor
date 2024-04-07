@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __ARCH_PAGE_TABLE_H__
 #define __ARCH_PAGE_TABLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 #define HYP_ROOT_PT_SIZE (PAGE_SIZE)
@@ -87,7 +87,7 @@ typedef pte_t pte_flags_t;
 
 static inline void pte_set(pte_t* pte, paddr_t addr, pte_type_t type, pte_flags_t flags)
 {
-    *pte = ((addr & PTE_ADDR_MSK) >> 2) | 
+    *pte = ((addr & PTE_ADDR_MSK) >> 2) |
         (((type == PTE_TABLE) ? type : (type | flags)) & PTE_FLAGS_MSK);
 }
 

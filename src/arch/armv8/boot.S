@@ -1,34 +1,34 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Gero Schwaericke <gero.schwaericke@tum.de>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
 
-.data 
+.data
 .align 3
 /**
  * barrier is used to minimal synchronization in boot - other cores wait for
  * bsp to set it.
  */
-_barrier: .8byte 0			
+_barrier: .8byte 0
 
 /**
- * 	The following code MUST be at the base of the image, as this is bao's entry
+ * 	The following code MUST be at the base of the image, as this is crossconhyp's entry
  *	point. Therefore .boot section must also be the first in the linker script.
  *  DO NOT implement any code before the _reset_handler in this section.
  */
@@ -38,11 +38,11 @@ _barrier: .8byte 0
 _el2_entry:
 _reset_handler:
 
-	/** 
+	/**
 	 * TODO: before anything...
 	 * perform sanity checks on ID registers to ensure support for
-	 * VE and TZ, 4K granule and possibly other needed features. 
-	 * Also, check current exception level. Act accordingly. 
+	 * VE and TZ, 4K granule and possibly other needed features.
+	 * Also, check current exception level. Act accordingly.
 	 * However, we expect to be running at EL2 at this point.
 	 */
 
@@ -52,7 +52,7 @@ _reset_handler:
 	 * as arguments:
 	 * 		x0 -> contains cpu id
 	 *		x1 -> contains image base load address
-	 *		x2 -> contains config binary load address (passed in x0) 
+	 *		x2 -> contains config binary load address (passed in x0)
 	 * Register x9 is reserved to indicate if the current cpu is master (negated)
 	 * Register x18 contains the size of the allocated physical memory between
 	 * the loadable sections of the image and the non-loadable
@@ -63,7 +63,7 @@ _reset_handler:
 	adrp x1, _image_start
 	ldr x18, =extra_allocated_phys_mem
 
-	/* 
+	/*
 	 * Install vector table physical address early, in case exception occurs
 	 * during this initialization.
 	 */
@@ -77,11 +77,11 @@ _reset_handler:
 	 * description this early in the initialization.
 	 */
 
-	mov x3, x0, lsr #8 
+	mov x3, x0, lsr #8
 	and x3, x3, 0xff
 	adr x4, platform
 	ldr x4, [x4, PLAT_ARCH_OFF+PLAT_ARCH_CLUSTERS_OFF+PLAT_CLUSTERS_CORES_NUM_OFF]
-	ldr x5, =BAO_VAS_BASE
+	ldr x5, =CROSSCONHYP_VAS_BASE
 	sub x4, x4, x5
 	add x4, x4, x1
 	mov x5, xzr
@@ -103,8 +103,8 @@ _master_set:
 	.8byte 	0
 .popsection
 /**
- * For setting the master cpu, we assume only one cpu is initially activated 
- * which later will turn on all the others. Therefore, there is no concurrency 
+ * For setting the master cpu, we assume only one cpu is initially activated
+ * which later will turn on all the others. Therefore, there is no concurrency
  * when setting CPU_MASTER and no atomic operations are needed.
  * As a result x9 should be set to !is_cpu_master
  */
@@ -117,22 +117,22 @@ _set_master_cpu:
 	mov x9, xzr
 	adr x3, CPU_MASTER
 	str x0, [x3]
-7: 
+7:
 
-	/** 
-	 * TODO: bring the system to a well known state. This includes disabling 
+	/**
+	 * TODO: bring the system to a well known state. This includes disabling
 	 * the MMU (done), all caches (missing i$), BP and others...
-	 * and invalidating them.	
+	 * and invalidating them.
 	 */
- 
+
 	/* Clear stack pointer to avoid unaligned SP exceptions during boot */
     mov x3, xzr
 	mov sp, x3
 
 	/* Disable caches and MMU */
-	mrs x3, SCTLR_EL2 
-	bic x3, x3, #0x7	
-	msr SCTLR_EL2, x3 
+	mrs x3, SCTLR_EL2
+	bic x3, x3, #0x7
+	msr SCTLR_EL2, x3
 
 	/* Invalidate caches */
 	/* Should we also clean ? */
@@ -155,25 +155,25 @@ _set_master_cpu:
 	/* Skip initialy global page tables setup if not bsp (boot cpu) */
 	cbnz	x9, wait_for_bsp
 
-	adr	x16, _page_tables_start	
-	adr	x17, _page_tables_end	
+	adr	x16, _page_tables_start
+	adr	x17, _page_tables_end
 	add x16, x16, x18
 	add x17, x17, x18
-	bl	clear				
+	bl	clear
 
 	/* Set temporary flat mapping to switch to VAS. */
 
 	adr x4, root_l1_flat_pt
 	add x4, x4, x18
-	PTE_INDEX_ASM x5, x1, 1 
+	PTE_INDEX_ASM x5, x1, 1
 	add x6, x1, #(PTE_HYP_FLAGS | PTE_SUPERPAGE)
 	str x6, [x4, x5]
-	
+
 	/* Set global root mappings for hypervisor image */
 
 	adr x4, root_l1_pt
 	add x4, x4, x18
-	ldr x5, =(PTE_INDEX(1, BAO_VAS_BASE)*8)
+	ldr x5, =(PTE_INDEX(1, CROSSCONHYP_VAS_BASE)*8)
 	adr x6, root_l2_pt
 	add x6, x6, x18
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
@@ -181,7 +181,7 @@ _set_master_cpu:
 
 	adr x4, root_l2_pt
 	add x4, x4, x18
-	ldr x5, =(PTE_INDEX(2, BAO_VAS_BASE)*8)
+	ldr x5, =(PTE_INDEX(2, CROSSCONHYP_VAS_BASE)*8)
 	adr x6, root_l3_pt
 	add x6, x6, x18
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
@@ -207,7 +207,7 @@ _set_master_cpu:
 	cmp x7, x8
 	b.ge 3f
     ldr x6, =_image_noload_start
-    ldr x10, =BAO_VAS_BASE
+    ldr x10, =CROSSCONHYP_VAS_BASE
     sub x6, x6, x10
     add x6, x6, x1
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_PAGE)
@@ -220,7 +220,7 @@ _set_master_cpu:
 	sev
 	b 	map_cpu
 
-wait_for_bsp:	
+wait_for_bsp:
 /* wait fot the bsp to finish up global mappings */
 	wfe
 	ldr x4, _barrier
@@ -234,35 +234,35 @@ map_cpu:
 	 *    x5 -> pte index
 	 *    x6 -> phys addr
 	 *    x7 -> virt addr
-	 *    x8 -> aux 
+	 *    x8 -> aux
 	 */
 
 	/* get cpu root pt */
 	mov x8, #(CPU_SIZE + (PT_SIZE*(PT_LVLS-1)))
 	adrp x3, _dmem_phys_beg
 	madd x3, x0, x8, x3
-	
-	mov	x16, x3	
+
+	mov	x16, x3
 	add	x17, x3, x8
-	bl	clear	
+	bl	clear
 
 	/* Get pointer to root page table */
 	add x4, x3, #CPU_ROOT_PT_OFF
 
 	/* map original bootstrap flat mappings */
-	PTE_INDEX_ASM x5, x1, 0 
+	PTE_INDEX_ASM x5, x1, 0
 	adr x6, root_l1_flat_pt
 	add x6, x6, x18
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
 	str x6, [x4, x5]
-	
-	ldr x5, =(PTE_INDEX(0, BAO_VAS_BASE)*8)
+
+	ldr x5, =(PTE_INDEX(0, CROSSCONHYP_VAS_BASE)*8)
 	adr x6, root_l1_pt
 	add x6, x6, x18
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
 	str x6, [x4, x5]
 
-	ldr x5, =(PTE_INDEX(0, BAO_CPU_BASE)*8)
+	ldr x5, =(PTE_INDEX(0, CROSSCONHYP_CPU_BASE)*8)
 	//add x6, x4, #PT_SIZE
     add x6, x3, #CPU_SIZE
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
@@ -270,19 +270,19 @@ map_cpu:
 
 	//add x4, x4, #PT_SIZE
     add x4, x3, #CPU_SIZE
-	ldr x5, =(PTE_INDEX(1, BAO_CPU_BASE)*8)
+	ldr x5, =(PTE_INDEX(1, CROSSCONHYP_CPU_BASE)*8)
 	add x6, x4, #PT_SIZE
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
 	str x6, [x4, x5]
 
 	add x4, x4, #PT_SIZE
-	ldr x5, =(PTE_INDEX(2, BAO_CPU_BASE)*8)
+	ldr x5, =(PTE_INDEX(2, CROSSCONHYP_CPU_BASE)*8)
 	add x6, x4, #PT_SIZE
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
 	str x6, [x4, x5]
 
 	add x4, x4, #PT_SIZE
-	ldr x7, =BAO_CPU_BASE
+	ldr x7, =CROSSCONHYP_CPU_BASE
 	add x8, x7, #CPU_SIZE
 	mov x6, x3
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
@@ -310,7 +310,7 @@ map_cpu_interface:
 1:
 	cmp	x7, x8
 	b.ge setup_cpu
-	PTE_INDEX_ASM x5, x7, 3 
+	PTE_INDEX_ASM x5, x7, 3
 	str x6, [x4, x5]
 
 	add x7, x7, #PAGE_SIZE
@@ -323,11 +323,11 @@ setup_cpu:
 	/**
 	 * 	The operation is purposely commented out.
 	 *  We are assuming monitor code already enabled smp coherency.
-	 */ 
+	 */
 	/* Turn on smp coherence */
-	//mrs	x3, CPUECTLR_EL1  	
+	//mrs	x3, CPUECTLR_EL1
 	//orr	x3, x3, #(CPUECTLR_SPEN_BIT)
-	//msr	CPUECTLR_EL1, x3 
+	//msr	CPUECTLR_EL1, x3
 
 	mov x3, xzr
 	msr CPTR_EL2, x3
@@ -348,12 +348,12 @@ setup_cpu:
 
 	/* set up cpu stack */
 	mov x3, #(SPSel_SP)
-	msr SPSEL, x3	
+	msr SPSEL, x3
 	ldr x3, =cpu
 	add x3, x3, #(CPU_STACK_OFF + CPU_STACK_SIZE)
 	mov SP, x3
 
-	/**	
+	/**
 	 * TODO: set implementation defined registers such as ACTLR or AMAIR.
 	 * Maybe define a macro for this in a implementation oriented directory
 	 * inside arch.
@@ -369,11 +369,11 @@ setup_cpu:
 	/* Enable MMU and caches */
 	ldr x4, =(SCTLR_RES1 | SCTLR_M | SCTLR_C | SCTLR_I)
 	msr	SCTLR_EL2, x4
-	
+
 	tlbi	alle2
 	dsb	nsh
 	isb
-	
+
 	br  x5
 
 _enter_vas:
@@ -385,7 +385,7 @@ _enter_vas:
 	/* Remove temporary mapping - the L1 page holding it leaks */
 	ldr x4, =cpu
 	add x4, x4, #CPU_ROOT_PT_OFF
-	PTE_INDEX_ASM x5, x1, 0 
+	PTE_INDEX_ASM x5, x1, 0
 	str xzr, [x4, x5]
 
     tlbi	alle2
@@ -394,13 +394,13 @@ _enter_vas:
 
 	/* If this is bsp (cpu 0) clear bss */
 	cbnz x9, 1f
-	ldr	x16, =_bss_start	
-	ldr	x17, =_bss_end	
-	bl	clear	
+	ldr	x16, =_bss_start
+	ldr	x17, =_bss_end
+	bl	clear
 
 	adr x5, _barrier
 	mov x4, #2
-	str x4, [x5]	
+	str x4, [x5]
 
 1:
 	/* wait for bsp to finish clearing bss */
@@ -413,17 +413,17 @@ _enter_vas:
 	b init
 
 	/* This point should never be reached */
-	b	.				
+	b	.
 
 /***** 	Helper functions for boot code. ******/
 
  .func clear
 clear:
 2:
-	cmp	x16, x17			
-	b.ge 1f				
-	str	xzr, [x16], #8	
-	b	2b				
+	cmp	x16, x17
+	b.ge 1f
+	str	xzr, [x16], #8
+	b	2b
 1:
 	ret
 .endfunc
@@ -436,7 +436,7 @@ clear:
  */
 .func cache_invalidate
 cache_invalidate:
-	msr csselr_el1, x0 
+	msr csselr_el1, x0
 	mrs x4, ccsidr_el1 // read cache size id.
 	and x1, x4, #0x7
 	add x1, x1, #0x4 // x1 = cache line size.
@@ -496,7 +496,7 @@ warm_boot:
 	/* map original bootstrap flat mappings */
 	mrs x3, TTBR0_EL2
 	adrp x1, _image_start
-	PTE_INDEX_ASM x1, x1, 0 
+	PTE_INDEX_ASM x1, x1, 0
 	add x3, x3, x1
 	dc civac, x3  //we invalidated l1$, but make sure the pte is not in l2$
 	add x5, x5, #(PTE_HYP_FLAGS | PTE_TABLE)
@@ -506,7 +506,7 @@ warm_boot:
 	ldr	x3, =_hyp_vector_table
 	msr	VBAR_EL2, x3
 
-    tlbi	alle2 
+    tlbi	alle2
 	dsb	nsh
 	isb
 
@@ -516,9 +516,9 @@ warm_boot:
 
 	dsb	nsh
 	isb
-	
+
 	ldr x5, =_enter_vas_warm
-	br  x5		
+	br  x5
 
 _enter_vas_warm:
 	/* Unmap bootstrat flat mappings */
@@ -526,7 +526,7 @@ _enter_vas_warm:
 	add x3, x4, #(CPU_STACK_OFF+CPU_STACK_SIZE)
 
 	add x4, x4, #CPU_ROOT_PT_OFF
-	PTE_INDEX_ASM x5, x1, 0 
+	PTE_INDEX_ASM x5, x1, 0
 	str xzr, [x4, x5]
     tlbi	alle2
 	dsb	nsh

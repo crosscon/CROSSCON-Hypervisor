@@ -1,15 +1,15 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
@@ -27,7 +27,7 @@ VM_IMAGE(vm2, "/path/to/vm2/binary.bin");
  * The configuration itself is a struct config that MUST be named config.
  */
 struct config config = {
-    
+
     /**
      * This macro must be always placed in the config struct, to initialize,
      * configuration independent fields.
@@ -49,10 +49,10 @@ struct config config = {
      */
     .vmlist_size = 2,
     .vmlist = {
-        { 
+        {
             .image = {
                 .base_addr = 0x80000000,
-                /** 
+                /**
                  * Use the  VM_IMAGE_OFFSET and VM_IMAGE_SIZE to initialize
                  * the image fields passing the identifier of the image.
                  */
@@ -67,18 +67,18 @@ struct config config = {
             .platform = {
 
                 .cpu_num = 2,
-                
+
                 .region_num = 1,
                 .regions =  (struct mem_region[]) {
                     {
                         .base = 0x80000000,
-                        .size = 0x100000 
+                        .size = 0x100000
                     }
                 },
 
                 .dev_num = 1,
                 .devs =  (struct dev_region[]) {
-                    {   
+                    {
                         /* UART0 */
                         .pa = 0x1c090000,
                         .va = 0x1c090000,
@@ -122,12 +122,12 @@ struct config config = {
 
             .platform = {
                 .cpu_num = 2,
-                
+
                 .region_num = 2,
                 .regions =  (struct mem_region[]) {
                     {
                         .base = 0x00000000,
-                        .size = 0x80000000 
+                        .size = 0x80000000
                     }
                     ,
                     {
@@ -138,7 +138,7 @@ struct config config = {
 
                 .dev_num = 1,
                 .devs =  (struct dev_region[]) {
-                    {   
+                    {
                         /* UART1 */
                         .pa = 0x1C0B0000,
                         .va = 0x1c090000,

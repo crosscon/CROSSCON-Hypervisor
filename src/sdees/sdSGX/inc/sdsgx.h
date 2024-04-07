@@ -1,7 +1,7 @@
 #ifndef SDSGX_H
 #define SDSGX_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <config.h>
 #include <vm.h>
 

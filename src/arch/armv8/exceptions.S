@@ -1,25 +1,25 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <asm_defs.h>
 
 #define ENTRY_SIZE   (0x80)
 
-.text 
+.text
 
 .macro SAVE_HYP_GPRS
 
@@ -40,7 +40,7 @@
     stp x24, x25, [sp, #(8*24)]
     stp x26, x27, [sp, #(8*26)]
     stp x28, x29, [sp, #(8*28)]
-    mov x29, sp 
+    mov x29, sp
     //add x29, x29, 32*8
     sub x29, x29, 32*8
     stp x30, x29, [sp, #(8*30)]
@@ -107,56 +107,56 @@ vcpu_arch_entry:
     ldr x30,      [sp, #(8*30)]
 
     add sp, sp, #(VCPU_REGS_SIZE)
-    
+
     eret
     b   .
 
 .balign 0x800
-.global _hyp_vector_table	
+.global _hyp_vector_table
 _hyp_vector_table:
 
-/* 
+/*
  * EL2 with SP0
- */  
+ */
 .balign ENTRY_SIZE
-curr_el_sp0_sync:        
+curr_el_sp0_sync:
     b	.
 .balign ENTRY_SIZE
-curr_el_sp0_irq:  
+curr_el_sp0_irq:
     b   .
 .balign ENTRY_SIZE
-curr_el_sp0_fiq:         
+curr_el_sp0_fiq:
     b	.
 .balign ENTRY_SIZE
-curr_el_sp0_serror:      
+curr_el_sp0_serror:
     b	.
-          
 
-/* 
+
+/*
  * EL2 with SPx
- */  
-.balign ENTRY_SIZE  
+ */
+.balign ENTRY_SIZE
 curr_el_spx_sync:
     SAVE_HYP_GPRS
     mov x0, sp
-    bl	internal_abort_handler        
+    bl	internal_abort_handler
     b	.
 .balign ENTRY_SIZE
-curr_el_spx_irq:         
+curr_el_spx_irq:
     b	.
 .balign ENTRY_SIZE
-curr_el_spx_fiq:         
+curr_el_spx_fiq:
     b	.
 .balign ENTRY_SIZE
 curr_el_spx_serror:
     SAVE_HYP_GPRS
     mov x0, sp
-    bl	internal_abort_handler       
-    b	.         
+    bl	internal_abort_handler
+    b	.
 
-/* 
+/*
  * Lower EL using AArch64
- */  
+ */
 
 .balign ENTRY_SIZE
 lower_el_aarch64_sync:
@@ -164,31 +164,31 @@ lower_el_aarch64_sync:
     bl	aborts_sync_handler
     b   vcpu_arch_entry
 .balign ENTRY_SIZE
-lower_el_aarch64_irq:    
+lower_el_aarch64_irq:
     VM_EXIT
     bl  gic_handle
     b   vcpu_arch_entry
 .balign ENTRY_SIZE
-lower_el_aarch64_fiq:    
+lower_el_aarch64_fiq:
     b	.
 .balign ENTRY_SIZE
-lower_el_aarch64_serror: 
-    b	.          
+lower_el_aarch64_serror:
+    b	.
 
-/* 
+/*
  * Lower EL using AArch32
- */  
-.balign ENTRY_SIZE   
-lower_el_aarch32_sync:   
+ */
+.balign ENTRY_SIZE
+lower_el_aarch32_sync:
     b	.
 .balign ENTRY_SIZE
-lower_el_aarch32_irq:    
+lower_el_aarch32_irq:
     b	.
 .balign ENTRY_SIZE
-lower_el_aarch32_fiq:    
+lower_el_aarch32_fiq:
     b	.
 .balign ENTRY_SIZE
-lower_el_aarch32_serror: 
+lower_el_aarch32_serror:
     b	.
 
-.balign ENTRY_SIZE          
+.balign ENTRY_SIZE

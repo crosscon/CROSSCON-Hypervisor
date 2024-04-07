@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Sandro Pinto <sandro.pinto@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -30,7 +30,7 @@
 
 struct config* vm_config_ptr;
 
-struct partition* const partition = (struct partition*)BAO_VM_BASE;
+struct partition* const partition = (struct partition*)CROSSCONHYP_VM_BASE;
 
 static void* vmm_alloc_vm_struct()
 {
@@ -162,8 +162,8 @@ void vmm_init()
         if(cpu.id == CPU_MASTER)
             INFO("No virtual machines to run.");
         cpu_idle();
-    } 
-    
+    }
+
     vmm_arch_init();
 
     static struct vm_assignment {
@@ -256,7 +256,7 @@ void vmm_init()
 
             /* Alloc partition memory (stack of VMs) */
             size_t vm_npages = NUM_PAGES(sizeof(struct partition));
-            vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, (vaddr_t)BAO_VM_BASE, vm_npages);
+            vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_VM, (vaddr_t)CROSSCONHYP_VM_BASE, vm_npages);
             mem_map(&cpu.as, va, NULL, vm_npages, PTE_HYP_FLAGS);
             memset((void*)va, 0, vm_npages * PAGE_SIZE);
 
@@ -267,10 +267,10 @@ void vmm_init()
 
             fence_ord_write();
 
-            vm_assign[vm_id].vm_shared_table = *pt_get_pte(&cpu.as.pt, 0, (vaddr_t)BAO_VM_BASE);
+            vm_assign[vm_id].vm_shared_table = *pt_get_pte(&cpu.as.pt, 0, (vaddr_t)CROSSCONHYP_VM_BASE);
         } else {
             while (vm_assign[vm_id].vm_shared_table == 0);
-            pte_t* pte = pt_get_pte(&cpu.as.pt, 0, (vaddr_t)BAO_VM_BASE);
+            pte_t* pte = pt_get_pte(&cpu.as.pt, 0, (vaddr_t)CROSSCONHYP_VM_BASE);
             *pte = vm_assign[vm_id].vm_shared_table;
             fence_sync_write();
         }

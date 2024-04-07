@@ -33,5 +33,6 @@ int64_t sdtz_arch_handler_setup(struct vm *vm);
 
 void tee_arch_interrupt_disable();
 void tee_arch_interrupt_enable();
+void tee_step(struct vcpu* vcpu);
 
 #endif

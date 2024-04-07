@@ -33,7 +33,7 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
 
     struct vcpu *calling_vcpu = cpu.vcpu;
 
-    if (calling_vcpu->vm->id == 2) { /* normal world */
+    if (calling_vcpu->vm->type == 0) { /* normal world */
         if (is_psci_fid(smc_fid)) {
             /* TODO: signal trusted OS a PSCI event is comming up */
             /* potentially handle core going to sleep */
@@ -78,5 +78,12 @@ void tee_arch_interrupt_disable()
 
 void tee_arch_interrupt_enable()
 {
+
+}
+
+void tee_step(struct vcpu* vcpu)
+{
+    uint64_t pc_step = 2 + (2 * 1);
+    vcpu_writepc(vcpu, vcpu_readpc(vcpu) + pc_step);
 
 }

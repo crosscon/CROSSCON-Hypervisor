@@ -24,7 +24,7 @@ struct imx_uart {
     uint32_t ts; /* 0xb4 */
 };
 
-typedef struct imx_uart bao_uart_t;
+typedef struct imx_uart crossconhyp_uart_t;
 
 void uart_enable(volatile struct imx_uart *uart);
 void uart_init(volatile struct imx_uart *uart);

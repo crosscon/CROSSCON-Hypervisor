@@ -1,21 +1,21 @@
-## 
- # Bao, a Lightweight Static Partitioning Hypervisor 
+##
+ # * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  #
- # Copyright (c) Bao Project (www.bao-project.org), 2019-
+ # Copyright (c) CROSSCONHyp Project (www.crossconhyp-project.org), 2019-
  #
  # Authors:
  #      Jose Martins <jose.martins@bao-project.org>
  #
- # Bao is free software; you can redistribute it and/or modify it under the
+ # * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  # terms of the GNU General Public License version 2 as published by the Free
  # Software Foundation, with a special exception exempting guest code from such
- # license. See the COPYING file in the top-level directory for details. 
+ # license. See the COPYING file in the top-level directory for details.
  #
 ##
 
 SHELL:=bash
 
-PROJECT_NAME:=bao
+PROJECT_NAME:=crossconhyp
 
 # Setup toolchain macros
 cpp=		$(CROSS_COMPILE)cpp
@@ -59,7 +59,7 @@ endif
 endif
 
 #Plataform must be defined excpet for clean target
-ifeq ($(PLATFORM),) 
+ifeq ($(PLATFORM),)
 ifneq ($(MAKECMDGOALS), clean)
  $(error Target platform argument (PLATFORM) not specified)
 endif
@@ -88,7 +88,7 @@ bin_dir:=$(cur_dir)/bin/$(PLATFORM)
 ifeq ($(CONFIG_BUILTIN), y)
 bin_dir:=$(bin_dir)/builtin-configs/$(CONFIG)
 endif
-directories:=$(build_dir) $(bin_dir) $(builtin_build_dir) 
+directories:=$(build_dir) $(bin_dir) $(builtin_build_dir)
 
 src_dirs:= $(cpu_arch_dir) $(cpu_impl_dir) $(lib_dir) $(core_dir)\
 	$(platform_dir) $(sdees_dir) $(sdees_arch_dir) $(addprefix $(drivers_dir)/, $(drivers))
@@ -153,7 +153,7 @@ override LDFLAGS+=-build-id=none -nostdlib $(arch-ldflags) $(plattform-ldflags)
 
 .PHONY: all
 all: $(targets-y)
-	
+
 $(bin_dir)/$(PROJECT_NAME).elf: $(gens) $(objs-y) $(ld_script_temp)
 	@echo "Linking			$(patsubst $(cur_dir)/%, %, $@)"
 	@$(ld) $(LDFLAGS) -T$(ld_script_temp) $(objs-y) -o $@
@@ -174,14 +174,14 @@ ifeq (, $(findstring $(MAKECMDGOALS), clean $(submakes)))
 -include $(deps)
 endif
 
-$(ld_script_temp).d: $(ld_script) 
+$(ld_script_temp).d: $(ld_script)
 	@echo "Creating dependency	$(patsubst $(cur_dir)/%, %, $<)"
 	@$(cc) -x assembler-with-cpp  -MM -MT "$(ld_script_temp) $@" \
 		$(addprefix -I, $(inc_dirs))  $< > $@
 
 $(build_dir)/%.d : $(src_dir)/%.[c,S] | $(gens)
 	@echo "Creating dependency	$(patsubst $(cur_dir)/%, %, $<)"
-	@$(cc) -MM -MG -MT "$(patsubst %.d, %.o, $@) $@"  $(CPPFLAGS) $< > $@	
+	@$(cc) -MM -MG -MT "$(patsubst %.d, %.o, $@) $@"  $(CPPFLAGS) $< > $@
 
 $(objs-y):
 	@echo "Compiling source	$(patsubst $(cur_dir)/%, %, $<)"
@@ -203,7 +203,7 @@ $(asm_defs_hdr): $(asm_defs_src)
 $(asm_defs_hdr).d: $(asm_defs_src)
 	@echo "Creating dependency	$(patsubst $(cur_dir)/%, %,\
 		 $(patsubst %.d,%, $@))"
-	@$(cc) -MM -MT "$(patsubst %.d,%, $@)" $(addprefix -I, $(inc_dirs)) $< > $@	
+	@$(cc) -MM -MT "$(patsubst %.d,%, $@)" $(addprefix -I, $(inc_dirs)) $< > $@
 endif
 
 ifdef CONFIG

@@ -1,16 +1,16 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Angelo Ruocco <angeloruocco90@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
@@ -22,11 +22,11 @@ struct platform_desc platform = {
     .regions =  (struct mem_region[]) {
         {
             .base = 0x80020000,
-            .size = 0x80000000 - 0x20000 // 2 GiB - 128 KiB (reserved for ATF) 
+            .size = 0x80000000 - 0x20000 // 2 GiB - 128 KiB (reserved for ATF)
         },
         {
             .base = 0x800000000,
-            .size = 0x100000000 // 4 GiB 
+            .size = 0x100000000 // 4 GiB
         }
     },
 

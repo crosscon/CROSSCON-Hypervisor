@@ -1,16 +1,16 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Sandro Pinto <sandro.pinto@bao-project.org>
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
@@ -72,11 +72,11 @@
 
 /* UART Integer Baud Rate Register */
 
-#define UART_IBRD_DIVINT         0x0000FFFF 
+#define UART_IBRD_DIVINT         0x0000FFFF
 
 /* UART Fractional Baud Rate Register */
 
-#define UART_FBRD_DIVFRAC        0x0000003F 
+#define UART_FBRD_DIVFRAC        0x0000003F
 
 /* UART Line Control Register */
 
@@ -127,7 +127,7 @@
 #define UART_IMSC_DSRMI          (1 << 3)
 #define UART_IMSC_RXIM           (1 << 4)
 #define UART_IMSC_TXIM           (1 << 5)
-#define UART_IMSC_RTIM           (1 << 6) 
+#define UART_IMSC_RTIM           (1 << 6)
 #define UART_IMSC_FEIM           (1 << 7)
 #define UART_IMSC_PEIM           (1 << 8)
 #define UART_IMSC_BEIM           (1 << 9)
@@ -163,16 +163,16 @@
 
 /* UART Interrupt Clear Register */
 
-#define UART_ICR_RIMIC           (1 << 0) 
-#define UART_ICR_CTSMIC          (1 << 1) 
-#define UART_ICR_DCDMIC          (1 << 2) 
-#define UART_ICR_DSRMIC          (1 << 3) 
-#define UART_ICR_RXIC            (1 << 4) 
-#define UART_ICR_TXIC            (1 << 5) 
-#define UART_ICR_RTIC            (1 << 6) 
-#define UART_ICR_FEIC            (1 << 7) 
-#define UART_ICR_PEIC            (1 << 8) 
-#define UART_ICR_BEIC            (1 << 9) 
+#define UART_ICR_RIMIC           (1 << 0)
+#define UART_ICR_CTSMIC          (1 << 1)
+#define UART_ICR_DCDMIC          (1 << 2)
+#define UART_ICR_DSRMIC          (1 << 3)
+#define UART_ICR_RXIC            (1 << 4)
+#define UART_ICR_TXIC            (1 << 5)
+#define UART_ICR_RTIC            (1 << 6)
+#define UART_ICR_FEIC            (1 << 7)
+#define UART_ICR_PEIC            (1 << 8)
+#define UART_ICR_BEIC            (1 << 9)
 #define UART_ICR_OEIC            (1 << 10)
 
 /* UART DMA Control Register */
@@ -183,7 +183,7 @@
 
 /* For printk */
 
-#define serial_puts(str_buffer) uart_puts(1,str_buffer) 
+#define serial_puts(str_buffer) uart_puts(1,str_buffer)
 
 /* UART (PL011) register structure */
 
@@ -207,7 +207,7 @@ struct Pl011_Uart_hw
    volatile uint32_t DMA_control;         // UART DMA control Register
 };
 
-typedef struct Pl011_Uart_hw bao_uart_t;
+typedef struct Pl011_Uart_hw crossconhyp_uart_t;
 
 /** Public PL011 UART interfaces */
 

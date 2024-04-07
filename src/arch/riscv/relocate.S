@@ -1,19 +1,19 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/csrs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -50,15 +50,15 @@ switch_space:
     /* Copy two words */
     ld a2, (a6)
     sd a2, (a0)
-    
+
     /* Increment addressess and count accordingly */
     add a6, a6, 8
     add a0, a0, 8
     add a4, a4, 8
-    
+
     /* If count is less then size, repeat */
     blt a4, a5, 1b
-    
+
     /* Restore original addresses */
     sub a6, a6, a4
     sub a0, a0, a4

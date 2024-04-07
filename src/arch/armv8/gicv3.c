@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -235,7 +235,7 @@ void gic_send_sgi(cpuid_t cpu_target, irqid_t sgi_num)
         /* We only support two affinity levels */
         uint64_t sgi = (MPIDR_AFF_LVL(mpidr, 1) << ICC_SGIR_AFF1_OFFSET) |
                        (1UL << MPIDR_AFF_LVL(mpidr, 0)) |
-                       (sgi_num << ICC_SGIR_SGIINTID_OFF);             
+                       (sgi_num << ICC_SGIR_SGIINTID_OFF);
         MSR(ICC_SGI1R_EL1, sgi);
     }
 }

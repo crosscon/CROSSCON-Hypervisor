@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -146,7 +146,7 @@ void vcpu_arch_run(struct vcpu* vcpu)
     } else {
         cpu_idle();
     }
-    
+
 }
 
 void vtimer_save_state(struct vcpu* vcpu) {
@@ -154,7 +154,7 @@ void vtimer_save_state(struct vcpu* vcpu) {
 //    uint64_t timer_ctl = MRS(CNTV_CTL_EL0);
 //    uint64_t timer_cmp = MRS(CNTV_CVAL_EL0);
 //
-//    if((timer_ctl & 0x3) == 0x1 && vm_has_interrupt(vcpu->vm, 27) && 
+//    if((timer_ctl & 0x3) == 0x1 && vm_has_interrupt(vcpu->vm, 27) &&
 //        vgic_int_get_enabled(vcpu, 27)) {
 //
 //        struct vcpu *next_vcpu = cpu.arch.vtimer.next_vcpu;
@@ -167,7 +167,7 @@ void vtimer_save_state(struct vcpu* vcpu) {
 //                    cpu.arch.vtimer.next_vcpu = vcpu;
 //                    MSR(CNTHP_CTL_EL2, timer_ctl);
 //                    MSR(CNTHP_CVAL_EL2, timer_cmp);
-//                } 
+//                }
 //            }
 //        } else {
 //            MSR(CNTHP_CTL_EL2, timer_ctl);

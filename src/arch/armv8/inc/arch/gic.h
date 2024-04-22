@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Angelo Ruocco <angeloruocco90@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -17,7 +17,7 @@
 #ifndef __GIC_H__
 #define __GIC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <emul.h>
 #include <bitmap.h>
 #include <spinlock.h>
@@ -223,7 +223,7 @@ struct gicr_hw {
 #define GICC_IAR_CPU_OFF (10)
 #define GICC_IAR_CPU_LEN (3)
 #define GICC_IAR_CPU_MSK (BIT32_MASK(GICC_IAR_CPU_OFF, GICC_IAR_CPU_LEN))
-#else 
+#else
 #define GICC_IAR_ID_LEN (24)
 #endif
 #define GICC_IAR_ID_MSK (BIT32_MASK(GICC_IAR_ID_OFF, GICC_IAR_ID_LEN))
@@ -235,7 +235,7 @@ struct gicr_hw {
     bit64_extract(sgir, ICC_SGIR_SGIINTID_OFF, ICC_SGIR_SGIINTID_LEN)
 #define ICC_SGIR_IRM_BIT (1ull << 40)
 #define ICC_SGIR_TRGLSTFLT_OFF 0
-#define ICC_SGIR_TRGLSTFLT_LEN 16 
+#define ICC_SGIR_TRGLSTFLT_LEN 16
 #define ICC_SGIR_TRGLSTFLT_MSK BIT64_MASK(ICC_SGIR_TRGLSTFLT_OFF, ICC_SGIR_TRGLSTFLT_LEN)
 #define ICC_SGIR_TRGLSTFLT(sgir) \
     bit64_extract(sgir, ICC_SGIR_TRGLSTFLT_OFF, ICC_SGIR_TRGLSTFLT_LEN)
@@ -288,9 +288,9 @@ struct gicc_hw {
 #define GICH_VTR_LEN (6)
 #define GICH_VTR_MSK BIT32_MASK(GICH_VTR_OFF, GICH_VTR_LEN)
 
-#define ICH_VTR_OFF GICH_VTR_OFF 
-#define ICH_VTR_LEN GICH_VTR_LEN 
-#define ICH_VTR_MSK GICH_VTR_MSK 
+#define ICH_VTR_OFF GICH_VTR_OFF
+#define ICH_VTR_LEN GICH_VTR_LEN
+#define ICH_VTR_MSK GICH_VTR_MSK
 
 #if (GIC_VERSION == GICV2)
 #define GICH_LR_VID_OFF (0)

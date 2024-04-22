@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Sandro Pinto <sandro.pinto@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -17,7 +17,7 @@
 #ifndef __VM_H__
 #define __VM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/vm.h>
 
 #include <platform.h>
@@ -46,6 +46,8 @@ struct vm {
     struct list vcpu_list;
     size_t cpu_num;
     cpumap_t cpus;
+
+    size_t type;
 
     struct addr_space as;
 

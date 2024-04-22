@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -31,7 +31,7 @@
 //    } else {
 //        cpu.arch.vtimer.next_vcpu = NULL;
 //        MSR(CNTHP_CTL_EL2, 0x2);
-//    }    
+//    }
 //}
 
 void vmm_arch_init()
@@ -41,9 +41,9 @@ void vmm_arch_init()
      * IPA size. Patch 2-stage page table descriptors if this forces
      * the initial lookup to level 1.
      *
-     * In multi-cluster heterogenous we only support the minimum parange 
+     * In multi-cluster heterogenous we only support the minimum parange
      * for a vm's physicall adress space.
-     * TODO: we could make this more dynamic and adapt it to each virtual 
+     * TODO: we could make this more dynamic and adapt it to each virtual
      * machine.
      */
 
@@ -71,9 +71,9 @@ void vmm_arch_init()
             vm_pt_dscr->lvls = vm_pt_dscr->lvls - 1;
         }
 	/* TODO */
-        /*interrupts_reserve(platform.arch.generic_timer.irqs.hyp, 
+        /*interrupts_reserve(platform.arch.generic_timer.irqs.hyp,
             vmm_vtimer_irq_handler);*/
-        
+
         interrupts_set_shared(platform.arch.generic_timer.irqs.virtual);
     }
 

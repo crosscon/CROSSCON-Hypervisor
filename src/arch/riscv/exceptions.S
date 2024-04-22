@@ -1,27 +1,27 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <asm_defs.h>
 #include <arch/csrs.h>
 
-.text 
+.text
 
 .macro VM_EXIT
-    
-    csrrw   x31, sscratch, x31 
+
+    csrrw   x31, sscratch, x31
     add     x31, x31, -VCPU_REGS_SIZE
 
     STORE   x1, 0*REGLEN(x31)
@@ -54,7 +54,7 @@
     STORE   x28, 27*REGLEN(x31)
     STORE   x29, 28*REGLEN(x31)
     STORE   x30, 29*REGLEN(x31)
-    
+
     mv      sp, x31
     csrrw   x31, sscratch, x31
     STORE   x31, 30*REGLEN(sp)
@@ -69,12 +69,12 @@
     .option push
     .option norelax
     la  gp, __global_pointer$
-    .option pop   
+    .option pop
 
 .endm
 
 
-.macro GET_VCPU_REGS_PTR reg 
+.macro GET_VCPU_REGS_PTR reg
     la      \reg, cpu
     LOAD    \reg, CPU_VCPU_OFF(\reg)
     LOAD    \reg, VCPU_REGS_OFF(\reg)
@@ -121,15 +121,15 @@
     LOAD   x27, 26*REGLEN(x31)
     LOAD   x28, 27*REGLEN(x31)
     LOAD   x29, 28*REGLEN(x31)
-    LOAD   x30, 29*REGLEN(x31) 
-    LOAD   x31, 30*REGLEN(x31)  
+    LOAD   x30, 29*REGLEN(x31)
+    LOAD   x31, 30*REGLEN(x31)
 
     sret
     j   .
 .endm
 
 .balign 0x4
-.global _hyp_trap_vector	
+.global _hyp_trap_vector
 _hyp_trap_vector:
     VM_EXIT
     csrr    t0, scause

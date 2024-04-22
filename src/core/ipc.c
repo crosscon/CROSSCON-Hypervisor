@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -66,19 +66,19 @@ static void ipc_notify(size_t shmem_id, size_t event_id) {
 static void ipc_handler(uint32_t event, uint64_t data){
     union ipc_msg_data ipc_data = { .raw = data };
     switch(event){
-        case IPC_NOTIFY: 
+        case IPC_NOTIFY:
             ipc_notify(ipc_data.shmem_id, ipc_data.event_id);
         break;
     }
 }
 CPU_MSG_HANDLER(ipc_handler, IPC_CPUSMG_ID);
 
-unsigned long ipc_hypercall(unsigned long ipc_id, unsigned long ipc_event, 
+unsigned long ipc_hypercall(unsigned long ipc_id, unsigned long ipc_event,
                                                 unsigned long arg2)
 {
     unsigned long ret = -HC_E_SUCCESS;
 
-    struct shmem *shmem = NULL; 
+    struct shmem *shmem = NULL;
     bool valid_ipc_obj = ipc_id < cpu.vcpu->vm->ipc_num;
     if(valid_ipc_obj) {
         shmem = ipc_get_shmem(cpu.vcpu->vm->ipcs[ipc_id].shmem_id);
@@ -123,7 +123,7 @@ static void ipc_alloc_shmem() {
 }
 
 static void ipc_setup_masters(const struct vm_config* vm_config, bool vm_master) {
-    
+
     static spinlock_t lock = SPINLOCK_INITVAL;
 
     for(size_t i = 0; i < vm_config_ptr->shmemlist_size; i++) {
@@ -148,7 +148,7 @@ void ipc_init(const struct vm_config* vm_config, bool vm_master) {
 
     shmem_table_size = vm_config_ptr->shmemlist_size;
     shmem_table = vm_config_ptr->shmemlist;
-    
+
     if(cpu.id == CPU_MASTER) {
         ipc_alloc_shmem();
     }

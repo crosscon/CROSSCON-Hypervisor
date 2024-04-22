@@ -1,22 +1,22 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
 #ifndef UART8250_H
 #define UART8250_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <plat/platform.h>
 
 #define UART8250_LSR_THRE   (1U << 5)
@@ -33,7 +33,7 @@
     typedef uint8_t uart8250_reg_t;
 #elif (UART8250_REG_WIDTH == 4)
     typedef uint32_t uart8250_reg_t;
-#else 
+#else
     #error "uart8250 reg width " UART8250_REG_WIDTH " not supported"
 #endif
 
@@ -71,7 +71,7 @@ struct uart8250_hw {
 #define UART8250_FCR_RX_CLR     (0x1 << 1)
 #define UART8250_FCR_EN         (0x1 << 0)
 
-typedef struct uart8250_hw bao_uart_t;
+typedef struct uart8250_hw crossconhyp_uart_t;
 
 void uart_enable(volatile struct uart8250_hw *uart);
 void uart_init(volatile struct uart8250_hw *uart);

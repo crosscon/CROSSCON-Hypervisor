@@ -33,7 +33,7 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
 
     struct vcpu *calling_vcpu = cpu.vcpu;
 
-    if (calling_vcpu->vm->id == 2) { /* normal world */
+    if (calling_vcpu->vm->type == 0) { /* normal world */
         if (is_psci_fid(smc_fid)) {
             /* TODO: signal trusted OS a PSCI event is comming up */
             /* potentially handle core going to sleep */

@@ -1,13 +1,13 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Angelo Ruocco <angeloruocco90@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -38,16 +38,16 @@ size_t gich_num_lrs()
     return ((gich.VTR & GICH_VTR_MSK) >> GICH_VTR_OFF) + 1;
 }
 
-uint32_t gich_get_apr(size_t i) 
+uint32_t gich_get_apr(size_t i)
 {
      if(i == 0) {
         return gich.APR;
     } else {
         return 0;
-    }   
+    }
 }
 
-void gich_set_apr(size_t i, uint32_t val) 
+void gich_set_apr(size_t i, uint32_t val)
 {
     if(i == 0) {
         gich.APR = val;
@@ -65,9 +65,9 @@ static inline void gicc_init()
     gicc.CTLR |= GICC_CTLR_EN_BIT | GICC_CTLR_EOImodeNS_BIT;
 
     gich.HCR |= GICH_HCR_LRENPIE_BIT;
-    
+
     uint32_t sgi_targets = gicd.ITARGETSR[0] & BIT32_MASK(0, GIC_TARGET_BITS);
-    ssize_t gic_cpu_id = 
+    ssize_t gic_cpu_id =
         bitmap_find_nth((bitmap_t*)&sgi_targets, GIC_TARGET_BITS, 1, 0, true);
     if(gic_cpu_id < 0) {
         ERROR("cant find gic cpu id");
@@ -155,7 +155,7 @@ void gic_map_mmio()
 void gic_send_sgi(cpuid_t cpu_target, irqid_t sgi_num)
 {
     if (sgi_num < GIC_MAX_SGIS && cpu_target < GIC_MAX_TARGETS) {
-        gicd.SGIR = 
+        gicd.SGIR =
             (1UL << (GICD_SGIR_CPUTRGLST_OFF + gic_cpu_map[cpu_target])) |
             (sgi_num & GICD_SGIR_SGIINTID_MSK);
     }
@@ -179,7 +179,7 @@ void gicd_set_trgt(irqid_t int_id, uint8_t cpu_targets)
 
     spin_lock(&gicd_lock);
 
-    gicd.ITARGETSR[reg_ind] = (gicd.ITARGETSR[reg_ind] & ~mask) | 
+    gicd.ITARGETSR[reg_ind] = (gicd.ITARGETSR[reg_ind] & ~mask) |
         ((gic_translate_cpu_to_trgt(cpu_targets) << off) & mask);
 
     spin_unlock(&gicd_lock);

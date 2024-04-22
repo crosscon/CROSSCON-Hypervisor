@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -90,7 +90,7 @@ static bool vplic_get_hw(struct vcpu* vcpu, irqid_t id)
     return ret;
 }
 
-static uint32_t vplic_get_theshold(struct vcpu* vcpu, int vcntxt) 
+static uint32_t vplic_get_theshold(struct vcpu* vcpu, int vcntxt)
 {
     struct vplic * vplic = &vcpu->vm->arch.vplic;
     return vplic->threshold[vcntxt];
@@ -102,7 +102,7 @@ static irqid_t vplic_next_pending(struct vcpu *vcpu, int vcntxt)
     irqid_t int_id = 0;
 
     for (size_t i = 0; i <= PLIC_MAX_INTERRUPTS; i++) {
-        if (vplic_get_pend(vcpu, i) && !vplic_get_act(vcpu, i) && 
+        if (vplic_get_pend(vcpu, i) && !vplic_get_act(vcpu, i) &&
             vplic_get_enbl(vcpu, vcntxt, i)) {
 
             uint32_t prio = vplic_get_prio(vcpu,i);
@@ -123,7 +123,7 @@ enum {UPDATE_HART_LINE};
 static void vplic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vplic_ipi_handler, VPLIC_IPI_ID);
 
-void vplic_update_hart_line(struct vcpu* vcpu, int vcntxt) 
+void vplic_update_hart_line(struct vcpu* vcpu, int vcntxt)
 {
     int pcntxt_id = vplic_vcntxt_to_pcntxt(vcpu, vcntxt);
     struct plic_cntxt pcntxt = plic_plat_id_to_cntxt(pcntxt_id);
@@ -136,11 +136,11 @@ void vplic_update_hart_line(struct vcpu* vcpu, int vcntxt)
         }
     } else {
         struct cpu_msg msg = {VPLIC_IPI_ID, UPDATE_HART_LINE, vcntxt};
-        cpu_send_msg(pcntxt.hart_id, &msg);       
+        cpu_send_msg(pcntxt.hart_id, &msg);
     }
 }
 
-static void vplic_ipi_handler(uint32_t event, uint64_t data) 
+static void vplic_ipi_handler(uint32_t event, uint64_t data)
 {
     switch(event) {
         case UPDATE_HART_LINE:
@@ -149,7 +149,7 @@ static void vplic_ipi_handler(uint32_t event, uint64_t data)
     }
 }
 
-static void vplic_set_threshold(struct vcpu* vcpu, int vcntxt, uint32_t threshold) 
+static void vplic_set_threshold(struct vcpu* vcpu, int vcntxt, uint32_t threshold)
 {
     struct vplic * vplic = &vcpu->vm->arch.vplic;
     spin_lock(&vplic->lock);
@@ -232,7 +232,7 @@ void vplic_inject(struct vcpu *vcpu, irqid_t id)
     struct vplic * vplic = &vcpu->vm->arch.vplic;
     spin_lock(&vplic->lock);
     if (id > 0 && id <= PLIC_MAX_INTERRUPTS && !vplic_get_pend(vcpu, id)) {
-        
+
         bitmap_set(vplic->pend, id);
 
         if(vplic_get_hw(vcpu, id)) {
@@ -242,7 +242,7 @@ void vplic_inject(struct vcpu *vcpu, irqid_t id)
         } else {
             for(size_t i = 0; i < vplic->cntxt_num; i++) {
                 if(plic_plat_id_to_cntxt(i).mode != PRIV_S) continue;
-                if(vplic_get_enbl(vcpu, i, id) && 
+                if(vplic_get_enbl(vcpu, i, id) &&
                 vplic_get_prio(vcpu, id) > vplic_get_theshold(vcpu, i)) {
                     vplic_update_hart_line(vcpu, i);
                 }
@@ -372,6 +372,6 @@ void vplic_init(struct vm *vm, vaddr_t vplic_base)
         vm_emul_add_mem(vm, &plic_claimcomplte_emu);
 
         /* assumes 2 contexts per hart */
-        vm->arch.vplic.cntxt_num = vm->cpu_num * 2; 
+        vm->arch.vplic.cntxt_num = vm->cpu_num * 2;
     }
 }

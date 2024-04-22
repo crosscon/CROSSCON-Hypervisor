@@ -42,7 +42,7 @@ bool sdgpos_arch_setup(struct vm *vm)
 
     /* TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
-    if(vm->id == 2){
+    if(vm->type == 0){
         vm_hndl_smc_add(vm, &smc);
     }
 

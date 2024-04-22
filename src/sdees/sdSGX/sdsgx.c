@@ -291,7 +291,7 @@ uint64_t irqs = 0;
 void sdsgx_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
     if (vcpu != cpu.vcpu && vcpu->state == VCPU_STACKED) {
-        if (cpu.vcpu->vm->id == 3) { /* currently running enclave */
+        if (cpu.vcpu->vm->type == 3) { /* currently running enclave */
             if (cpu.vcpu->nclv_data.initialized == false) return;
             vmstack_pop(); /* transition to normal world */
             irqs++;

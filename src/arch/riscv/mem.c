@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -61,7 +61,7 @@ bool mem_translate(struct addr_space *as, vaddr_t va, paddr_t *pa)
     for (size_t i = 0; i < as->pt.dscr->lvls; i++) {
         if (!pte_valid(pte) || !pte_table(&as->pt, pte, i)) {
             lvl = i;
-            break;  
+            break;
         }
         pte = (pte_t*)pte_addr(pte);
         int index = pt_getpteindex_by_va(&as->pt, va, i+1);

@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __PAGE_TABLE_H__
 #define __PAGE_TABLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/page_table.h>
 
 #ifndef __ASSEMBLER__
@@ -57,7 +57,7 @@ static inline size_t pt_getpteindex(struct page_table* pt, pte_t* pte, size_t lv
     return (size_t)(((size_t)pte) & (pt_size(pt, lvl) - 1)) / sizeof(pte_t);
 }
 
-static inline size_t pt_getpteindex_by_va(struct page_table* pt, vaddr_t va, 
+static inline size_t pt_getpteindex_by_va(struct page_table* pt, vaddr_t va,
     size_t lvl)
 {
     return (va >> pt->dscr->lvl_off[lvl]) & (pt_nentries(pt, lvl) - 1);

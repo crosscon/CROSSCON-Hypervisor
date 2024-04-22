@@ -2,7 +2,7 @@
 #include <hypercall.h>
 #include <vmstack.h>
 #include <config.h>
-#include "bao.h"
+#include "crossconhyp.h"
 #include "types.h"
 #include "vm.h"
 #include "vmm.h"
@@ -28,7 +28,7 @@ static inline void sdtz_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu
 int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     int64_t ret = -HC_E_FAILURE;
 
-    if (vcpu->vm->id == 2) {
+    if (vcpu->vm->type == 0) {
 	/* normal world */
         if (vmstack_pop() != NULL) {
 	    tee_arch_interrupt_disable();
@@ -82,7 +82,7 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     /* TODO: check current active handler */
 
    if(vcpu != cpu.vcpu && vcpu->state == VCPU_INACTIVE){
-       if(cpu.vcpu->vm->id == 1){ /* currently running secure world */
+       if (cpu.vcpu->vm->type == 1) {
            /* TODO */
            /* interrupts_vm_inject(cpu.vcpu, 40); */
        }

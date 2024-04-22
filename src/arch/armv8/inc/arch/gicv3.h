@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -52,21 +52,21 @@ static inline void gich_write_lr(size_t i, uint64_t val)
     }
 
     switch (i) {
-        case 0: MSR(ICH_LR0_EL2, val);   break;        
-        case 1: MSR(ICH_LR1_EL2, val);   break;         
-        case 2: MSR(ICH_LR2_EL2, val);   break;         
-        case 3: MSR(ICH_LR3_EL2, val);   break;         
-        case 4: MSR(ICH_LR4_EL2, val);   break;         
-        case 5: MSR(ICH_LR5_EL2, val);   break;         
-        case 6: MSR(ICH_LR6_EL2, val);   break;         
-        case 7: MSR(ICH_LR7_EL2, val);   break;         
-        case 8: MSR(ICH_LR8_EL2, val);   break;         
-        case 9: MSR(ICH_LR9_EL2, val);   break;         
-        case 10: MSR(ICH_LR10_EL2, val); break;           
-        case 11: MSR(ICH_LR11_EL2, val); break;           
-        case 12: MSR(ICH_LR12_EL2, val); break;           
-        case 13: MSR(ICH_LR13_EL2, val); break;           
-        case 14: MSR(ICH_LR14_EL2, val); break;           
+        case 0: MSR(ICH_LR0_EL2, val);   break;
+        case 1: MSR(ICH_LR1_EL2, val);   break;
+        case 2: MSR(ICH_LR2_EL2, val);   break;
+        case 3: MSR(ICH_LR3_EL2, val);   break;
+        case 4: MSR(ICH_LR4_EL2, val);   break;
+        case 5: MSR(ICH_LR5_EL2, val);   break;
+        case 6: MSR(ICH_LR6_EL2, val);   break;
+        case 7: MSR(ICH_LR7_EL2, val);   break;
+        case 8: MSR(ICH_LR8_EL2, val);   break;
+        case 9: MSR(ICH_LR9_EL2, val);   break;
+        case 10: MSR(ICH_LR10_EL2, val); break;
+        case 11: MSR(ICH_LR11_EL2, val); break;
+        case 12: MSR(ICH_LR12_EL2, val); break;
+        case 13: MSR(ICH_LR13_EL2, val); break;
+        case 14: MSR(ICH_LR14_EL2, val); break;
         case 15: MSR(ICH_LR15_EL2, val); break;
     }
 }
@@ -97,17 +97,17 @@ static inline uint64_t gich_get_elrsr()
     return MRS(ICH_ELRSR_EL2);
 }
 
-static inline uint32_t gich_get_vmcr() 
+static inline uint32_t gich_get_vmcr()
 {
     return MRS(ICH_VMCR_EL2);
 }
 
-static inline void gich_set_vmcr(uint32_t vmcr) 
+static inline void gich_set_vmcr(uint32_t vmcr)
 {
     MSR(ICH_VMCR_EL2, vmcr);
 }
 
-static inline uint32_t gich_get_apr(size_t i) 
+static inline uint32_t gich_get_apr(size_t i)
 {
     switch (i) {
         case 0: return MRS(ICH_AP1R0_EL2);
@@ -118,7 +118,7 @@ static inline uint32_t gich_get_apr(size_t i)
     }
 }
 
-static inline void gich_set_apr(size_t i, uint32_t val) 
+static inline void gich_set_apr(size_t i, uint32_t val)
 {
     switch (i) {
         case 0: MSR(ICH_AP1R0_EL2, val);

@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -52,10 +52,10 @@
 #define SBI_REMOTE_HFENCE_VVMA_ASID_FID (6)
 
 /**
- * For now we're defining bao specific ecalls, ie, hypercall, under the
+ * For now we're defining crossconhyp specific ecalls, ie, hypercall, under the
  * experimental extension id space.
  */
-#define SBI_EXTID_BAO (0x08000ba0)
+#define SBI_EXTID_CROSSCONHYP (0x08000ba0)
 
 static inline struct sbiret sbi_ecall(long eid, long fid, long a0, long a1,
                                       long a2, long a3, long a4, long a5)
@@ -427,7 +427,7 @@ struct sbiret sbi_hsm_handler(unsigned long fid){
 }
 
 
-struct sbiret sbi_bao_handler(unsigned long fid){
+struct sbiret sbi_crossconhyp_handler(unsigned long fid){
 
     struct sbiret ret;
     struct vcpu* vcpu = cpu.vcpu;
@@ -485,8 +485,8 @@ size_t sbi_vs_handler()
         case SBI_EXTID_HSM:
             ret = sbi_hsm_handler(fid);
             break;
-        case SBI_EXTID_BAO:
-            ret = sbi_bao_handler(fid);
+        case SBI_EXTID_CROSSCONHYP:
+            ret = sbi_crossconhyp_handler(fid);
 	    goto out;
             break;
         case SBI_EXTID_TEE:

@@ -1,12 +1,12 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -95,7 +95,7 @@ void vcpu_arch_run(struct vcpu *vcpu){
         vcpu_arch_entry();
     } else {
         cpu_idle();
-    }    
+    }
 
 }
 
@@ -116,7 +116,7 @@ void vcpu_save_state(struct vcpu* vcpu){
     vcpu->regs->vstval = CSRR(CSR_VSTVAL);
     vcpu->regs->hvip = CSRR(CSR_HVIP);
     vcpu->regs->hie = CSRR(CSR_HIE);
-    
+
     /* vgic_save_state(vcpu); */
     /* vtimer_save_state(vcpu); */
 }
@@ -137,7 +137,7 @@ void vcpu_restore_state(struct vcpu* vcpu){
     CSRW(CSR_HIE, vcpu->regs->hie);
 
     CSRW(CSR_HGATP, vcpu->vm->arch.hgatp);
-    
+
     /* TODO */
     sbi_set_timer(vcpu->arch.stime_value);  // assumes always success
     CSRC(CSR_HVIP, HIP_VSTIP);

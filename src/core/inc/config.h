@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 extern uint8_t _config_end, _images_end;
@@ -80,6 +80,9 @@ struct vm_config {
      * depending on the number of available colors calculated at runtime
      */
     colormap_t colors;
+
+    size_t type;
+
     size_t children_num;
     struct vm_config **children;
 

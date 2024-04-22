@@ -1,17 +1,17 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *      Jose Martins <jose.martins@bao-project.org>
  *      Angelo Ruocco <angeloruocco90@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
@@ -56,7 +56,7 @@ static bool iommu_vm_arch_add(struct vm *vm, streamid_t mask, streamid_t id)
     streamid_t prep_mask = (mask & SMMU_ID_MSK) | glbl_mask;
     streamid_t prep_id = (id & SMMU_ID_MSK);
     bool group = (bool) mask;
-    
+
     if(vm_ctx < 0){
         return false;
     }
@@ -81,7 +81,7 @@ inline bool iommu_arch_vm_add_device(struct vm *vm, streamid_t id)
 
 bool iommu_arch_vm_init(struct vm *vm, const struct vm_config *config)
 {
-    vm->iommu.arch.global_mask = 
+    vm->iommu.arch.global_mask =
         config->platform.arch.smmu.global_mask | platform.arch.smmu.global_mask;
     vm->iommu.arch.ctx_id = -1;
 

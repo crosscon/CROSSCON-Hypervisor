@@ -65,7 +65,7 @@ int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid) {
 
     struct vcpu *calling_vcpu = cpu.vcpu;
 
-    if (calling_vcpu->vm->id == 2) { /* normal world */
+    if (calling_vcpu->vm->type == 0) { /* normal world */
             /* TODO: assumes call is for trusted OS */
             ret = sdtz_handler(vcpu, smc_fid);
     }else{

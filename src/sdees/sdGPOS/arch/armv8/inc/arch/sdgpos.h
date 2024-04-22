@@ -1,7 +1,7 @@
 #ifndef SDGPOS_ARMV8_H_
 #define SDGPOS_ARMV8_H_
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <vm.h>
 
 bool sdgpos_arch_setup(struct vm *vm);

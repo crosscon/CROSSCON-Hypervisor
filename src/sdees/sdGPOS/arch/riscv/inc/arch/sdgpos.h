@@ -1,7 +1,7 @@
 #ifndef SDGPOS_RISCV_H_
 #define SDGPOS_RISCV_H_
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <vm.h>
 
 // NOT HERE

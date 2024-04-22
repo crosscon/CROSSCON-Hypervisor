@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __MEM_H__
 #define __MEM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/mem.h>
 #include <page_table.h>
 #include <list.h>
@@ -90,7 +90,7 @@ static inline bool all_clrs(colormap_t clrs)
 }
 
 void mem_init(paddr_t load_addr, paddr_t config_addr);
-void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, 
+void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id,
             pte_t* root_pt, colormap_t colors);
 void as_destroy(struct addr_space *as);
 void* mem_alloc_page(size_t n, enum AS_SEC sec, bool phys_aligned);

@@ -22,23 +22,23 @@ ENCLV=SGX-OpenSSL/SampleCode/Simple_TLS_Client
 # 	find . -name "*.o" -delete
 # 	cd -
 # 	make app
-# 
+#
 # 	rm -r ../sdk/libOS/build* || true
 # 	make enclave.so PLATFORM=qemu-aarch64-virt
 # popd
-# 
-# 
+#
+#
 # make PLATFORM=qemu-aarch64-virt CONFIG=anytee_sgx_enclave clean
 # make PLATFORM=qemu-aarch64-virt CONFIG=anytee_sgx_enclave -j16
-# cp -v ../bao-hypervisor/configs/anytee-sdsgx/anytee_sgx_enclave.bin ../initramfs-aarch64/enclave.signed.so
-# 
+# cp -v ../crossconhyp-hypervisor/configs/anytee-sdsgx/anytee_sgx_enclave.bin ../initramfs-aarch64/enclave.signed.so
+#
 # mkdir -p ../to_buildroot_sgx/bin
 # mkdir -p ../to_buildroot_sgx/root
 # cp -v ../sgx_anytee_enclave/$ENCLV/app ../to_buildroot_sgx/bin/enclave_app
 # cp -r ../sgx_anytee_enclave/sgx-nbench/nbenchPortal ../to_buildroot_sgx/root/
 # cp -r ../sgx_anytee_enclave/nbench/nbench ../to_buildroot_sgx/bin
-# cp -v ../bao-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin ../to_buildroot_sgx/root/enclave.signed.so
-# 
+# cp -v ../crossconhyp-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin ../to_buildroot_sgx/root/enclave.signed.so
+#
 # cd ../sgx-server-echo
 # make all
 # cd -

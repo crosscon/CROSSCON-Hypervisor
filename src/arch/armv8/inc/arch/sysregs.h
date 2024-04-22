@@ -1,12 +1,12 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
@@ -16,7 +16,7 @@
 #ifndef __ARCH_SYSREGS_H__
 #define __ARCH_SYSREGS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 /* ID_AA64MMFR0_EL1, AArch64 Memory Model Feature Register 0 */
@@ -38,7 +38,7 @@
 #define MPIDR_AFFINITY_BITS (8)
 #define MPIDR_U_BIT (1UL << 30)
 #define MPIDR_AFF_MSK (0xffff) //we are only supporting 2 affinity levels
-#define MPIDR_AFF_LVL(MPIDR, LVL)  (((MPIDR) >> (8*(LVL))) & 0xff) 
+#define MPIDR_AFF_LVL(MPIDR, LVL)  (((MPIDR) >> (8*(LVL))) & 0xff)
 
 /* SPSR - Saved Program Status Register */
 
@@ -403,28 +403,28 @@
 
 /* GICC System Register Interface Definitions */
 
-#define ICC_PMR_EL1         S3_0_C4_C6_0           
-#define ICC_IAR0_EL1        S3_0_C12_C8_0        
-#define ICC_EOIR0_EL1       S3_0_C12_C8_1        
-#define ICC_HPPIR0_EL1      S3_0_C12_C8_2        
-#define ICC_BPR0_EL1        S3_0_C12_C8_3        
-// #define ICC_AP0R<n>_EL1     S3_0_C12_C8_        
-#define ICC_AP1R_EL1(N)     S3_0_C12_C9_ ## N        
-#define ICC_DIR_EL1         S3_0_C12_C11_1    
-#define ICC_RPR_EL1         S3_0_C12_C11_3    
-#define ICC_SGI1R_EL1       S3_0_C12_C11_5        
-#define ICC_ASGI1R_EL1      S3_0_C12_C11_6        
-#define ICC_SGI0R_EL1       S3_0_C12_C11_7        
-#define ICC_IAR1_EL1        S3_0_C12_C12_0        
-#define ICC_EOIR1_EL1       S3_0_C12_C12_1        
-#define ICC_HPPIR1_EL1      S3_0_C12_C12_2        
-#define ICC_BPR1_EL1        S3_0_C12_C12_3        
-#define ICC_CTLR_EL1        S3_0_C12_C12_4        
-#define ICC_SRE_EL1         S3_0_C12_C12_5    
-#define ICC_IGRPEN0_EL1     S3_0_C12_C12_6        
-#define ICC_IGRPEN1_EL1     S3_0_C12_C12_7        
-#define ICC_SRE_EL2         S3_4_C12_C9_5    
-#define ICC_CTLR_EL3        S3_6_C12_C12_4 
+#define ICC_PMR_EL1         S3_0_C4_C6_0
+#define ICC_IAR0_EL1        S3_0_C12_C8_0
+#define ICC_EOIR0_EL1       S3_0_C12_C8_1
+#define ICC_HPPIR0_EL1      S3_0_C12_C8_2
+#define ICC_BPR0_EL1        S3_0_C12_C8_3
+// #define ICC_AP0R<n>_EL1     S3_0_C12_C8_
+#define ICC_AP1R_EL1(N)     S3_0_C12_C9_ ## N
+#define ICC_DIR_EL1         S3_0_C12_C11_1
+#define ICC_RPR_EL1         S3_0_C12_C11_3
+#define ICC_SGI1R_EL1       S3_0_C12_C11_5
+#define ICC_ASGI1R_EL1      S3_0_C12_C11_6
+#define ICC_SGI0R_EL1       S3_0_C12_C11_7
+#define ICC_IAR1_EL1        S3_0_C12_C12_0
+#define ICC_EOIR1_EL1       S3_0_C12_C12_1
+#define ICC_HPPIR1_EL1      S3_0_C12_C12_2
+#define ICC_BPR1_EL1        S3_0_C12_C12_3
+#define ICC_CTLR_EL1        S3_0_C12_C12_4
+#define ICC_SRE_EL1         S3_0_C12_C12_5
+#define ICC_IGRPEN0_EL1     S3_0_C12_C12_6
+#define ICC_IGRPEN1_EL1     S3_0_C12_C12_7
+#define ICC_SRE_EL2         S3_4_C12_C9_5
+#define ICC_CTLR_EL3        S3_6_C12_C12_4
 #define ICC_SRE_EL3         S3_6_C12_C12_5
 #define ICC_IGRPEN1_EL3     S3_6_C12_C12_7
 

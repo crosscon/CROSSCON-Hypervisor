@@ -1,20 +1,20 @@
 /**
- * Bao, a Lightweight Static Partitioning Hypervisor
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *      Angelo Ruocco <angeloruocco90@gmail.com>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
  *
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem.h>
 
 #include <cpu.h>
@@ -451,7 +451,7 @@ vaddr_t mem_alloc_vpage(struct addr_space *as, enum AS_SEC section,
         lvlsze = pt_lvlsize(&as->pt, lvl);
 
         while ((entry < nentries) && (count < n) && !failed) {
-            if(pte_check_rsw(pte, PTE_RSW_RSRV) || 
+            if(pte_check_rsw(pte, PTE_RSW_RSRV) ||
               (pte_valid(pte) && !pte_table(&as->pt, pte, lvl))) {
                 count = 0;
                 vpage = NULL_VA;
@@ -480,7 +480,7 @@ vaddr_t mem_alloc_vpage(struct addr_space *as, enum AS_SEC section,
                     lvl = 0;
                     break;
                 }
-            }   
+            }
         }
     }
 
@@ -628,7 +628,7 @@ bool mem_map(struct addr_space *as, vaddr_t va, struct ppages *ppages,
                         mem_alloc_pt(as, pte, lvl, vaddr);
                     } else if (!pte_table(&as->pt, pte, lvl)) {
                         /* WARNING("trying to override previous mapping"); */
-			/* in Bao enclave we use this to optimize the memory
+			/* icROSSCONHyp enclave we use this to optimize the memory
 			 * zeroying process */
 			/* since we are overriding we need to invalidate this
 			 * TLB */
@@ -1067,7 +1067,7 @@ bool mem_reserve_vm_cfg(struct page_pool *pool)
             struct ppages ppages = mem_ppages_get(shmem->phys, n_pg);
             if (!mem_reserve_ppool_ppages(pool, &ppages)) {
                 return false;
-            }           
+            }
             shmem->phys = ppages.base;
         }
     }
@@ -1193,7 +1193,7 @@ void *copy_space(void *base, const size_t size, struct ppages *pages)
  * To have the true benefits of coloring it's necessary that not only the guest
  * images, but also the hypervisor itself, are colored.
  *
- * Bao is coloring itself by copying everything that has been allocated until
+ CROSSCONHyp is coloring itself by copying everything that has been allocated until
  * this point in a new colored space, jumping into this new region and then
  * then deleting all that was allocated before.
  *
@@ -1233,14 +1233,14 @@ void color_hypervisor(const paddr_t load_addr, const paddr_t config_addr)
      *
      * the new CPU region is created, cleaned, prepared and finally mapped.
      */
-    cpu_new = copy_space((void *)BAO_CPU_BASE, sizeof(struct cpu), &p_cpu);
+    cpu_new = copy_space((void *)CROSSCONHYP_CPU_BASE, sizeof(struct cpu), &p_cpu);
     memset((void*)cpu_new->root_pt, 0, sizeof(cpu_new->root_pt));
     as_init(&cpu_new->as, AS_HYP_CPY, HYP_ASID, cpu_new->root_pt, colors);
     va = mem_alloc_vpage(&cpu_new->as, SEC_HYP_PRIVATE,
-                        (vaddr_t)BAO_CPU_BASE,
+                        (vaddr_t)CROSSCONHYP_CPU_BASE,
                         NUM_PAGES(sizeof(struct cpu)));
 
-    if (va != (vaddr_t)BAO_CPU_BASE)
+    if (va != (vaddr_t)CROSSCONHYP_CPU_BASE)
         ERROR("Can't allocate virtual address for cpuspace");
 
     mem_map(&cpu_new->as, va, &p_cpu, NUM_PAGES(sizeof(struct cpu)), PTE_HYP_FLAGS);
@@ -1259,7 +1259,7 @@ void color_hypervisor(const paddr_t load_addr, const paddr_t config_addr)
                             (vaddr_t) &_image_start, NUM_PAGES(image_size));
 
         if (va != (vaddr_t)&_image_start)
-            ERROR("Can't allocate virtual address for Bao Image");
+            ERROR("Can't allocate virtual address for CROSSCONHyp Image");
 
         mem_map(&cpu_new->as, va, &p_image,
                 NUM_PAGES(image_size), PTE_HYP_FLAGS);
@@ -1338,7 +1338,7 @@ void color_hypervisor(const paddr_t load_addr, const paddr_t config_addr)
     cache_flush_range((vaddr_t)&_cpu_private_beg, sizeof(struct cpu));
 
     /**
-     * Bao's code from here's on still uses the static global variables, so
+     CROSSCONHyp's code from here's on still uses the static global variables, so
      * they need to be updated.
      *
      * The synchronization objects are in an inconsistent state, and they need
@@ -1394,7 +1394,7 @@ void color_hypervisor(const paddr_t load_addr, const paddr_t config_addr)
     mem_free_vpage(&cpu.as, va, p_cpu.size, false);
 }
 
-void as_init(struct addr_space *as, enum AS_TYPE type, asid_t id, 
+void as_init(struct addr_space *as, enum AS_TYPE type, asid_t id,
             pte_t *root_pt, colormap_t colors)
 {
     as->type = type;
@@ -1407,7 +1407,7 @@ void as_init(struct addr_space *as, enum AS_TYPE type, asid_t id,
     if (root_pt == NULL) {
         size_t n = pt_size(&as->pt, 0) / PAGE_SIZE;
         root_pt = (pte_t*) mem_alloc_page(n,
-            type == AS_HYP || type == AS_HYP_CPY ? SEC_HYP_PRIVATE : SEC_HYP_VM, 
+            type == AS_HYP || type == AS_HYP_CPY ? SEC_HYP_PRIVATE : SEC_HYP_VM,
             true);
         memset((void*)root_pt, 0, n * PAGE_SIZE);
     }

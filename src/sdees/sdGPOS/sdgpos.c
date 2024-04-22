@@ -40,7 +40,7 @@ int64_t sdgpos_handler_setup(struct vm *vm)
 
     /* TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
-    if(vm->id == 2){
+    if(vm->type == 0){
         vm_hndl_irq_add(vm, &irq);
     }
 

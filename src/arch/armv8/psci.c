@@ -1,16 +1,16 @@
-/** 
- * Bao, a Lightweight Static Partitioning Hypervisor 
+/**
+ * CROSSCONHyp, a Lightweight Static Partitioning Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      David Cerdeira <davidmcerdeira@gmail.com>
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
- * license. See the COPYING file in the top-level directory for details. 
+ * license. See the COPYING file in the top-level directory for details.
  *
  */
 
@@ -48,7 +48,7 @@ static void update_vcpu_psci_ctx(struct vcpu* vcpu)
 }
 
 void psci_wake_from_off(uint64_t vmid){
-  
+
     struct vcpu *vcpu = cpu_get_vcpu(vmid);
 
     if(cpu.vcpu == NULL){
@@ -59,7 +59,7 @@ void psci_wake_from_off(uint64_t vmid){
      * wake it up */
     if(cpu.vcpu->arch.psci_ctx.state == OFF){
         spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
-        if(cpu.vcpu->vm->id == 1){
+        if(cpu.vcpu->vm->type == 1){
             /* Secure World VM */
             /* TODO identify VM type */
             if(cpu.vcpu != vcpu){
@@ -91,14 +91,14 @@ void psci_cpumsg_handler(uint32_t event, uint64_t data){
 
 CPU_MSG_HANDLER(psci_cpumsg_handler, PSCI_CPUSMG_ID);
 
-int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entrypoint, 
+int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entrypoint,
                                                     unsigned long context_id)
 {
     /**
-     * !! Ignoring the rest of the requested  powerstate for now. 
-     * This might be a problem howwver since powerlevel and stateid are 
+     * !! Ignoring the rest of the requested  powerstate for now.
+     * This might be a problem howwver since powerlevel and stateid are
      * implementation defined.
-     */ 
+     */
     uint32_t state_type = power_state & PSCI_STATE_TYPE_BIT;
     int32_t ret;
     /* struct vcpu* vcpu = cpu.vcpu; */
@@ -117,11 +117,11 @@ int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entrypoint,
     } else {
         //PSCI_STATE_TYPE_STANDBY:
         /**
-         *  TODO: ideally we would emmit a standby request to PSCI 
+         *  TODO: ideally we would emmit a standby request to PSCI
          * (currently, ATF), but when we do, we do not wake up on interrupts
          * on the current development target zcu104.
          * We should understand why. To circunvent this, we directly emmit a
-         * wfi 
+         * wfi
          */
         //ret = psci_standby();
         if(vmstack_pop() == NULL){
@@ -139,7 +139,7 @@ int32_t psci_cpu_off_handler(void)
     /**
      *  Right now we only support one vcpu por cpu, so passthrough the request
      *  directly to the monitor psci implementation. Later another vcpu, will
-     *  call cpu_on on this vcpu. 
+     *  call cpu_on on this vcpu.
      */
 
     spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
@@ -177,7 +177,7 @@ int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entrypoint,
             target_vcpu->arch.psci_ctx.context_id = context_id;
             fence_sync_write();
             already_on = false;
-        } 
+        }
         spin_unlock(&target_vcpu->arch.psci_ctx.lock);
 
         if(already_on){
@@ -201,17 +201,17 @@ int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entrypoint,
 }
 
 
-int32_t psci_affinity_info_handler(unsigned long  target_affinity, 
+int32_t psci_affinity_info_handler(unsigned long  target_affinity,
                                 uint32_t lowest_affinity_level)
 {
-    /* return ON, if at least one core in the affinity instance: has been 
+    /* return ON, if at least one core in the affinity instance: has been
     enabled with a call to CPU_ON, and that core has not called CPU_OFF */
 
-    /* return off if all of the cores in the affinity instance have called 
-    CPU_OFF and each of these calls has been processed by the PSCI 
+    /* return off if all of the cores in the affinity instance have called
+    CPU_OFF and each of these calls has been processed by the PSCI
     implementation. */
 
-    /*  return ON_PENDING if at least one core in the affinity instance is in 
+    /*  return ON_PENDING if at least one core in the affinity instance is in
     the ON_PENDING state */
 
     /**
@@ -234,13 +234,13 @@ int32_t psci_features_handler(uint32_t feature_id){
         case PSCI_FEATURES:
             ret = PSCI_E_SUCCESS;
             break;
-    }    
+    }
 
     return ret;
 }
 
 
-int32_t psci_smc_handler(uint32_t smc_fid, unsigned long x1, unsigned long x2, 
+int32_t psci_smc_handler(uint32_t smc_fid, unsigned long x1, unsigned long x2,
                         unsigned long x3)
 {
    int32_t ret = PSCI_E_NOT_SUPPORTED;
@@ -300,7 +300,7 @@ static void psci_save_state(enum wakeup_reason wakeup_reason){
     /**
      * Although the real PSCI implementation is responsible for managing cache
      * state, make sure the saved state is in memory as we'll use this on wake
-     * up before enabling cache to restore basic processor state. 
+     * up before enabling cache to restore basic processor state.
      */
     cache_flush_range((vaddr_t)&cpu.arch.psci_off_state,
                     sizeof(cpu.arch.psci_off_state));
@@ -316,7 +316,7 @@ static void psci_restore_state(){
      * The majority of the state is already restored in assembly routine
      *  psci_boot_entry.
      */
-    
+
     gicc_restore_state(&cpu.arch.psci_off_state.gicc_state);
     vcpu_restore_state(cpu.vcpu);
 }
@@ -345,7 +345,7 @@ void (*psci_wake_handlers[PSCI_WAKEUP_NUM])(uint64_t vmid) = {
 };
 
 void psci_wake(uint32_t handler_id)
-{    
+{
 
     psci_restore_state();
 
@@ -378,7 +378,7 @@ int32_t psci_power_down(enum wakeup_reason reason){
 }
 
 /* --------------------------------
-    SMC PSCI interface 
+    SMC PSCI interface
 --------------------------------- */
 
 int32_t psci_version(void)
@@ -387,29 +387,29 @@ int32_t psci_version(void)
 }
 
 
-int32_t psci_cpu_suspend(uint32_t power_state, unsigned long entrypoint, 
+int32_t psci_cpu_suspend(uint32_t power_state, unsigned long entrypoint,
                         unsigned long context_id)
 {
 
-    return smc_call(PSCI_CPU_SUSPEND_AARCH64, power_state, entrypoint, 
+    return smc_call(PSCI_CPU_SUSPEND_AARCH64, power_state, entrypoint,
                                                             context_id, NULL);
 }
 
 int32_t psci_cpu_off(void)
-{   
+{
     return smc_call(PSCI_CPU_OFF, 0, 0, 0, NULL);
 }
 
-int32_t psci_cpu_on(unsigned long target_cpu, unsigned long entrypoint, 
+int32_t psci_cpu_on(unsigned long target_cpu, unsigned long entrypoint,
                     unsigned long context_id)
 {
     return smc_call(PSCI_CPU_ON_AARCH64, target_cpu, entrypoint, context_id,
                                                                         NULL);
 }
 
-int32_t psci_affinity_info(unsigned long target_affinity, 
+int32_t psci_affinity_info(unsigned long target_affinity,
                             uint32_t lowest_affinity_level)
 {
-    return smc_call(PSCI_AFFINITY_INFO_AARCH64, target_affinity, 
+    return smc_call(PSCI_AFFINITY_INFO_AARCH64, target_affinity,
                                             lowest_affinity_level, 0, NULL);
 }

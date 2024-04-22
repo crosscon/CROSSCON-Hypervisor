@@ -22,7 +22,7 @@ fi
 # if [[ ! -e /media/david/boot ]]
 # then
 #     echo "/media/david/boot not found. Waiting"
-# 
+#
 #     while [[ ! -e /media/david/boot ]]
 #     do
 #       sleep 1
@@ -69,7 +69,7 @@ sed -i "s/.*::respawn:\/bin\/ash/ttymxc0::respawn:\/bin\/ash/" ../initramfs-aarc
 make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave clean
 compiledb make PLATFORM=imx8mq CONFIG=anytee_sgx_enclave -j16
 
-cp -v ../bao-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin \
+cp -v ../crossconhyp-hypervisor/configs/anytee_sgx_enclave/anytee_sgx_enclave.bin \
       ../initramfs-aarch64/enclave.signed.so
 
 cd ../linux/

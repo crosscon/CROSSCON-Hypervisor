@@ -13,9 +13,19 @@
  *
  */
 
-#include <config.h>
+#ifndef __ARCH_CROSSCONHYP_H__
+#define __ARCH_CROSSCONHYP_H__
 
-void config_arch_vm_adjust_to_va(struct vm_config *vm_config, struct config* config, paddr_t phys)
-{
-    adjust_ptr(vm_config->platform.arch.smmu.smmu_groups, config);
-}
+#define CROSSCONHYP_VAS_BASE    (0xba0000000000)
+#define CROSSCONHYP_CPU_BASE    (0xbb0000000000)
+#define CROSSCONHYP_VM_BASE     (0xbc0000000000)
+#define CROSSCONHYP_VAS_TOP     (0xbf0000000000)
+#define PAGE_SIZE       (0x1000)
+
+#ifndef __ASSEMBLER__
+
+
+#endif /* !__ASSEMBLER__ */
+
+
+#endif /* __ARCH_CROSSCONHYP_H__ */

@@ -1,18 +1,18 @@
 /**
- * Bao Hypervisor
+ CROSSCONHyp Hypervisor
  *
- * Copyright (c) Bao Project (www.bao-project.org), 2019-
+ * Copyright (c) bao Project (www.bao-project.org), 2019-
  *
  * Authors:
  *      Jose Martins <jose.martins@bao-project.org>
  *
- * Bao is free software; you can redistribute it and/or modify it under the
+ * CROSSCONHyp is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License version 2 as published by the Free
  * Software Foundation, with a special exception exempting guest code from such
  * license. See the COPYING file in the top-level directory for details.
  *
  */
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/csrs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -22,11 +22,11 @@
 #define PTE_INDEX_SHIFT(LEVEL) ((9 * (PT_LVLS - 1 - (LEVEL))) + 12)
 
 /**
- *  Calculates the index or offset of a page table entry for given virtual 
+ *  Calculates the index or offset of a page table entry for given virtual
  * address(addr) at a given level of page table.
  */
 .macro PTE_INDEX_ASM	index, addr, level
-	srl \index, \addr, PTE_INDEX_SHIFT(\level) 
+	srl \index, \addr, PTE_INDEX_SHIFT(\level)
     li  s0, ((PAGE_SIZE/8)-1)
 	and \index, \index, s0
 	sll \index, \index, 3
@@ -42,7 +42,7 @@
 .endm
 
 /**
- * Creates a page table entry (pte) for a given physical address (pa) 
+ * Creates a page table entry (pte) for a given physical address (pa)
  * and set of flags.
  */
 .macro PTE_FILL    pte, pa, flags
@@ -67,16 +67,16 @@ _bss_start_sym: .8byte _bss_start
 _bss_end_sym: .8byte _bss_end
 _cpu_sym:   .8byte cpu
 
-.data 
+.data
 .align 3
 /**
  * barrier is used to minimal synchronization in boot - other cores wait for
  * bsp to set it.
  */
-_barrier: .8byte 0		
+_barrier: .8byte 0
 
 /**
- * 	The following code MUST be at the base of the image, as this is bao's entry
+ * 	The following code MUST be at the base of the image, as this icrossconhyp's entry
  *	point. Therefore .boot section must also be the first in the linker script.
  *  DO NOT implement any code before the _reset_handler in this section.
  */
@@ -122,7 +122,7 @@ _reset_handler:
     csrw   sstatus, zero
     csrw   sie, zero
     csrw   sip, zero
-    csrw   satp, zero 
+    csrw   satp, zero
 
     /**
      * The first hart to grab the lock is CPU_MASTER
@@ -137,30 +137,30 @@ _boot_lock:
 1:
     lr.w    t2, (t0)
     bnez    t2, 2f
-    sc.w    t2, t1, (t0)   
-    bnez    t2, 1b 
+    sc.w    t2, t1, (t0)
+    bnez    t2, 1b
     la      t0, CPU_MASTER
     sd      a0, 0(t0)
 2:
 
-    /* Setup bootstrap page tables. Assuming sv39 support. */ 
+    /* Setup bootstrap page tables. Assuming sv39 support. */
 
  	/* Skip initialy global page tables setup if not hart */
     LD_SYM  t0, CPU_MASTER
-	bne     a0, t0, wait_for_bsp   
+	bne     a0, t0, wait_for_bsp
 
- 	la	    a3, _page_tables_start	
-	la	    a4, _page_tables_end	
+ 	la	    a3, _page_tables_start
+	la	    a4, _page_tables_end
     add     a3, a3, s6
     add     a4, a4, s6
-	call	clear		 
+	call	clear
 
     la          t0, root_l1_pt
     add         t0, t0, s6
     la          t1, root_l2_pt
     add         t1, t1, s6
     PTE_FILL    t1, t1, PTE_TABLE
-    li          t2, BAO_VAS_BASE
+    li          t2, CROSSCONHYP_VAS_BASE
     PTE_PTR     t2, t0, 1, t2
     STORE       t1, 0(t2)
 
@@ -220,7 +220,7 @@ map_cpu:
     /* Flat mapping to switch to VAS. */
     PTE_PTR     t2, t1, 0, a1
     li          t3, ~((1 << 30) -1)
-    and         t3, a1, t3          //align a1 to 1GB (levle 0 superpage)  
+    and         t3, a1, t3          //align a1 to 1GB (levle 0 superpage)
     PTE_FILL    t3, t3, PTE_HYP_FLAGS | PTE_PAGE | PTE_SUPERPAGE
     STORE       t3, 0(t2)
 
@@ -228,7 +228,7 @@ map_cpu:
     la          t2, root_l1_pt
     add         t2, t2, s6
     PTE_FILL    t2, t2, PTE_TABLE
-    li          t3, BAO_VAS_BASE
+    li          t3,  CROSSCONHYP_VAS_BASE
     PTE_PTR     t3, t1, 0, t3
     STORE       t2, 0(t3)
 
@@ -238,7 +238,7 @@ map_cpu:
     //add         t2, t1, t4
     add         t2, t0, t5
     PTE_FILL    t2, t2, PTE_TABLE
-    li          t3, BAO_CPU_BASE
+    li          t3, CROSSCONHYP_CPU_BASE
     PTE_PTR     t3, t1, 0, t3
     STORE       t2, 0(t3)
 
@@ -246,13 +246,13 @@ map_cpu:
     add         t1, t0, t5
     add         t2, t1, t4
     PTE_FILL    t2, t2, PTE_TABLE
-    li          t3, BAO_CPU_BASE
+    li          t3, CROSSCONHYP_CPU_BASE
     PTE_PTR     t3, t1, 1, t3
     STORE       t2, 0(t3)
 
 
     add         t1, t1, t4
-    li          t2, BAO_CPU_BASE
+    li          t2, CROSSCONHYP_CPU_BASE
     PTE_PTR     t1, t1, 2, t2
     PTE_FILL    t2, t0, PTE_HYP_FLAGS | PTE_PAGE
     li          t3, CPU_SIZE
@@ -277,7 +277,7 @@ map_cpu_interface:
     li      t2, CPU_IF_OFF
     add     t0, t0, t2
     PTE_FILL    t0, t0, PTE_HYP_FLAGS | PTE_PAGE
-   
+
     li      t3, CPU_IF_SIZE
 1:
     blez    t3, setup_cpu
@@ -286,12 +286,12 @@ map_cpu_interface:
     add     t0, t0, 0x400
     sub     t3, t3, t4
     j       1b
-    
+
 setup_cpu:
     la      t0, _dmem_phys_beg
     li      t1, (CPU_SIZE + (PT_SIZE*(PT_LVLS-1)))
     mul     t1, t1, a0
-    add     t0, t0, t1   
+    add     t0, t0, t1
     li      t1, CPU_ROOT_PT_OFF
     add     t0, t0, t1
     srl     t0, t0, PAGE_SHIFT
@@ -352,7 +352,7 @@ wait_for_bsp_2:
     j   init
 
 	/* This point should never be reached */
-	j	.	
+	j	.
 
 clear:
     sb  zero, 0(a3)

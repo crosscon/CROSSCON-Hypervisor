@@ -1,6 +1,7 @@
 ## CROSSCON Hypervisor - A Lightweight Hypervisor
 
-Here you can find the initial version of the _CROSSCON Hypervisor_:  an Hypervisor developed as part of the [CROSSCON project](https://crosscon.eu/).  The repository contains an overview of the CROSSCON Hypervisor, featuring support for QEMU virt. For detailed description of the CROSSCON Hypervisor, please refer to Section 3.2 on the deliverable [D3.1: CROSSCON Open Security Stack Documentation ‐ Draft.](https://crosscon.eu/library/deliverables) This repository is part of the deliverable D3.2: CROSSCON Open Security Stack - Initial Version.
+Here you can find the initial version of the _CROSSCON Hypervisor_:  an Hypervisor developed as part of the [CROSSCON project](https://crosscon.eu/).  The repository contains an overview of the CROSSCON Hypervisor, featuring support for QEMU virt. For detailed description of the CROSSCON Hypervisor, please refer to Section 3.2 on the deliverable [D3.1: CROSSCON Open Security Stack Documentation ‐ Draft.](https://crosscon.eu/library/deliverables). This repository is part of the deliverable D3.2: CROSSCON Open Security Stack - Initial Version.
+
 ### Overview
 
 **CROSSCON Hypervisor**, being built upon [Bao](https://github.com/bao-project/bao-hypervisor), is grounded in a lightweight, open-source and static partitioning hypervisor that aims to provide strong isolation and real-time guarantees. Its static partitioning designs targets mixed-criticality systems focusing on isolation for fault-containment and real-time behavior. To implement the static partitioning hypervisor architecture: (i) resources are statically partitioned and assigned at VM instantiation time; (ii) memory is statically assigned using 2-stage translation; (iii) IO is pass-through only; (iv) virtual interrupts are directly mapped to physical ones; and (v) it follows a 1-1 mapping of virtual to physical CPUs (with no need for a scheduler). In addition to the inherited architectural isolation features, CROSSCON Hypervisor also offers microarchitectural-level isolation, implementing mechanisms, such as cache coloring, to maintain the isolation of shared resources such as last‐level caches. However, the static partitioning hypervisor design come with its own set of challenges that limit their applicability in IoT systems. Such limitations encompass (i) the absence of dynamic VM creation and management, and (ii) the incapacity to deliver per‐VM TEE services. These challenges will be addressed by enhancing the static partitioning design of the Bao.
@@ -54,7 +55,7 @@ The full list of supported (and work in progress) platforms is presented below:
 
 During the boot time, CROSSCON Hypervisor initiates the VMs setup by reading a configuration file. This file defines various properties for each VM, such as the number of cores, size, and optionally, the location of memory regions and VM devices. To see understand the configuration process please refer to: [Bao Configuration]([https://github.com/bao-project/bao-docs/blob/feat/bao-classic_config_guests/source/bao_hyp/config.rst](https://github.com/bao-project/bao-docs/blob/feat/bao-classic_config_guests/source/bao_hyp/config.rst))
 
-[Should we show how to configure each feature? To provide both features there is anything that varies in configurations? There is any document explaining the configuration process? (If yes we could point to there)]?????
+Please see [the example demos](https://github.com/crosscon/CROSSCON-Hypervisor-and-TEE-Isolation-Demos) for examples on how to use the config files.
 
 ### Prerequisites
 We assume that you are following the instructions on a PC with a working setup of Ubuntu or Debian OS.
@@ -74,6 +75,7 @@ Before you jump to Demos you need to install each Tool in the following list:
 
 ### Demos
 
+Please refer to [the example demos](https://github.com/crosscon/CROSSCON-Hypervisor-and-TEE-Isolation-Demos).
 
 ### References
 4. Bruno Sá, José Martins and Sandro Pinto. "**A First Look at RISC-V Virtualization from an Embedded Systems Perspective**". To be published, 2021. [https://arxiv.org/abs/2103.14951](https://arxiv.org/abs/2103.14951)
@@ -93,6 +95,10 @@ Source code:
 - [https://github.com/crossconhyp-project/crossconhyp-hypervisor.git](https://github.com/crossconhyp-project/crossconhyp-hypervisor.git)
 - [git@github.com](mailto:git@github.com):crossconhyp-project/crossconhyp-hypervisor.git
 
+
+## License
+
+See LICENSE file.
 
 ### Acknowledgments
 The work presented in this repository is part of the [CROSSCON project](https://crosscon.eu/) that received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement No 101070537.

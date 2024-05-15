@@ -25,46 +25,138 @@ static inline void sdtz_copy_args_call_done(struct vcpu *vcpu_dst, struct vcpu
     }
 }
 
+int64_t optee_handle_nw(struct vcpu* ree_vcpu)
+{
+    int64_t ret = -HC_E_FAILURE;
+    if (vmstack_pop() != NULL) {
+        tee_arch_interrupt_disable();
+        sdtz_copy_args(cpu.vcpu, ree_vcpu, 7);
+        /* TODO: more generic stepping */
+        /* in arm steeping is done here, but in RISC-V it is done outside */
+        tee_step(cpu.vcpu);
+        ret = HC_E_SUCCESS;
+    }
+    return ret;
+}
+
+int64_t optee2_handle_nw(struct vcpu* ree_vcpu)
+{
+    int64_t ret = -HC_E_FAILURE;
+    struct vcpu* optee_vcpu = vcpu_get_child(ree_vcpu, 0);
+    if(optee_vcpu == NULL){
+        ret = HC_E_SUCCESS;
+        vcpu_writereg(ree_vcpu, 0, -1);
+        return ret;
+    }
+
+    tee_arch_interrupt_disable();
+    if(optee_vcpu->vm->type == 2){
+        vmstack_push(optee_vcpu);
+        sdtz_copy_args(cpu.vcpu, ree_vcpu, 7);
+        /* TODO: more generic stepping */
+        /* in arm steeping is done here, but in RISC-V it is done outside */
+        tee_step(cpu.vcpu);
+        ret = HC_E_SUCCESS;
+    }
+    return ret;
+}
+
+
+int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
+{
+    int64_t ret = -HC_E_FAILURE;
+    struct vcpu *ree_vcpu = vcpu_get_child(optee_vcpu, 0);
+    if (ree_vcpu != NULL) {
+        /* There is bulshit when copying regsiters */
+        switch (ID_TO_FUNCID(fid)) {
+            case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
+            case TEEHC_FUNCID_RETURN_ON_DONE:
+                sdtz_copy_args(ree_vcpu, cpu.vcpu, 1);
+                vmstack_push(ree_vcpu);
+                tee_arch_interrupt_enable();
+                break;
+            case TEEHC_FUNCID_RETURN_CALL_DONE:
+                if(vcpu_readreg(cpu.vcpu, 1) == 0xffff0004){
+                    /* interrupted */
+                    /* TODO Not sure if needed */
+                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
+                } else
+                    sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
+                vmstack_push(ree_vcpu);
+                tee_arch_interrupt_enable();
+                break;
+            case TEEHC_FUNCID_RETURN_ENTRY_DONE:
+                vmstack_push(ree_vcpu);
+                struct vcpu *guest_vcpu = vcpu_get_child(ree_vcpu, 0);
+                if(guest_vcpu != NULL)
+                    vmstack_push(guest_vcpu);
+
+                break;
+            default:
+                ERROR("unknown tee call %0lx by vm %d", fid, cpu.vcpu->vm->id);
+        }
+        ret = HC_E_SUCCESS;
+    }
+
+    return ret;
+}
+
+int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
+{
+    int64_t ret = -HC_E_FAILURE;
+    struct vcpu *guest_vcpu = vmstack_pop();
+    (void) guest_vcpu;
+    struct vcpu *ree_vcpu = cpu.vcpu;
+    if (ree_vcpu != NULL) {
+        switch (ID_TO_FUNCID(fid)) {
+            case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
+            case TEEHC_FUNCID_RETURN_ON_DONE:
+                sdtz_copy_args(ree_vcpu, optee_vcpu, 1);
+                tee_arch_interrupt_enable();
+                break;
+            case TEEHC_FUNCID_RETURN_CALL_DONE:
+                if(vcpu_readreg(cpu.vcpu, 1) == 0xffff0004){
+                    /* interrupted */
+                    /* TODO Not sure if needed */
+                    sdtz_copy_args_call_done(ree_vcpu, optee_vcpu, 4);
+                } else
+                    sdtz_copy_args_call_done(ree_vcpu, optee_vcpu, 6);
+            case TEEHC_FUNCID_RETURN_ENTRY_DONE:
+                tee_arch_interrupt_enable();
+                break;
+            default:
+                ERROR("unknown tee call %0lx by vm %d", fid, cpu.vcpu->vm->id);
+        }
+        ret = HC_E_SUCCESS;
+    }
+
+    return ret;
+}
+
+#define ARM_SMCCC_OWNER_MASK	0x3F
+#define ARM_SMCCC_OWNER_SHIFT	24
+
+#define GET_OWNER(x) (((x) >> ARM_SMCCC_OWNER_SHIFT) & ARM_SMCCC_OWNER_MASK)
+#define IS_OPTEE(x)  (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
+#define IS_OPTEE2(x) (GET_OWNER(x) >= (0x12) && GET_OWNER(x) <= (0x1f))
+
 int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     int64_t ret = -HC_E_FAILURE;
 
     if (vcpu->vm->type == 0) {
 	/* normal world */
-        if (vmstack_pop() != NULL) {
-	    tee_arch_interrupt_disable();
-            sdtz_copy_args(cpu.vcpu, vcpu, 7);
-            /* TODO: more generic stepping */
-            /* in arm steeping is done here, but in RISC-V it is done outside */
-            tee_step(cpu.vcpu);
-            ret = HC_E_SUCCESS;
+        if(IS_OPTEE(fid)) {
+            ret = optee_handle_nw(vcpu);
+        } else if(IS_OPTEE2(fid)) {
+            ret = optee2_handle_nw(vcpu);
         }
     } else {
-	/* secure world */
+        /* secure world */
         /* TODO: get parent */
-        struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
-        if (ree_vcpu != NULL) {
-            switch (ID_TO_FUNCID(fid)) {
-                case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
-                case TEEHC_FUNCID_RETURN_ON_DONE:
-                    sdtz_copy_args(ree_vcpu, cpu.vcpu, 1);
-                    vmstack_push(ree_vcpu);
-		    tee_arch_interrupt_enable();
-                    break;
-                case TEEHC_FUNCID_RETURN_CALL_DONE:
-                    if(vcpu_readreg(cpu.vcpu, 1) == 0xffff0004){
-                        /* interrupted */
-                        /* TODO Not sure if needed */
-                        sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 4);
-                    } else
-                        sdtz_copy_args_call_done(ree_vcpu, cpu.vcpu, 6);
-                case TEEHC_FUNCID_RETURN_ENTRY_DONE:
-                    vmstack_push(ree_vcpu);
-		    tee_arch_interrupt_enable();
-                    break;
-                default:
-                    ERROR("unknown tee call %0lx by vm %d", fid, cpu.vcpu->vm->id);
-            }
-            ret = HC_E_SUCCESS;
+        if(cpu.vcpu->vm->type == 1){ /* host secure world */
+            ret = optee_handle_sw(vcpu, fid);
+        } else if (cpu.vcpu->vm->type == 2){ /* guest secure world */
+            ret = optee2_handle_sw(vcpu, fid);
         }
     }
 

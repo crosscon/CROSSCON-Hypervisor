@@ -59,19 +59,28 @@ void psci_wake_from_off(uint64_t vmid){
      * wake it up */
     if(cpu.vcpu->arch.psci_ctx.state == OFF){
         spin_lock(&cpu.vcpu->arch.psci_ctx.lock);
-        if(cpu.vcpu->vm->type == 1){
+        if(cpu.vcpu->vm->type == 1 ){
             /* Secure World VM */
             /* TODO identify VM type */
             if(cpu.vcpu != vcpu){
                 /* we wouldn't be here otherwise, but whatever */
                 /* TODO register optee hooks */
-                vcpu_arch_reset(cpu.vcpu, 0x101017ec);
-                cpu.vcpu->arch.psci_ctx.state = ON;
-                vcpu_restore_state(cpu.vcpu);
+                if(cpu.vcpu->vm->type == 1){
+                    vcpu_arch_reset(cpu.vcpu, 0x101017ec);
+                    list_foreach(cpu.vcpu->vmstack_children, struct node_data, node){
+                        struct vcpu* child = node->data;
+                        if(child->vm->type == 2){
+                            vcpu_arch_reset(child, 0x201017ec);
+                        }
+                    }
+
+                    cpu.vcpu->arch.psci_ctx.state = ON;
+                    vcpu_restore_state(cpu.vcpu);
+                }
             }
+            cpu.vcpu->arch.psci_ctx.state = ON;
+            spin_unlock(&cpu.vcpu->arch.psci_ctx.lock);
         }
-        cpu.vcpu->arch.psci_ctx.state = ON;
-        spin_unlock(&cpu.vcpu->arch.psci_ctx.lock);
     }
 
 

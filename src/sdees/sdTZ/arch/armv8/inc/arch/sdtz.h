@@ -4,7 +4,7 @@
 #include <vm.h>
 
 #define PREFIX_MASK 0xff000000
-#define ID_TO_FUNCID(x) (x & ~(PREFIX_MASK))
+#define ID_TO_FUNCID(x) ((x) & ~(PREFIX_MASK))
 #define PREFIX 0
 #define TEEHC_FUNCID_RETURN_ENTRY_DONE          (PREFIX | 0)
 #define TEEHC_FUNCID_RETURN_ON_DONE             (PREFIX | 1)

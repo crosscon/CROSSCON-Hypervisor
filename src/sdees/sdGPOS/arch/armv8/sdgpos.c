@@ -7,7 +7,7 @@
 
 int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
-    if(vcpu->vm->id != 2)
+    if(vcpu->vm->type != 0)
         return 0;
     int64_t ret = -HC_E_FAILURE;
     uint64_t x1 = vcpu->regs->x[1];

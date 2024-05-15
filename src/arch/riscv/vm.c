@@ -125,6 +125,9 @@ void vcpu_restore_state(struct vcpu* vcpu){
     if(vcpu == NULL) return;
 
     // hstatus, sstatus ans sepc are restored in vcpu_arch_entry
+    CSRW(sepc, vcpu->regs->sepc);
+    CSRW(sstatus, vcpu->regs->sstatus);
+    CSRW(CSR_HSTATUS, vcpu->regs->hstatus);
 
     CSRW(CSR_VSSTATUS, vcpu->regs->vsstatus);
     CSRW(CSR_VSTVEC, vcpu->regs->vstvec);
@@ -132,6 +135,7 @@ void vcpu_restore_state(struct vcpu* vcpu){
     CSRW(CSR_VSEPC, vcpu->regs->vsepc);
     CSRW(CSR_VSCAUSE, vcpu->regs->vscause);
     CSRW(CSR_VSTVAL, vcpu->regs->vstval);
+
     CSRW(CSR_VSATP, vcpu->regs->vsatp);
     CSRW(CSR_HVIP, vcpu->regs->hvip);
     CSRW(CSR_HIE, vcpu->regs->hie);

@@ -16,28 +16,26 @@
 #include <config.h>
 
 void config_vm_adjust_to_va(struct vm_config *vm_config, struct config *config, paddr_t phys) {
-    for (size_t i = 0; i < config->vmlist_size; i++) {
-        adjust_ptr(vm_config->image.load_addr, phys);
+    adjust_ptr(vm_config->image.load_addr, phys);
 
-        adjust_ptr(vm_config->platform.regions, config);
+    adjust_ptr(vm_config->platform.regions, config);
 
-        if (adjust_ptr(vm_config->platform.devs, config)) {
-	    for (size_t j = 0; j < vm_config->platform.dev_num; j++) {
-	       adjust_ptr(vm_config->platform.devs[j].interrupts, config);
-	    }
-	}
-
-	if(adjust_ptr(vm_config->platform.ipcs, config)){
-	   for (size_t j = 0; j < vm_config->platform.ipc_num; j++) {
-	       adjust_ptr(vm_config->platform.ipcs[j].interrupts, config);
-	   }
-	}
-
-        adjust_ptr(vm_config->children, config);
-        for (size_t i = 0; i < vm_config->children_num; i++) {
-            adjust_ptr(vm_config->children[i], config);
-            config_vm_adjust_to_va(vm_config->children[i], config, phys);
+    if (adjust_ptr(vm_config->platform.devs, config)) {
+        for (size_t j = 0; j < vm_config->platform.dev_num; j++) {
+            adjust_ptr(vm_config->platform.devs[j].interrupts, config);
         }
+    }
+
+    if(adjust_ptr(vm_config->platform.ipcs, config)){
+        for (size_t j = 0; j < vm_config->platform.ipc_num; j++) {
+            adjust_ptr(vm_config->platform.ipcs[j].interrupts, config);
+        }
+    }
+
+    adjust_ptr(vm_config->children, config);
+    for (size_t i = 0; i < vm_config->children_num; i++) {
+        adjust_ptr(vm_config->children[i], config);
+        config_vm_adjust_to_va(vm_config->children[i], config, phys);
     }
 
     config_arch_vm_adjust_to_va(vm_config, config, phys);

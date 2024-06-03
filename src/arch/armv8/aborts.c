@@ -83,7 +83,7 @@ void aborts_data_lower(uint64_t iss, uint64_t far, uint64_t il)
             mem_abort_handler_t handler = node->hndl_mem_abort.handler;
             if (handler != NULL) {
                 if (handler(vcpu, addr)) {
-                    ERROR("handler smc failed (0x%x)", far);
+                    ERROR("handler abort failed (0x%x)", far);
                 }
             }
         }

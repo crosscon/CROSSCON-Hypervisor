@@ -8,6 +8,8 @@
 #include "vmm.h"
 #include <arch/sdtz.h>
 
+static int optee_crash = 0;
+static int optee2_crash = 0;
 
 static inline void sdtz_copy_args(struct vcpu *vcpu_dst, struct vcpu *vcpu_src,
         size_t num_args) {
@@ -146,9 +148,19 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     if (vcpu->vm->type == 0) {
 	/* normal world */
         if(IS_OPTEE(fid)) {
-            ret = optee_handle_nw(vcpu);
+            if(!optee_crash){
+                ret = optee_handle_nw(vcpu);
+            } else {
+                /* TODO: arch specific */
+                vcpu_writereg(cpu.vcpu, 10, 0x7);
+            }
         } else if(IS_OPTEE2(fid)) {
-            ret = optee2_handle_nw(vcpu);
+            if(!optee2_crash){
+                ret = optee2_handle_nw(vcpu);
+            } else {
+                /* TODO: arch specific */
+                vcpu_writereg(cpu.vcpu, 10, 0x7);
+            }
         }
     } else {
         /* secure world */
@@ -181,6 +193,28 @@ void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
    }
 }
 
+int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
+{
+    int64_t res = HC_E_SUCCESS;
+
+    if(vcpu->vm->type == 1){
+        struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
+        if (ree_vcpu != NULL) {
+            vmstack_push(ree_vcpu);
+        }
+        optee_crash = 1;
+        tee_arch_interrupt_enable();
+    } else if(vcpu->vm->type == 2){
+        vmstack_pop();
+        tee_arch_interrupt_enable();
+        optee2_crash = 1;
+    }
+
+    /* TODO: arch specific */
+    vcpu_writereg(cpu.vcpu, 10, 0x7);
+    return res;
+}
+
 static struct hndl_irq irq = {
     /* TODO: obtain this from config file */
     /* TODO: obtain this to decide whether to invoke handler early on */
@@ -188,6 +222,11 @@ static struct hndl_irq irq = {
     .irqs = {27,33,72,73,74,75,76,77,78,79},
     .handler = sdtz_handle_interrupt,
 };
+
+static struct hndl_mem_abort mem_abort = {
+    .handler = sdtz_handle_abort,
+};
+
 
 int64_t sdtz_handler_setup(struct vm *vm)
 {
@@ -201,6 +240,7 @@ int64_t sdtz_handler_setup(struct vm *vm)
     /* TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
     vm_hndl_irq_add(vm, &irq);
+    vm_hndl_mem_abort_add(vm, &mem_abort);
 
     return ret;
 }

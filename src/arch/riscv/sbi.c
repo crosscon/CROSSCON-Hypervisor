@@ -500,6 +500,7 @@ size_t sbi_vs_handler()
                     }
                 }
             }
+	    goto out;
             break;
 
         default:

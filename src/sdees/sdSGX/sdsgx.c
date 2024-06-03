@@ -265,6 +265,10 @@ int64_t sdsgx_handle_abort(struct vcpu* vcpu, uint64_t addr)
 {
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
+
+    if(vcpu->vm->type != 3)
+        return 0;
+
     enclv_aborts++;
     /* TODO: validate address space */
 

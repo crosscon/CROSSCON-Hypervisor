@@ -138,8 +138,19 @@ size_t guest_page_fault_handler()
             ERROR("emulation handler failed (0x%x at 0x%x)", addr, CSRR(sepc));
         }
     } else {
-        ERROR("no emulation handler for abort(0x%x at 0x%x)", addr, CSRR(sepc));
+        struct vcpu* vcpu = cpu.vcpu;
+        WARNING("no emulation handler for abort(0x%x at 0x%x)", addr, CSRR(sepc));
+        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
+        {
+            mem_abort_handler_t handler = node->hndl_mem_abort.handler;
+            if (handler != NULL) {
+                if (handler(vcpu, addr)) {
+                    ERROR("handler abort failed (0x%x)", addr);
+                }
+            }
+        }
     }
+    return 0;
 }
 
 size_t guest_illegal_instr_handler()

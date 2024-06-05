@@ -117,7 +117,7 @@ void interrupts_vm_assign(struct vm *vm, irqid_t id)
     }
     if(bitmap_get(hyp_interrupt_bitmap, id) ||
         (!interrupts_is_shared(id) && interrupt_owner[id] != 0)){
-        WARNING("Trying to assign cpu interrupt multiple times\n", id);
+        ERROR("Trying to assign cpu interrupt multiple times\n", id);
     }
 
     interrupts_arch_vm_assign(vm, id);

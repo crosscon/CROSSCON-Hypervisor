@@ -203,11 +203,13 @@ int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
             vmstack_push(ree_vcpu);
         }
         optee_crash = 1;
+        INFO("VM %d performed illegal access. Disabling.", vcpu->vm->id);
         tee_arch_interrupt_enable();
     } else if(vcpu->vm->type == 2){
         vmstack_pop();
         tee_arch_interrupt_enable();
         optee2_crash = 1;
+        INFO("VM %d performed illegal access. Disabling.", vcpu->vm->id);
     }
 
     /* TODO: arch specific */

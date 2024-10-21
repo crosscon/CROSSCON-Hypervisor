@@ -37,6 +37,8 @@ void vmstack_push(struct vcpu* vcpu){
     vcpu_restore_state(vcpu);
     vcpu->state = VCPU_ACTIVE;
     cpu.vcpu = vcpu;
+
+    /* INFO("Current VM on pCPU %d is VM %d", cpu.id, cpu.vcpu->vm->id); */
 }
 
 struct vcpu* vmstack_pop(){
@@ -55,6 +57,8 @@ struct vcpu* vmstack_pop(){
         vcpu_restore_state(cpu.vcpu);
         cpu.vcpu->state = VCPU_ACTIVE;
     }
+
+    /* INFO("Current VM on pCPU %d is VM %d", cpu.id, cpu.vcpu->vm->id); */
 
     return vcpu;
 }
@@ -78,4 +82,6 @@ void vmstack_unwind(struct vcpu* vcpu){
     cpu.vcpu = vcpu;
     vcpu_restore_state(cpu.vcpu);
     cpu.vcpu->state = VCPU_ACTIVE;
+
+    /* INFO("Current VM on pCPU %d is VM %d", cpu.id, cpu.vcpu->vm->id); */
 }

@@ -182,6 +182,7 @@ void vm_copy_img_to_rgn(struct vm* vm, const struct vm_config* config,
 
 void vm_map_mem_region(struct vm* vm, struct mem_region* reg)
 {
+    INFO("VM %d adding memory region, VA 0x%lx size 0x%lx", vm->id, reg->base, reg->size);
     size_t n = NUM_PAGES(reg->size);
     vaddr_t va = mem_alloc_vpage(&vm->as, SEC_VM_ANY,
                     (vaddr_t)reg->base, n);
@@ -268,6 +269,7 @@ static void vm_init_mem_regions(struct vm* vm, const struct vm_config* config)
 {
     for (size_t i = 0; i < config->platform.region_num; i++) {
         struct mem_region* reg = &config->platform.regions[i];
+
         bool img_is_in_rgn = range_in_range(
             config->image.base_addr, config->image.size, reg->base, reg->size);
         if (img_is_in_rgn) {
@@ -289,6 +291,7 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* config)
             WARNING("Invalid shmem id in configuration. Ignored.");
             continue;
         }
+        INFO("VM %d adding IPC for shared memory %d at VA: 0x%lx  size: 0x%lx", vm->id, ipc->shmem_id, ipc->base, ipc->size);
         size_t size = ipc->size;
         if(ipc->size > shmem->size) {
             size = shmem->size;
@@ -319,6 +322,7 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* vm_cfg)
 {
     for (size_t i = 0; i < vm->config->platform.dev_num; i++) {
         struct dev_region* dev = &vm->config->platform.devs[i];
+        INFO("VM %d adding MMIO region, VA: 0x%lx size: 0x%lx mapped at 0x%lx", vm->id, dev->va, dev->va, dev->pa);
 
         size_t n = ALIGN(dev->size, PAGE_SIZE) / PAGE_SIZE;
 
@@ -327,6 +331,7 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* vm_cfg)
         mem_map_dev(&vm->as, va, dev->pa, n);
 
         for (size_t j = 0; j < dev->interrupt_num; j++) {
+            INFO("VM %d assigning interrupt %u", vm->id, dev->interrupts[j]);
             interrupts_vm_assign(vm, dev->interrupts[j]);
         }
     }
@@ -377,6 +382,8 @@ static void vm_dynamic_donate(struct vm* newvm, struct config* config, uint64_t 
 
     uintptr_t newvm_mem_start = reg->base;
     uintptr_t newvm_mem_size = reg->size;
+
+    INFO("Donating host VM %d memory VA 0x%x size 0x%x to VM %d", cpu.vcpu->vm->id, reg->base, reg->size, newvm->id);
 
     size_t contiguous_pages = 0;
     size_t base_cont_pa = 0;
@@ -438,6 +445,7 @@ static void vm_dynamic_donate(struct vm* newvm, struct config* config, uint64_t 
 
 void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmid_t vmid)
 {
+    INFO("Creating dynamic VM %d", vmid);
     vm_master_init(vm, config->vmlist[0], vmid);
     vm_cpu_init(vm);
 
@@ -454,6 +462,7 @@ void vm_init_dynamic(struct vm* vm, struct config* config, uint64_t vm_addr, vmi
 
     vm->vmdyn_house_keeping.donor_va = vm_addr;
     vm->vmdyn_house_keeping.config = config;
+    INFO("Dynamic VM %d created", vmid);
 }
 
 void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
@@ -556,6 +565,7 @@ void vm_dynamic_reclaim(struct vcpu* host, struct vcpu* newvm)
 
 void vm_destroy_dynamic(struct vm* vm)
 {
+    INFO("Destroying dynamic VM %d", vm->id);
     vm_destroy_ipc(vm);
     vm_destroy_dev(vm, vm->config);
 
@@ -577,6 +587,7 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
      * Before anything else, initialize vm structure.
      */
     if (master) {
+        INFO("Initializing VM %d", vm_id);
         vm_master_init(vm, config, vm_id);
     }
 
@@ -612,6 +623,16 @@ struct vcpu* vm_init(struct vm* vm, const struct vm_config* config, bool master,
     }
 
     if(master){
+        switch(vm->type){
+            case 0:
+                INFO("VM %d is sdGPOS (normal VM)", vm->id);
+                break;
+            case 1:
+            case 2:
+                INFO("VM %d is sdTZ (OP-TEE)", vm->id);
+                break;
+        }
+
         /* TODO: use linker table */
         sdtz_handler_setup(vm);
         sdgpos_handler_setup(vm);

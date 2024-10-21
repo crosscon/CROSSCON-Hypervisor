@@ -73,24 +73,24 @@ static void ipc_handler(uint32_t event, uint64_t data){
 }
 CPU_MSG_HANDLER(ipc_handler, IPC_CPUSMG_ID);
 
-unsigned long ipc_hypercall(unsigned long ipc_id, unsigned long ipc_event,
+unsigned long ipc_hypercall(struct vcpu *vcpu, unsigned long ipc_id, unsigned long ipc_event,
                                                 unsigned long arg2)
 {
     unsigned long ret = -HC_E_SUCCESS;
 
     struct shmem *shmem = NULL;
-    bool valid_ipc_obj = ipc_id < cpu.vcpu->vm->ipc_num;
+    bool valid_ipc_obj = ipc_id < vcpu->vm->ipc_num;
     if(valid_ipc_obj) {
-        shmem = ipc_get_shmem(cpu.vcpu->vm->ipcs[ipc_id].shmem_id);
+        shmem = ipc_get_shmem(vcpu->vm->ipcs[ipc_id].shmem_id);
     }
     bool valid_shmem = shmem != NULL;
 
     if(valid_ipc_obj && valid_shmem) {
 
-        cpumap_t ipc_cpu_masters = shmem->cpu_masters & ~cpu.vcpu->vm->cpus;
+        cpumap_t ipc_cpu_masters = shmem->cpu_masters & ~vcpu->vm->cpus;
 
         union ipc_msg_data data = {
-            .shmem_id = cpu.vcpu->vm->ipcs[ipc_id].shmem_id,
+            .shmem_id = vcpu->vm->ipcs[ipc_id].shmem_id,
             .event_id = ipc_event,
         };
         struct cpu_msg msg = {IPC_CPUSMG_ID, IPC_NOTIFY, data.raw};

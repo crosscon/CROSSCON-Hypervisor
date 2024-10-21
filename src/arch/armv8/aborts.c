@@ -103,7 +103,7 @@ void smc64_handler(uint64_t iss, uint64_t far, uint64_t il)
         smc_handler_t handler = node->hndl_smc.handler;
         if (handler != NULL) {
             if (handler(vcpu, smc_fid)) {
-                ERROR("handler smc failed (0x%x)", far);
+                /* ERROR("handler smc failed (0x%x)", far); */
             }
         }
     }
@@ -121,7 +121,7 @@ void hvc64_handler(uint64_t iss, uint64_t far, uint64_t il)
         hvc_handler_t handler = node->hndl_hvc.handler;
         if (handler != NULL) {
             if (handler(vcpu, x0 & 0xffff)) {
-                ERROR("handler hvc failed (0x%x)", far);
+                /* ERROR("handler hvc failed (0x%x)", far); */
             }
         }
     }

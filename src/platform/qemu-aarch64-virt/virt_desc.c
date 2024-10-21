@@ -17,7 +17,7 @@
 
 struct platform_desc platform = {
 
-    .cpu_num = 2,
+    .cpu_num = 4,
     .region_num = 1,
     .regions =  (struct mem_region[]) {
         {

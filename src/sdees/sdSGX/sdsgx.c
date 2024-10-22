@@ -27,6 +27,21 @@ enum {
     SDSGX_FAULT   = 9,
 };
 
+static struct vcpu* sdsgx_get_nclv(struct vcpu* vcpu, int nclv_id)
+{
+    struct vcpu* child = NULL;
+    list_foreach(vcpu->vmstack_children, struct node_data, node)
+    {
+        struct vcpu* tmp = NULL;
+        tmp = node->data;
+        if (tmp->nclv_data.id == nclv_id) {
+            child = tmp;
+            break;
+        }
+    }
+    return child;
+}
+
 struct config* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_ipa)
 {
     uint64_t paddr = 0;
@@ -82,6 +97,7 @@ void sdsgx_create(uint64_t host_ipa)
     /* init */
     /* TODO use parent vm.vcpu.id*/
     struct vcpu* enclave_vcpu = vm_get_vcpu(enclave, 0);
+    enclave_vcpu->nclv_data.id = enclave->id;
     vmstack_push(enclave_vcpu);
     enclave_vcpu->nclv_data.initialized = false;
     vcpu_writereg(cpu.vcpu, 0, 0);
@@ -95,7 +111,7 @@ void sdsgx_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t enclave_va)
     vaddr_t va = (vaddr_t)NULL;
 
     /* TODO: handle multiple child */
-    if ((child = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
+    if ((child = sdsgx_get_nclv(cpu.vcpu, enclave_id)) == NULL) {
         /* TODO HANDLE */
         return;
     }
@@ -118,7 +134,7 @@ void sdsgx_delete(uint64_t enclave_id, uint64_t arg1)
 
     struct vcpu* nclv = NULL;
 
-    if ((nclv = vcpu_get_child(cpu.vcpu, 0)) == NULL) {
+    if ((nclv = sdsgx_get_nclv(cpu.vcpu, enclave_id)) == NULL) {
         ERROR("non host invoked enclaved destruction");
     }
 
@@ -132,7 +148,7 @@ void sdsgx_ecall(uint64_t enclave_id, uint64_t args_addr, uint64_t sp_el0)
     /* TODO: handle multiple child */
     int64_t res = HC_E_SUCCESS;
     struct vcpu* child = NULL;
-    if ((child = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
+    if ((child = sdsgx_get_nclv(cpu.vcpu, enclave_id)) != NULL) {
         /* TODO separate architecture specific details. only works for Arm */
         /* child->arch.sysregs.vm.sp_el0 = sp_el0; */
         vmstack_push(child);
@@ -166,7 +182,7 @@ void sdsgx_resume(uint64_t enclave_id)
     /* TODO: handle multiple child */
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
-    if ((enclave = vcpu_get_child(cpu.vcpu, 0)) != NULL) {
+    if ((enclave = sdsgx_get_nclv(cpu.vcpu, enclave_id)) != NULL) {
         vmstack_push(enclave);
     } else {
         res = -HC_E_INVAL_ARGS;
@@ -337,7 +353,7 @@ int64_t sdsgx_handler_setup(struct vm* vm)
     vm_hndl_irq_add(vm, &irq);
 
     /* TODO */
-    if(vm->id >= 3)
+    if(vm->type == 3)
         vm_hndl_mem_abort_add(vm, &mem_abort);
 
     return ret;

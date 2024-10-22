@@ -1120,8 +1120,9 @@ bool mem_map_vm_config(paddr_t config_addr)
     if (vm_config_ptr == NULL) return false;
 
     struct ppages pages = mem_ppages_get(config_addr, 1);
-    mem_map(&cpu.as, (vaddr_t)vm_config_ptr, &pages, 1, PTE_HYP_FLAGS);
-    if (vm_config_ptr->config_header_size > PAGE_SIZE) {
+    /* TODO why are config headers larger than PAGE_SIZE not detected? */
+    mem_map(&cpu.as, (vaddr_t)vm_config_ptr, &pages, 2, PTE_HYP_FLAGS);
+    if (vm_config_ptr->config_header_size > PAGE_SIZE*2) {
         size_t n =
             NUM_PAGES(((size_t)vm_config_ptr->config_header_size) - PAGE_SIZE);
         vaddr_t va = mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL,

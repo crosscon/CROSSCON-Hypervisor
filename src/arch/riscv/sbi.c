@@ -431,29 +431,19 @@ struct sbiret sbi_crossconhyp_handler(unsigned long fid){
 
     struct sbiret ret;
     struct vcpu* vcpu = cpu.vcpu;
-
     unsigned long arg0 = vcpu_readreg(vcpu, REG_A0);
-    unsigned long arg1 = vcpu_readreg(vcpu, REG_A1);
-    unsigned long arg2 = vcpu_readreg(vcpu, REG_A2);
-    /* unsigned long arg3 = vcpu_readreg(vcpu, REG_A3); */
 
-    /* TODO: sdee */
-    switch(fid) {
-        case HC_IPC:
-            ret.value = ipc_hypercall(arg0, arg1, arg2);
-            break;
-        default:
-            list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
-            {
-                /* TODO: match range */
-                hvc_handler_t handler = node->hndl_hvc.handler;
-                if (handler != NULL) {
-                    if (handler(vcpu, arg0 & 0xffff)) {
-                        ERROR("handler hvc failed (0x%x)", vcpu->regs->sepc);
-                    }
-                }
+    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
+    {
+        /* TODO: match range */
+        hvc_handler_t handler = node->hndl_hvc.handler;
+        if (handler != NULL) {
+            ret.value = handler(vcpu, arg0 & 0xffff);
+            if (ret.value) {
+                ERROR("handler hvc failed (0x%x)", vcpu->regs->sepc);
             }
-   }
+        }
+    }
 
    ret.error = ret.value  < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
 

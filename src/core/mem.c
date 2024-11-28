@@ -1042,22 +1042,34 @@ bool mem_reserve_config(paddr_t config_addr, struct page_pool *pool)
     return true;
 }
 
+static bool mem_reserve_vm_mem(struct page_pool *pool, struct vm_config* vm_cfg)
+{
+    /* for every mem region */
+    for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
+        struct mem_region *reg = &vm_cfg->platform.regions[j];
+        if (reg->place_phys) {
+            size_t n_pg = NUM_PAGES(reg->size);
+            struct ppages ppages = mem_ppages_get(reg->phys, n_pg);
+            if (!mem_reserve_ppool_ppages(pool, &ppages)) {
+                return false;
+            }
+        }
+    }
+    if(vm_cfg->children_num > 0){
+        for (size_t i = 0; i < vm_cfg->children_num; i++) {
+            if(!mem_reserve_vm_mem(pool, vm_cfg->children[i])){
+                ERROR("error reserving vm mem");
+            }
+        }
+    }
+    return true;
+}
+
 bool mem_reserve_vm_cfg(struct page_pool *pool)
 {
     /* for every vm config */
     for (size_t i = 0; i < vm_config_ptr->vmlist_size; i++) {
-        struct vm_config *vm_cfg = vm_config_ptr->vmlist[i];
-        /* for every mem region */
-        for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
-            struct mem_region *reg = &vm_cfg->platform.regions[j];
-            if (reg->place_phys) {
-                size_t n_pg = NUM_PAGES(reg->size);
-                struct ppages ppages = mem_ppages_get(reg->phys, n_pg);
-                if (!mem_reserve_ppool_ppages(pool, &ppages)) {
-                    return false;
-                }
-            }
-        }
+        mem_reserve_vm_mem(pool, vm_config_ptr->vmlist[i]);
     }
 
     for (size_t i = 0; i < vm_config_ptr->shmemlist_size; i++) {
@@ -1119,7 +1131,7 @@ bool mem_map_vm_config(paddr_t config_addr)
         (struct config*)mem_alloc_vpage(&cpu.as, SEC_HYP_GLOBAL, NULL_VA, 1);
     if (vm_config_ptr == NULL) return false;
 
-    struct ppages pages = mem_ppages_get(config_addr, 1);
+    struct ppages pages = mem_ppages_get(config_addr, 2);
     /* TODO why are config headers larger than PAGE_SIZE not detected? */
     mem_map(&cpu.as, (vaddr_t)vm_config_ptr, &pages, 2, PTE_HYP_FLAGS);
     if (vm_config_ptr->config_header_size > PAGE_SIZE*2) {

@@ -18,21 +18,12 @@
 
 struct platform_desc platform = {
     .cpu_num = 4,
-    .region_num = (RPI4_MEM_GB > 1) ? 2: 1,
+    .region_num = 1,
     .regions =  (struct mem_region[]) {
         {
-            /*
-             * - 0x8000 at the bottom reserved for atf
-             * - 0x4c00000 (76 MiB) at the top reserved for gpu (depends on
-             * gpu_mem in config.txt. this is the default)
-             */
             .base = 0x80000,
-            .size = 0x40000000 - 0x80000 - 0x4c00000
+            .size = 0x100000000
         },
-        {
-            .base = 0x40000000,
-            .size = ((RPI4_MEM_GB-1) * 0x40000000ULL) - 0x4000000
-        }
     },
 
     .console = {

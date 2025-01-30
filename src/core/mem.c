@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem.h>
 
 #include <cpu.h>
@@ -318,6 +318,58 @@ static bool mem_vm_img_in_phys_rgn(struct vm_config* vm_config)
     return img_in_rgn;
 }
 
+static bool vm_reserve_img_memory(struct vm_config *vm_cfg, struct page_pool* pool)
+{
+    size_t n_pg = NUM_PAGES(vm_cfg->image.size);
+    struct ppages ppages = mem_ppages_get(vm_cfg->image.load_addr, n_pg);
+
+    // If the vm image is part of a statically allocated region of the same vm, we defer the
+    // reservation of this memory to when we reserve the physical region below. Note that this
+    // not allow partial overlaps. If the image must be entirely inside a statically allocated
+    // region, or completely outside of it. This avoid overcamplicating the reservation logic
+    // while still covering all the useful use cases.
+    if (!mem_vm_img_in_phys_rgn(vm_cfg)) {
+        if (!mem_reserve_ppool_ppages(pool, &ppages)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool vm_reserve_mem_rgn(struct vm_config *vm_cfg, struct page_pool* pool)
+{
+    /* for every mem region */
+    for (size_t i = 0; i < vm_cfg->platform.region_num; i++) {
+        struct vm_mem_region* reg = &vm_cfg->platform.regions[i];
+        if (reg->place_phys) {
+            size_t n_pg = NUM_PAGES(reg->size);
+            struct ppages ppages = mem_ppages_get(reg->phys, n_pg);
+            if (!mem_reserve_ppool_ppages(pool, &ppages)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool vm_reserve_physical_memory(struct vm_config *vm_cfg, struct page_pool* pool)
+{
+    if(!vm_reserve_img_memory(vm_cfg, pool)){
+        return false;
+    }
+
+    if(!vm_reserve_mem_rgn(vm_cfg, pool)){
+        return false;
+    }
+
+    for (size_t i = 0; i < vm_cfg->children_num; i++){
+        if(!vm_reserve_physical_memory(vm_cfg->children[i], pool)){
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool mem_reserve_physical_memory(struct page_pool* pool)
 {
     if (pool == NULL) {
@@ -330,38 +382,11 @@ static bool mem_reserve_physical_memory(struct page_pool* pool)
         }
     }
 
-    for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
-        size_t n_pg = NUM_PAGES(vm_cfg->image.size);
-        struct ppages ppages = mem_ppages_get(vm_cfg->image.load_addr, n_pg);
-
-        // If the vm image is part of a statically allocated region of the same vm, we defer the
-        // reservation of this memory to when we reserve the physical region below. Note that this
-        // not allow partial overlaps. If the image must be entirely inside a statically allocated
-        // region, or completely outside of it. This avoid overcamplicating the reservation logic
-        // while still covering all the useful use cases.
-        if (mem_vm_img_in_phys_rgn(vm_cfg)) {
-            continue;
-        }
-
-        if (!mem_reserve_ppool_ppages(pool, &ppages)) {
-            return false;
-        }
-    }
-
     /* for every vm config */
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
-        /* for every mem region */
-        for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
-            struct vm_mem_region* reg = &vm_cfg->platform.regions[j];
-            if (reg->place_phys) {
-                size_t n_pg = NUM_PAGES(reg->size);
-                struct ppages ppages = mem_ppages_get(reg->phys, n_pg);
-                if (!mem_reserve_ppool_ppages(pool, &ppages)) {
-                    return false;
-                }
-            }
+        struct vm_config* vm_cfg = config.vmlist[i];
+        if(!vm_reserve_physical_memory(vm_cfg, pool)){
+            return false;
         }
     }
 
@@ -433,8 +458,7 @@ __attribute__((weak)) void mem_color_hypervisor(const paddr_t load_addr,
     UNUSED_ARG(load_addr);
     UNUSED_ARG(root_region);
 
-    WARNING("Trying to color hypervisor, but implementation does not suuport "
-            "it");
+    WARNING("Trying to color hypervisor, but implementation does not suuport it\n");
 }
 
 __attribute__((weak)) bool mem_map_reclr(struct addr_space* as, vaddr_t va, struct ppages* ppages,
@@ -475,10 +499,6 @@ struct ppages mem_alloc_ppages(colormap_t colors, size_t num_pages, bool aligned
 
     return pages;
 }
-
-/* use global variables instead the argument
- * rx_addr rw_addr
- */
 
 void mem_init(void)
 {

@@ -6,6 +6,6 @@
 #ifndef __ARCH_MEM_H__
 #define __ARCH_MEM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #endif /* __ARCH_MEM_H__ */

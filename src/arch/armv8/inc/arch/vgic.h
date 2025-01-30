@@ -6,7 +6,7 @@
 #ifndef __VGIC_H__
 #define __VGIC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/gic.h>
 #include <list.h>
 
@@ -64,6 +64,13 @@ struct vgicr {
 };
 
 struct vgic_priv {
+    struct {
+        uint64_t ELSR;
+        uint64_t LR[GICH_LR_MAX];
+        uint32_t HCR;
+        uint32_t VMCR;
+        uint32_t APR[GIC_APR_MAX];
+    } gich;
 #if (GIC_VERSION != GICV2)
     struct vgicr vgicr;
 #endif
@@ -125,5 +132,10 @@ void vgic_emul_razwi(struct emul_access* acc, struct vgic_reg_handler_info* hand
 bool vgic_int_has_other_target(struct vcpu* vcpu, struct vgic_int* interrupt);
 uint8_t vgic_int_ptarget_mask(struct vcpu* vcpu, struct vgic_int* interrupt);
 void vgic_inject_sgi(struct vcpu* vcpu, struct vgic_int* interrupt, vcpuid_t source);
+
+void vgic_save_state(struct vcpu *vcpu);
+void vgic_restore_state(struct vcpu *vcpu);
+bool vgic_int_get_enabled(struct vcpu *vcpu, uint64_t int_id);
+void vgic_hw_commit(struct vcpu *vcpu, uint64_t int_id);
 
 #endif /* __VGIC_H__ */

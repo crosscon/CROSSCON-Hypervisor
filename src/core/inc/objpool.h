@@ -6,7 +6,7 @@
 #ifndef OBJPOOL_H
 #define OBJPOOL_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bitmap.h>
 #include <arch/spinlock.h>
 

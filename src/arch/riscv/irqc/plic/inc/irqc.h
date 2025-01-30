@@ -6,7 +6,7 @@
 #ifndef IRQC_H
 #define IRQC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <plic.h>
 #include <cpu.h>
 #include <vplic.h>
@@ -62,7 +62,7 @@ static inline void irqc_clr_pend(irqid_t int_id)
 {
     UNUSED_ARG(int_id);
 
-    WARNING("trying to clear external interrupt");
+    WARNING("trying to clear external interrupt\n");
 }
 
 static inline void virqc_set_hw(struct vm* vm, irqid_t id)

@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/csrs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -40,15 +40,15 @@ switch_space:
     /* Copy two words */
     LOAD a2, (a6)
     STORE a2, (a0)
-    
+
     /* Increment addressess and count accordingly */
     add a6, a6, REGLEN
     add a0, a0, REGLEN
     add a4, a4, REGLEN
-    
+
     /* If count is less then size, repeat */
     blt a4, a5, 1b
-    
+
     /* Restore original addresses */
     sub a6, a6, a4
     sub a0, a0, a4

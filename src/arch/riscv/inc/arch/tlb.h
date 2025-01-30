@@ -6,7 +6,7 @@
 #ifndef __ARCH_TLB_H__
 #define __ARCH_TLB_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 #include <arch/sbi.h>
 

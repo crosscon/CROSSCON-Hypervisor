@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <config.h>
 
 void config_mem_prot_init(paddr_t load_addr)

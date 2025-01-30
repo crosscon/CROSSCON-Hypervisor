@@ -6,7 +6,7 @@
 #ifndef __PLATFORM_H__
 #define __PLATFORM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/platform.h>
 #include <plat/platform.h>
 #include <mem.h>

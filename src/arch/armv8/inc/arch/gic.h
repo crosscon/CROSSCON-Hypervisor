@@ -6,7 +6,7 @@
 #ifndef __GIC_H__
 #define __GIC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <emul.h>
 #include <bitmap.h>
 #include <spinlock.h>
@@ -285,6 +285,8 @@ struct gicc_hw {
 #define GICH_LR_STATE_LEN (2)
 #define GICH_LR_HW_BIT    (1U << 31)
 #define GICH_LR_EOI_BIT   (1U << 19)
+#define GICH_LR_MAX (64)
+#define GIC_APR_MAX (1)
 #define GICH_NUM_ELRSR    (2)
 #define GICH_LR_PRIO_MSK  BIT32_MASK(GICH_LR_PRIO_OFF, GICH_LR_PRIO_LEN)
 #define GICH_LR_PID_MSK   BIT32_MASK(GICH_LR_PID_OFF, GICH_LR_PID_LEN)
@@ -303,6 +305,8 @@ typedef uint32_t gic_lr_t;
 #define GICH_LR_GRP_BIT   (1ULL << 60)
 #define GICH_LR_HW_BIT    (1ULL << 61)
 #define GICH_LR_EOI_BIT   (1ULL << 41)
+#define GICH_LR_MAX (16)
+#define GIC_APR_MAX (4)
 #define GICH_NUM_ELRSR    (1)
 #define GICH_LR_PRIO_MSK  BIT64_MASK(GICH_LR_PRIO_OFF, GICH_LR_PRIO_LEN)
 #define GICH_LR_PID_MSK   BIT64_MASK(GICH_LR_PID_OFF, GICH_LR_PID_LEN)

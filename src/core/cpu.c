@@ -9,6 +9,7 @@
 #include <objpool.h>
 #include <vm.h>
 #include <fences.h>
+#include <vmm.h>
 
 struct cpu_msg_node {
     node_t node;
@@ -157,4 +158,24 @@ void cpu_powerdown_wakeup(void)
     } else {
         cpu_powerdown();
     }
+}
+
+void cpu_add_vcpu(struct vcpu * vcpu){
+    struct node_data* node = objpool_alloc(&nodes_pool);
+    node->data = vcpu;
+    list_push(&cpu()->vcpus, (node_t*) node);
+}
+
+void cpu_remove_vcpu(struct vcpu * vcpu){
+    list_rm(&cpu()->vcpus, (node_t*) vcpu);
+}
+
+struct vcpu* cpu_get_vcpu(uint64_t vmid){
+    list_foreach(cpu()->vcpus, struct node_data, node){
+	struct vcpu* vcpu = node->data;
+        if(vcpu->vm->id == vmid){
+            return vcpu;
+        }
+    }
+    return NULL;
 }

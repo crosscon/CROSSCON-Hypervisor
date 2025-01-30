@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -48,7 +48,7 @@ memcpy:
  */
 .globl switch_space
 switch_space:
-        
+
     /**
     * update flat maping page table entry  to feature new physical address space entry page
     */

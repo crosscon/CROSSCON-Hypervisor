@@ -6,7 +6,7 @@
 #ifndef __ARCH_PAGE_TABLE_H__
 #define __ARCH_PAGE_TABLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 #define HYP_ROOT_PT_SIZE (PAGE_SIZE)

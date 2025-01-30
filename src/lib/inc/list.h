@@ -6,7 +6,7 @@
 #ifndef __LIST_H__
 #define __LIST_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <spinlock.h>
 
 typedef void* node_t;
@@ -14,6 +14,11 @@ struct list {
     node_t* head;
     node_t* tail;
     spinlock_t lock;
+};
+
+struct node_data {
+    node_t node;
+    void* data;
 };
 
 #define list_foreach(list, type, nodeptr) \
@@ -47,6 +52,20 @@ static inline void list_push(struct list* list, node_t* node)
         if (list->head == NULL) {
             list->head = node;
         }
+
+        spin_unlock(&list->lock);
+    }
+}
+
+static inline void list_push_front(struct list* list, node_t* node)
+{
+    if (list != NULL && node != NULL) {
+        spin_lock(&list->lock);
+
+        if (list->head != NULL)
+            *node = list->head;
+
+        list->head = node;
 
         spin_unlock(&list->lock);
     }

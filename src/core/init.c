@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #include <cpu.h>
 #include <mem.h>
@@ -29,7 +29,22 @@ void init(cpuid_t cpu_id)
     console_init();
 
     if (cpu_is_master()) {
-        console_printk("Bao Hypervisor\n\r");
+        console_printk("\n");
+        console_printk("   _____ _____   ____   _____ _____  _____ ____  _   _ \n");
+        console_printk("  / ____|  __ \\ / __ \\ / ____/ ____|/ ____/ __ \\| \\ | |\n");
+        console_printk(" | |    | |__) | |  | | (___| (___ | |   | |  | |  \\| |\n");
+        console_printk(" | |    |  _  /| |  | |\\___ \\\\___ \\| |   | |  | | . ` |\n");
+        console_printk(" | |____| | \\ \\| |__| |____) |___) | |___| |__| | |\\  |\n");
+        console_printk("  \\_____|_|  \\_\\\\____/|_____/_____/ \\_____\\____/|_| \\_|\n");
+        console_printk("  _    _                             _\n");
+        console_printk(" | |  | |                           (_)                \n");
+        console_printk(" | |__| |_   _ _ __   ___ _ ____   ___ ___  ___  _ __  \n");
+        console_printk(" |  __  | | | | '_ \\ / _ \\ '__\\ \\ / / / __|/ _ \\| '__| \n");
+        console_printk(" | |  | | |_| | |_) |  __/ |   \\ V /| \\__ \\ (_) | |    \n");
+        console_printk(" |_|  |_|\\__, | .__/ \\___|_|    \\_/ |_|___/\\___/|_|    \n");
+        console_printk("          __/ | |                                      \n");
+        console_printk("         |___/|_| \n");
+        console_printk("\n");
     }
 
     interrupts_init();

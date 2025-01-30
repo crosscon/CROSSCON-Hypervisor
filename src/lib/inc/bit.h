@@ -6,7 +6,7 @@
 #ifndef __BIT_H__
 #define __BIT_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 /**
  * The extra shift is because both arm and riscv logical shift instructions support a maximum of

@@ -6,7 +6,7 @@
 #ifndef __SBI_UART_H__
 #define __SBI_UART_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 typedef volatile uint8_t bao_uart_t;
 

@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform_defs.h>
 #include <config_defs.h>
 
@@ -26,6 +26,7 @@ SECTIONS
 	.text :  {
 		*(.text)
 	}
+
     . = ALIGN(PAGE_SIZE); /* start RO sections in separate page */
 
 	.rodata :  {
@@ -94,20 +95,20 @@ SECTIONS
 #endif
 
 	/* Only no load regions below */
-
-	.bss (NOLOAD) :  {
+	
+	.bss (NOLOAD) :  {	
 		_bss_start = .;
-		*(.bss* .sbss*)
-		*(COMMON)
+		*(.bss* .sbss*)  
+		*(COMMON)	
 		_bss_end = .;
-	}
+	} 
 
 	.glb_page_tables (NOLOAD) : ALIGN(PAGE_SIZE) {
 		_page_tables_start = .;
 		*(.glb_page_tables)
 		_page_tables_end = .;
 	}
-
+	
 	. = ALIGN(PAGE_SIZE);
 	_image_end = ABSOLUTE(.);
 	_dmem_phys_beg = ABSOLUTE(.) + extra_allocated_phys_mem;
@@ -115,7 +116,7 @@ SECTIONS
 	. = ALIGN(PAGE_SIZE);
 	_dmem_beg = ABSOLUTE(.);
 
-#ifdef MEM_PROT_MMU
+#ifdef MEM_PROT_MMU	
 	/* Global dynamic memory virtual address space here */
 
 	. = BAO_CPU_BASE;

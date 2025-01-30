@@ -6,10 +6,11 @@
 #ifndef __INTERRUPTS_H__
 #define __INTERRUPTS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/interrupts.h>
 
 #include <bitmap.h>
+#include <vm.h>
 
 struct vm;
 
@@ -54,4 +55,7 @@ void interrupts_arch_ipi_send(cpuid_t cpu_target);
 void interrupts_arch_vm_assign(struct vm* vm, irqid_t id);
 bool interrupts_arch_conflict(bitmap_t* interrupt_bitmap, irqid_t id);
 void interrupts_arch_ipi_init(void);
+void interrupts_vm_inject(struct vcpu* vcpu, irqid_t id);
+void interrupts_set_shared(irqid_t id);
+bool interrupts_is_shared(irqid_t id);
 #endif /* __INTERRUPTS_H__ */

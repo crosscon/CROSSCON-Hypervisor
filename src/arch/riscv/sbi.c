@@ -3,6 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
+#include "util.h"
 #include <arch/sbi.h>
 #include <arch/csrs.h>
 #include <cpu.h>
@@ -11,6 +12,7 @@
 #include <fences.h>
 #include <hypercall.h>
 #include <interrupts.h>
+#include <arch/sdtz.h>
 
 #define SBI_EXTID_BASE                  (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID    (0)
@@ -206,7 +208,7 @@ void sbi_msg_handler(uint32_t event, uint64_t data)
             spin_unlock(&cpu()->vcpu->arch.sbi_ctx.lock);
         } break;
         default:
-            WARNING("unknown sbi msg");
+            WARNING("unknown sbi msg\n");
             break;
     }
 }
@@ -226,6 +228,7 @@ static struct sbiret sbi_time_handler(unsigned long fid)
         csrs_vstimecmp_write(stime_value);
     } else {
         sbi_set_timer(stime_value); // assumes always success
+        cpu()->vcpu->arch.stime_value = stime_value;
         csrs_hvip_clear(HIP_VSTIP);
         csrs_sie_set(SIE_STIE);
     }
@@ -306,7 +309,7 @@ static struct sbiret sbi_rfence_handler(unsigned long fid)
     const size_t hart_mask_width = sizeof(hart_mask) * 8;
     if ((hart_mask_base != 0) &&
         ((hart_mask_base >= hart_mask_width) || ((hart_mask << hart_mask_base) == 0))) {
-        WARNING("sbi invalid hart_mask");
+        WARNING("sbi invalid hart_mask\n");
         return (struct sbiret){ SBI_ERR_INVALID_PARAM, 0 };
     }
 
@@ -443,14 +446,31 @@ static struct sbiret sbi_hsm_handler(unsigned long fid)
 
 static struct sbiret sbi_bao_handler(unsigned long fid)
 {
+    UNUSED_ARG(fid);
     struct sbiret ret;
+    struct vcpu* vcpu = cpu()->vcpu;
+    unsigned long arg0 = vcpu_readreg(vcpu, REG_A0);
+
+    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
+    {
+        /* TODO: match range */
+        hvc_handler_t handler = node->hndl_hvc.handler;
+        if (handler != NULL) {
+            ret.value = handler(vcpu, arg0 & 0xffff);
+            if (ret.value) {
+                ERROR("handler hvc failed (0x%x)", vcpu->regs.sepc);
+            }
+        }
+    }
 
     // Any hypercall will always be successful from a purely SBI standpoint. A
     // bao-specific hypercall code is returned as the value.
-    ret.error = SBI_SUCCESS;
-    ret.value = hypercall(fid);
+    //ret.error = SBI_SUCCESS;
+    //ret.value = hypercall(fid);
 
-    return ret;
+   ret.error = ret.value  < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
+
+   return ret;
 }
 
 size_t sbi_vs_handler()
@@ -458,6 +478,7 @@ size_t sbi_vs_handler()
     unsigned long extid = vcpu_readreg(cpu()->vcpu, REG_A7);
     unsigned long fid = vcpu_readreg(cpu()->vcpu, REG_A6);
     struct sbiret ret;
+    struct vcpu *calling_cpu = cpu()->vcpu;
 
     switch (extid) {
         case SBI_EXTID_BASE:
@@ -478,14 +499,28 @@ size_t sbi_vs_handler()
         case SBI_EXTID_BAO:
             ret = sbi_bao_handler(fid);
             break;
+        case SBI_EXTID_TEE:
+            list_foreach(calling_cpu->vm->smc_list, struct hndl_smc_node, node)
+            {
+                /* TODO: match range */
+                smc_handler_t handler = node->hndl_smc.handler;
+                if (handler != NULL) {
+                    if (handler(calling_cpu, fid)) {
+                        /* ERROR("handler smc failed (0x%x)", calling_cpu->); */
+                    }
+                }
+            }
+	    goto out;
+            break;
         default:
-            WARNING("guest issued unsupport sbi extension call (%d)", extid);
-            ret.error = SBI_ERR_NOT_SUPPORTED;
+            WARNING("guest issued unsupport sbi extension call (%d)\n", extid);
+            ret.value = SBI_ERR_NOT_SUPPORTED;
     }
 
-    vcpu_writereg(cpu()->vcpu, REG_A0, (unsigned long)ret.error);
-    vcpu_writereg(cpu()->vcpu, REG_A1, (unsigned long)ret.value);
+    vcpu_writereg(calling_cpu, REG_A0, (unsigned long)ret.error);
+    vcpu_writereg(calling_cpu, REG_A1, (unsigned long)ret.value);
 
+out:
     return 4;
 }
 

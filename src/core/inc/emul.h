@@ -6,7 +6,7 @@
 #ifndef __EMUL_H__
 #define __EMUL_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <list.h>
 #include <arch/emul.h>
 

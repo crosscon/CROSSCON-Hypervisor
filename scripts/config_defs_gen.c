@@ -10,7 +10,7 @@ static size_t remio_dev_num(void)
 {
     size_t dev_num = 0;
     for (size_t vm_id = 0; vm_id < config.vmlist_size; vm_id++) {
-        struct vm_config* vm_config = &config.vmlist[vm_id];
+        struct vm_config* vm_config = config.vmlist[vm_id];
         for (size_t i = 0; i < vm_config->platform.remio_dev_num; i++) {
             struct remio_dev* dev = &vm_config->platform.remio_devs[i];
             if (dev->type == REMIO_DEV_BACKEND) {
@@ -21,13 +21,34 @@ static size_t remio_dev_num(void)
     return dev_num;
 }
 
+size_t calc_vm_num(struct vm_config* vm){
+    size_t vm_num = 0;
+    vm_num += vm->children_num;
+    for(size_t i = 0; i < vm->children_num; i++){
+        vm_num += calc_vm_num(vm->children[i]);
+    }
+    return vm_num;
+}
+
+size_t get_vm_num(void) 
+{
+    size_t vm_num = 0;
+    vm_num += config.vmlist_size;
+    for(size_t i = 0; i < config.vmlist_size; i++){
+        vm_num += calc_vm_num(config.vmlist[i]);
+    }
+    return vm_num;
+}
+
 int main() {
     size_t vcpu_num = 0;
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        vcpu_num += config.vmlist[i].platform.cpu_num;
+        vcpu_num += config.vmlist[i]->platform.cpu_num;
     }
 
-    printf("#define CONFIG_VM_NUM %ld\n", config.vmlist_size);
+    size_t vm_num = get_vm_num();
+    printf("#define CONFIG_VM_NUM %ld\n", vm_num);
+    printf("#define CONFIG_PARTITION_NUM %ld\n", config.vmlist_size);
     printf("#define CONFIG_VCPU_NUM %ld\n", vcpu_num);
 
     if(config.hyp.relocate) {

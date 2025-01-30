@@ -3,12 +3,13 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem.h>
 
 #include <cpu.h>
 #include <platform.h>
 #include <cache.h>
+#include <stdbool.h>
 #include <string.h>
 #include <vm.h>
 #include <fences.h>
@@ -503,8 +504,7 @@ __attribute__((weak)) void mem_color_hypervisor(const paddr_t load_addr,
     UNUSED_ARG(load_addr);
     UNUSED_ARG(root_region);
 
-    WARNING("Trying to color hypervisor, but implementation does not suuport "
-            "it");
+    WARNING("Trying to color hypervisor, but implementation does not suuport it\n");
 }
 
 __attribute__((weak)) bool mem_map_reclr(struct addr_space* as, vaddr_t va, struct ppages* ppages,

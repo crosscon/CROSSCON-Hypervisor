@@ -6,7 +6,7 @@
 #ifndef __VPLIC_H__
 #define __VPLIC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <plic.h>
 #include <arch/spinlock.h>
 #include <bitmap.h>

@@ -6,7 +6,7 @@
 #ifndef __STRING_H_
 #define __STRING_H_
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 void* memcpy(void* dst, const void* src, size_t count);
 void* memset(void* dest, int c, size_t count);

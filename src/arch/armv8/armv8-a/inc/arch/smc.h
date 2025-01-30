@@ -6,7 +6,7 @@
 #ifndef __SMC_H__
 #define __SMC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 struct smc_res {
     unsigned long x0;

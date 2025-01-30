@@ -6,7 +6,7 @@
 #ifndef ACLINT_H
 #define ACLINT_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 #define ACLINT_SSWI_MAX_HARTS   (4095)

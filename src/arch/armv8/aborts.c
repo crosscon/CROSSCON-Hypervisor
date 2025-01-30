@@ -49,7 +49,16 @@ static void aborts_data_lower(unsigned long iss, unsigned long far, unsigned lon
             ERROR("data abort emulation failed (0x%x)", far);
         }
     } else {
-        ERROR("no emulation handler for abort(0x%x at 0x%x)", far, vcpu_readpc(cpu()->vcpu));
+        struct vcpu* vcpu = cpu()->vcpu;
+        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
+        {
+            mem_abort_handler_t abort_handler = node->hndl_mem_abort.handler;
+            if (abort_handler != NULL) {
+                if (abort_handler(vcpu, addr)) {
+                    ERROR("handler abort failed (0x%x)", far);
+                }
+            }
+        }
     }
 }
 
@@ -67,7 +76,7 @@ static long int standard_service_call(unsigned long _fn_num)
     if (is_psci_fid(smc_fid)) {
         ret = psci_smc_handler((uint32_t)smc_fid, x1, x2, x3);
     } else {
-        INFO("unknown smc_fid 0x%lx", smc_fid);
+        INFO("unknown smc_fid 0x%lx\n", smc_fid);
     }
 
     return ret;
@@ -94,7 +103,7 @@ static inline void syscall_handler(unsigned long iss, unsigned long far, unsigne
             ret = hypercall(fid & SMCC_FID_FN_NUM_MSK);
             break;
         default:
-            WARNING("Unknown system call fid 0x%x", fid);
+            WARNING("Unknown system call fid 0x%x\n", fid);
     }
 
     vcpu_writereg(cpu()->vcpu, 0, (unsigned long)ret);
@@ -102,21 +111,47 @@ static inline void syscall_handler(unsigned long iss, unsigned long far, unsigne
 
 static void hvc_handler(unsigned long iss, unsigned long far, unsigned long il, unsigned long ec)
 {
-    syscall_handler(iss, far, il, ec);
+    UNUSED_ARG(iss);
+    UNUSED_ARG(far);
+    UNUSED_ARG(il);
+    UNUSED_ARG(ec);
+    uint64_t x0 = vcpu_readreg(cpu()->vcpu, 0);
+
+    struct vcpu* vcpu = cpu()->vcpu;
+
+    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
+    {
+        /* TODO: match range */
+        hvc_handler_t handler = node->hndl_hvc.handler;
+        if (handler != NULL) {
+            if (handler(vcpu, x0 & 0xffff)) {
+                /* ERROR("handler hvc failed (0x%x)", far); */
+            }
+        }
+    }
 }
 
 static void smc_handler(unsigned long iss, unsigned long far, unsigned long il, unsigned long ec)
 {
+    UNUSED_ARG(iss);
     UNUSED_ARG(far);
+    UNUSED_ARG(il);
+    UNUSED_ARG(ec);
+    uint64_t smc_fid = vcpu_readreg(cpu()->vcpu, 0);
 
-    syscall_handler(iss, far, il, ec);
+    struct vcpu* vcpu = cpu()->vcpu;
 
-    /**
-     * Since SMCs are trapped due to setting hcr_el2.tsc, the "preferred exception return address"
-     * is the address of the actual smc instruction. Thus, we need to adjust it to the next
-     * instruction.
-     */
-    vcpu_writepc(cpu()->vcpu, vcpu_readpc(cpu()->vcpu) + 4);
+
+    list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
+    {
+        /* TODO: match range */
+        smc_handler_t handler = node->hndl_smc.handler;
+        if (handler != NULL) {
+            if (handler(vcpu, smc_fid)) {
+                /* ERROR("handler smc failed (0x%x)", far); */
+            }
+        }
+    }
 }
 
 static regaddr_t reg_addr_translate(unsigned long iss)

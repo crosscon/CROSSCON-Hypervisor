@@ -6,7 +6,7 @@
 #ifndef __MEM_PROT_H__
 #define __MEM_PROT_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bitmap.h>
 #include <list.h>
 #include <arch/mem.h>
@@ -38,6 +38,7 @@ struct addr_space {
 };
 
 void as_init(struct addr_space* as, enum AS_TYPE type, colormap_t colors);
+void as_destroy(struct addr_space *as);
 
 static inline bool mem_regions_overlap(struct mp_region* reg1, struct mp_region* reg2)
 {

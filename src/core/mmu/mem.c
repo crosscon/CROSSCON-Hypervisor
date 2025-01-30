@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem.h>
 
 #include <cpu.h>
@@ -458,7 +458,7 @@ void mem_unmap(struct addr_space* as, vaddr_t at, size_t num_pages, bool free_pp
                     }
 
                     *pte = 0;
-                    tlb_inv_va(&cpu()->as, vaddr);
+                    tlb_inv_va(as, vaddr);
 
                 } else {
                     break;
@@ -943,6 +943,14 @@ void as_init(struct addr_space* as, enum AS_TYPE type, pte_t* root_pt, colormap_
     as_arch_init(as);
 }
 
+void as_destroy(struct addr_space *as)
+{
+    size_t n = pt_size(&as->pt, 0) / PAGE_SIZE;
+    memset((void*)as->pt.root, 0, n * PAGE_SIZE);
+    mem_unmap(as, (vaddr_t)as->pt.root, n, true);
+    /* we trust that any other allocations have been undone */
+}
+
 void mem_prot_init(void)
 {
     pte_t* root_pt = (pte_t*)ALIGN(((vaddr_t)cpu()) + sizeof(struct cpu), PAGE_SIZE);
@@ -953,9 +961,14 @@ vaddr_t mem_alloc_map(struct addr_space* as, as_sec_t section, struct ppages* pa
     size_t num_pages, mem_flags_t flags)
 {
     vaddr_t address = mem_alloc_vpage(as, section, at, num_pages);
-    if (address != INVALID_VA) {
-        mem_map(as, address, page, num_pages, flags);
+    if (address == INVALID_VA) {
+        WARNING("Failed to allocate vpage 0x%x\n", at);
+    } else {
+        if(!mem_map(as, address, page, num_pages, flags)){
+            WARNING("Failed to map 0x%x at 0x%x\n", address, at);
+        }
     }
+
     return address;
 }
 

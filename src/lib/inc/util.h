@@ -6,12 +6,14 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
+#include <types.h>
+
 /* UTILITY MACROS */
 
 /* align VAL to TO which must be power a two */
 #define ALIGN(VAL, TO)       ((((VAL) + (TO) - 1) / (TO)) * TO)
 #define IS_ALIGNED(VAL, TO)  (!((VAL) % (TO)))
-#define ALIGN_FLOOR(VAL, TO) ((VAL) & ~((TO) - 1))
+#define ALIGN_FLOOR(VAL, TO) ((VAL) & ~((TO) - 1UL))
 #define NUM_PAGES(SZ)        (ALIGN(SZ, PAGE_SIZE) / PAGE_SIZE)
 #define PAGE_OFFSET_MASK     ((PAGE_SIZE) - 1)
 #define PAGE_FRAME_MASK      (~(PAGE_OFFSET_MASK))

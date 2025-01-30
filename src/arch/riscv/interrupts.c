@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <interrupts.h>
 
 #include <irqc.h>
@@ -107,6 +107,24 @@ void interrupts_arch_handle(void)
             break;
         case IRQ_S_TIMER:
             interrupts_handle(irqc_timer_int_id);
+            break;
+        case IRQ_S_EXT:
+            irqc_handle();
+            break;
+        default:
+            WARNING("unkown interrupt\n");
+            break;
+    }
+#else
+    unsigned long _scause = csrs_scause_read();
+
+    switch (_scause) {
+        case SCAUSE_CODE_SSI:
+            csrs_sip_clear(SIP_SSIP);
+            interrupts_handle(interrupts_ipi_id);
+            break;
+        case SCAUSE_CODE_STI:
+            interrupts_handle(irqc_timer_int_id);
             /**
              * Clearing the timer pending bit actually has no effect. We could re-program the timer
              * to "infinity" but we don't know if the handler itself re-programed the timer with a
@@ -155,7 +173,7 @@ void interrupts_arch_clear(irqid_t int_id)
         /**
          * It is not actually possible to clear timer by software.
          */
-        WARNING("trying to clear timer interrupt");
+        WARNING("trying to clear timer interrupt\n");
     } else {
         irqc_clr_pend(int_id);
     }

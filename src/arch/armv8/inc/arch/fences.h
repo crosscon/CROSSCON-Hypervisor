@@ -6,7 +6,7 @@
 #ifndef __FENCES_ARCH_H__
 #define __FENCES_ARCH_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define DMB(shdmn) __asm__ volatile("dmb " XSTR(shdmn) "\n\t" ::: "memory")
 

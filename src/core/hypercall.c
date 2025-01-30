@@ -11,13 +11,13 @@ long int hypercall(unsigned long id)
 
     switch (id) {
         case HC_IPC:
-            ret = ipc_hypercall();
+            ret = ipc_hypercall(cpu()->vcpu);
             break;
         case HC_REMIO:
-            ret = remio_hypercall();
+            ret = remio_hypercall(cpu()->vcpu);
             break;
         default:
-            WARNING("Unknown hypercall id %d", id);
+            WARNING("Unknown hypercall id %d\n", id);
     }
 
     return ret;

@@ -6,7 +6,7 @@
 #ifndef VAPLIC_H
 #define VAPLIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <aplic.h>
 #include <arch/spinlock.h>
 #include <bitmap.h>

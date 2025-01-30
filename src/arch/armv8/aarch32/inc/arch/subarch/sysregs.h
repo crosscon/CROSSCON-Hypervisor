@@ -6,7 +6,7 @@
 #ifndef ARCH_PROFILE_SYSREGS_H
 #define ARCH_PROFILE_SYSREGS_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #ifndef __ASSEMBLER__
 

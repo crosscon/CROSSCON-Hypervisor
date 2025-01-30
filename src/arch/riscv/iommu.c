@@ -181,8 +181,7 @@ static void rv_iommu_check_features(void)
     }
 
     if (!(caps & RV_IOMMU_CAPS_MSI_FLAT_BIT)) {
-        WARNING("RISC-V IOMMU HW does not support MSI Address Translation "
-                "(basic-translate mode)");
+        WARNING("RISC-V IOMMU HW does not support MSI Address Translation (basic-translate mode)\n");
     }
 
     uint64_t igs = bit64_extract(caps, RV_IOMMU_CAPS_IGS_OFF, RV_IOMMU_CAPS_IGS_LEN);
@@ -210,12 +209,12 @@ static void rv_iommu_fq_irq_handler(irqid_t irq_id)
     uint32_t fqcsr = rv_iommu.hw.reg_ptr->fqcsr;
     if (fqcsr & (RV_IOMMU_XQCSR_MF_BIT | RV_IOMMU_FQCSR_OF_BIT)) {
         if (fqcsr & RV_IOMMU_XQCSR_MF_BIT) {
-            WARNING("RV IOMMU: FQ Memory Fault error!");
+            WARNING("RV IOMMU: FQ Memory Fault error!\n");
             // TODO: MF management
         }
 
         if (fqcsr & RV_IOMMU_FQCSR_OF_BIT) {
-            WARNING("RV IOMMU: FQ Full!");
+            WARNING("RV IOMMU: FQ Full!\n");
             // TODO: OF Management
         }
 
@@ -232,7 +231,7 @@ static void rv_iommu_fq_irq_handler(irqid_t irq_id)
 
     while (fqh != fqt) {
         struct fq_entry record = rv_iommu.hw.fq[fqh];
-        WARNING("RV IOMMU FQ: CAUSE: %d | DID: %d | iotval: %x | iotval2: %x",
+        WARNING("RV IOMMU FQ: CAUSE: %d | DID: %d | iotval: %x | iotval2: %x\n",
             bit64_extract(record.tags, RV_IOMMU_FQ_CAUSE_OFF, RV_IOMMU_FQ_CAUSE_LEN),
             bit64_extract(record.tags, RV_IOMMU_FQ_DID_OFF, RV_IOMMU_FQ_DID_LEN), record.iotval,
             record.iotval2);
@@ -409,11 +408,11 @@ static bool iommu_vm_arch_add(struct vm* vm, deviceid_t dev_id)
             // Set DDT entry with root PT base address, VMID and configuration
             rv_iommu_write_ddt(dev_id, vm, rootpt);
         } else {
-            INFO("RV IOMMU: Cannot add one device ID (%d) twice", dev_id);
+            INFO("RV IOMMU: Cannot add one device ID (%d) twice\n", dev_id);
             return false;
         }
     } else {
-        INFO("RV IOMMU: Invalid device ID: %d", dev_id);
+        INFO("RV IOMMU: Invalid device ID: %d\n", dev_id);
         return false;
     }
 

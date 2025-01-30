@@ -319,7 +319,7 @@ void remio_init(void)
 
     /** Create the Remote I/O devices based on the VM configuration */
     for (size_t vm_id = 0; vm_id < config.vmlist_size; vm_id++) {
-        struct vm_config* vm_config = &config.vmlist[vm_id];
+        struct vm_config* vm_config = config.vmlist[vm_id];
         for (size_t i = 0; i < vm_config->platform.remio_dev_num; i++) {
             struct remio_dev* dev = &vm_config->platform.remio_devs[i];
             struct remio_device* device = NULL;
@@ -384,7 +384,7 @@ void remio_init(void)
 
     /** Update the Remote I/O device configuration */
     for (size_t vm_id = 0; vm_id < config.vmlist_size; vm_id++) {
-        struct vm_config* vm_config = &config.vmlist[vm_id];
+        struct vm_config* vm_config = config.vmlist[vm_id];
         for (size_t i = 0; i < vm_config->platform.remio_dev_num; i++) {
             struct remio_dev* dev = &vm_config->platform.remio_devs[i];
             struct remio_device* device = remio_find_dev_by_bind_key(dev->bind_key);
@@ -521,16 +521,16 @@ static bool remio_cpu_post_work(uint32_t event, uint8_t remio_bind_key, uint8_t 
     return true;
 }
 
-long int remio_hypercall(void)
+long int remio_hypercall(struct vcpu* vcpu)
 {
     long int ret = -HC_E_SUCCESS;
-    unsigned long dm_id = hypercall_get_arg(cpu()->vcpu, 0);
-    unsigned long addr = hypercall_get_arg(cpu()->vcpu, 1);
-    unsigned long op = hypercall_get_arg(cpu()->vcpu, 2);
-    unsigned long value = hypercall_get_arg(cpu()->vcpu, 3);
-    unsigned long request_id = hypercall_get_arg(cpu()->vcpu, 4);
+    unsigned long dm_id = hypercall_get_arg(vcpu, 0);
+    unsigned long addr = hypercall_get_arg(vcpu, 1);
+    unsigned long op = hypercall_get_arg(vcpu, 2);
+    unsigned long value = hypercall_get_arg(vcpu, 3);
+    unsigned long request_id = hypercall_get_arg(vcpu, 4);
     struct remio_device* device = NULL;
-    struct vm* vm = cpu()->vcpu->vm;
+    struct vm* vm = vcpu->vm;
 
     /** Check if the device model ID is within the valid range */
     if (dm_id >= vm->remio_dev_num) {
@@ -620,7 +620,7 @@ static void remio_cpu_msg_handler(uint32_t event, uint64_t data)
             vcpu_inject_irq(cpu()->vcpu, msg.interrupt);
             break;
         default:
-            WARNING("Unknown Remote I/O CPU message event");
+            WARNING("Unknown Remote I/O CPU message event\n");
             break;
     }
 }

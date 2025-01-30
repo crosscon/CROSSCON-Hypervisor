@@ -6,7 +6,7 @@
 #ifndef __CPU_H__
 #define __CPU_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/cpu.h>
 
 #include <spinlock.h>
@@ -30,6 +30,13 @@ struct cpu {
     struct addr_space as;
 
     struct vcpu* vcpu;
+    /* this cpu's execution stack */
+    /* TODO: vcpus can not be stacked arbitrarily
+     * because we are using the vcpus as nodes in themselves.
+     */
+    struct list vcpu_stack;
+    /* all the vcpus this cpu can run */
+    struct list vcpus;
 
     struct cpu_arch arch;
 
@@ -134,6 +141,11 @@ static inline void cpu_sync_and_clear_msgs(struct cpu_synctoken* token)
 
     cpu_sync_barrier(token);
 }
+
+struct vcpu* cpu_get_vcpu(uint64_t vmid);
+
+void cpu_add_vcpu(struct vcpu * vcpu);
+void cpu_remove_vcpu(struct vcpu * vcpu);
 
 #endif /* __ASSEMBLER__ */
 

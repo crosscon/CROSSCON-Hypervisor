@@ -6,7 +6,7 @@
 #ifndef VM_SUBARCH_H
 #define VM_SUBARCH_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 struct arch_regs {
     uint64_t x[31];

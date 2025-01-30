@@ -6,7 +6,7 @@
 #ifndef __ARCH_INTERRUPTS_H__
 #define __ARCH_INTERRUPTS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define IPI_CPU_MSG            1
 #define MAX_INTERRUPT_LINES    GIC_MAX_INTERUPTS

@@ -6,7 +6,7 @@
 #ifndef __CONSOLE_H__
 #define __CONSOLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 void console_init(void);
 void console_write(const char* buf, size_t n);

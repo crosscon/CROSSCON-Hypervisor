@@ -6,7 +6,7 @@
 #ifndef GENERIC_TIMER_H
 #define GENERIC_TIMER_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define GENERIC_TIMER_CNTCTL_CNTCR_EN (0x1)
 

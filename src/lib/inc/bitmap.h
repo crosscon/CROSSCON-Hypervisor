@@ -6,7 +6,7 @@
 #ifndef __BITMAP_H__
 #define __BITMAP_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 /* TODO: needs optimizations */

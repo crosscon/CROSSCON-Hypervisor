@@ -12,6 +12,8 @@
 #include <cache.h>
 #include <config.h>
 #include <arch/smcc.h>
+#include <vmstack.h>
+#include <util.h>
 
 enum { PSCI_MSG_ON };
 
@@ -19,32 +21,86 @@ enum { PSCI_MSG_ON };
     SMC Trapping
 --------------------------------- */
 
-void psci_wake_from_off(void)
+static void update_vcpu_psci_ctx(struct vcpu* vcpu)
 {
-    if (cpu()->vcpu == NULL) {
+    spin_lock(&vcpu->arch.psci_ctx.lock);
+    if(vcpu->arch.psci_ctx.state == ON_PENDING){
+    vcpu_arch_reset(vcpu, vcpu->arch.psci_ctx.entrypoint);
+    vcpu->arch.psci_ctx.state = ON;
+    vcpu_writereg(vcpu, 0, vcpu->arch.psci_ctx.context_id);
+        if(vcpu == cpu()->vcpu)
+            vcpu_restore_state(vcpu);
+    }
+    spin_unlock(&vcpu->arch.psci_ctx.lock);
+}
+
+void psci_wake_from_off(uint64_t vmid){
+
+    struct vcpu *vcpu = cpu_get_vcpu(vmid);
+
+    if(cpu()->vcpu == NULL){
         return;
     }
 
-    /* update vcpu()->psci_ctx */
-    spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
-    if (cpu()->vcpu->arch.psci_ctx.state == ON_PENDING) {
-        vcpu_arch_reset(cpu()->vcpu, cpu()->vcpu->arch.psci_ctx.entrypoint);
-        cpu()->vcpu->arch.psci_ctx.state = ON;
-        vcpu_writereg(cpu()->vcpu, 0, cpu()->vcpu->arch.psci_ctx.context_id);
+    /* whether are note we are waking this vcpu, our current vcpu is off so
+     * wake it up */
+    if(cpu()->vcpu->arch.psci_ctx.state == OFF){
+        spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
+        if(cpu()->vcpu->vm->type == 1 ){
+            /* Secure World VM */
+            /* TODO identify VM type */
+            if(cpu()->vcpu != vcpu){
+                /* we wouldn't be here otherwise, but whatever */
+                /* TODO register optee hooks */
+                if(cpu()->vcpu->vm->type == 1){
+                    vcpu_arch_reset(cpu()->vcpu, 0x101017ec);
+                    list_foreach(cpu()->vcpu->vmstack_children, struct node_data, node){
+                        struct vcpu* child = node->data;
+                        if(child->vm->type == 2){
+                            vcpu_arch_reset(child, 0x201017ec);
+                        }
+                    }
+
+                    cpu()->vcpu->arch.psci_ctx.state = ON;
+                    vcpu_restore_state(cpu()->vcpu);
+                }
+            }
+            cpu()->vcpu->arch.psci_ctx.state = ON;
+            spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
+        }
     }
-    spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
+
+
+    /* finally update the state of the vm that asked to wake up */
+    update_vcpu_psci_ctx(vcpu);
+
 }
+
+// TODO
+// void psci_wake_from_off(void)
+// {
+//    if (cpu()->vcpu == NULL) {
+//        return;
+//    }
+//
+//    /* update vcpu()->psci_ctx */
+//    spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
+//    if (cpu()->vcpu->arch.psci_ctx.state == ON_PENDING) {
+//        vcpu_arch_reset(cpu()->vcpu, cpu()->vcpu->arch.psci_ctx.entrypoint);
+//        cpu()->vcpu->arch.psci_ctx.state = ON;
+//        vcpu_writereg(cpu()->vcpu, 0, cpu()->vcpu->arch.psci_ctx.context_id);
+//    }
+//    spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
+// }
 
 static void psci_cpumsg_handler(uint32_t event, uint64_t data)
 {
-    UNUSED_ARG(data);
-
     switch (event) {
         case PSCI_MSG_ON:
-            psci_wake_from_off();
+            psci_wake_from_off(data);
             break;
         default:
-            WARNING("Unknown PSCI IPI event");
+            WARNING("Unknown PSCI IPI event\n");
             break;
     }
 }
@@ -59,7 +115,7 @@ static int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entr
      * since powerlevel and stateid are implementation defined.
      */
     uint32_t state_type = power_state & PSCI_STATE_TYPE_BIT;
-    int32_t ret;
+    int32_t ret = PSCI_E_NOT_SUPPORTED;
 
     if (state_type) {
         // PSCI_STATE_TYPE_POWERDOWN:
@@ -68,9 +124,17 @@ static int32_t psci_cpu_suspend_handler(uint32_t power_state, unsigned long entr
         cpu()->vcpu->arch.psci_ctx.context_id = context_id;
         spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
         ret = psci_power_down();
+
+        if(vmstack_pop() == NULL){
+            ret = psci_power_down();
+        } else {
+            ret = PSCI_E_SUCCESS;
+        }
     } else {
         // PSCI_STATE_TYPE_STANDBY:
-        ret = psci_standby();
+        if(vmstack_pop() == NULL){
+            ret = psci_standby();
+        }
     }
 
     return ret;
@@ -85,15 +149,19 @@ static int32_t psci_cpu_off_handler(void)
 
     spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
     cpu()->vcpu->arch.psci_ctx.state = OFF;
+    cpu()->vcpu->state = VCPU_OFF;
     spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
 
-    cpu_powerdown();
+    if(vmstack_pop() == NULL){
+        cpu_powerdown();
 
-    spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
-    cpu()->vcpu->arch.psci_ctx.state = ON;
-    spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
+        spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
+        cpu()->vcpu->arch.psci_ctx.state = ON;
+        spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
 
-    return PSCI_E_DENIED;
+        return PSCI_E_DENIED;
+    }
+    return PSCI_E_SUCCESS;
 }
 
 static int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entrypoint,
@@ -105,7 +173,7 @@ static int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entry
 
     if (target_vcpu != NULL) {
         bool already_on = true;
-        spin_lock(&cpu()->vcpu->arch.psci_ctx.lock);
+        spin_lock(&target_vcpu->arch.psci_ctx.lock);
         if (target_vcpu->arch.psci_ctx.state == OFF) {
             target_vcpu->arch.psci_ctx.state = ON_PENDING;
             target_vcpu->arch.psci_ctx.entrypoint = entrypoint;
@@ -113,7 +181,7 @@ static int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entry
             fence_sync_write();
             already_on = false;
         }
-        spin_unlock(&cpu()->vcpu->arch.psci_ctx.lock);
+        spin_unlock(&target_vcpu->arch.psci_ctx.lock);
 
         if (already_on) {
             return PSCI_E_ALREADY_ON;
@@ -123,7 +191,7 @@ static int32_t psci_cpu_on_handler(unsigned long target_cpu, unsigned long entry
         if (pcpuid == INVALID_CPUID) {
             ret = PSCI_E_INVALID_PARAMS;
         } else {
-            struct cpu_msg msg = { (uint32_t)PSCI_CPUMSG_ID, PSCI_MSG_ON, 0 };
+            struct cpu_msg msg = { (uint32_t)PSCI_CPUMSG_ID, PSCI_MSG_ON, target_vcpu->vm->id};
             cpu_send_msg(pcpuid, &msg);
             ret = PSCI_E_SUCCESS;
         }

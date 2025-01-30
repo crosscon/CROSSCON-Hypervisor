@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <cpu.h>
 #include <arch/sbi.h>
 #include <platform.h>
@@ -21,7 +21,7 @@ void cpu_arch_init(cpuid_t cpuid, paddr_t load_addr)
             }
             struct sbiret ret = sbi_hart_start(hartid, load_addr, 0);
             if (ret.error < 0) {
-                WARNING("failed to wake up hart %d", hartid);
+                WARNING("failed to wake up hart %d\n", hartid);
             }
         }
     }

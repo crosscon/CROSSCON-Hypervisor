@@ -94,7 +94,7 @@ static void smmu_check_features(void)
      * according to the result of this feature test.
      */
     if (!(smmu.hw.glbl_rs0->IDR0 & SMMUV2_IDR0_CTTW_BIT)) {
-        WARNING("smmuv2 does not support coherent page table walks");
+        WARNING("smmuv2 does not support coherent page table walks\n");
     }
 
     if (!(smmu.hw.glbl_rs0->IDR0 & SMMUV2_IDR0_BTM_BIT)) {

@@ -6,7 +6,7 @@
 #ifndef ARCH_PROFILE_CPU_H
 #define ARCH_PROFILE_CPU_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/mpu.h>
 #include <bitmap.h>

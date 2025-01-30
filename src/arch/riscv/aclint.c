@@ -5,7 +5,7 @@
 
 #include <arch/aclint.h>
 #include <cpu.h>
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 volatile struct aclint_sswi_hw* aclint_sswi;

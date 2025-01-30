@@ -8,6 +8,7 @@
 #include <vm.h>
 #include <cpu.h>
 #include <mem.h>
+#include "util.h"
 
 extern uint8_t root_l1_flat_pt;
 
@@ -45,8 +46,9 @@ static void psci_restore_state(void)
     gicc_restore_state(&cpu()->arch.profile.psci_off_state.gicc_state);
 }
 
-static void psci_wake_from_powerdown(void)
+static void psci_wake_from_powerdown(unsigned long vmid)
 {
+    UNUSED_ARG(vmid);
     if (cpu()->vcpu == NULL) {
         ERROR("cpu woke up but theres no vcpu to run");
     }
@@ -56,9 +58,9 @@ static void psci_wake_from_powerdown(void)
     cpu_powerdown_wakeup();
 }
 
-void psci_wake_from_off(void);
+void psci_wake_from_off(unsigned long);
 
-void (*psci_wake_handlers[PSCI_WAKEUP_NUM])(void) = {
+void (*psci_wake_handlers[PSCI_WAKEUP_NUM])(unsigned long) = {
     [PSCI_WAKEUP_CPU_OFF] = psci_wake_from_off,
     [PSCI_WAKEUP_POWERDOWN] = psci_wake_from_powerdown,
 };
@@ -68,7 +70,7 @@ void psci_wake(uint32_t handler_id)
     psci_restore_state();
 
     if (handler_id < PSCI_WAKEUP_NUM) {
-        psci_wake_handlers[handler_id]();
+        psci_wake_handlers[handler_id](0/* TODO */);
     } else {
         ERROR("unkown reason for cpu wake up");
     }

@@ -11,7 +11,7 @@
 #ifndef REMIO_H
 #define REMIO_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <emul.h>
 #include <list.h>
 #include <vm.h>
@@ -71,7 +71,7 @@ void remio_assign_vm_cpus(struct vm* vm);
  * @note Used to exchange information between the Remote I/O system and the backend VM
  * @return Returns the number of pending I/O requests
  */
-long int remio_hypercall(void);
+long int remio_hypercall(struct vcpu * vcpu);
 
 /**
  * @brief Remote I/O MMIO emulation handler

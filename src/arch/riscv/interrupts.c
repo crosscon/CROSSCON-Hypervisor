@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <interrupts.h>
 
 #include <irqc.h>
@@ -100,7 +100,7 @@ void interrupts_arch_handle(void)
             irqc_handle();
             break;
         default:
-            WARNING("unkown interrupt");
+            WARNING("unkown interrupt\n");
             break;
     }
 #else
@@ -125,7 +125,7 @@ void interrupts_arch_handle(void)
             irqc_handle();
             break;
         default:
-            WARNING("unkown interrupt");
+            // WARNING("unkown interrupt\n");
             break;
     }
 #endif
@@ -158,7 +158,7 @@ void interrupts_arch_clear(irqid_t int_id)
         /**
          * It is not actually possible to clear timer by software.
          */
-        WARNING("trying to clear timer interrupt");
+        WARNING("trying to clear timer interrupt\n");
     } else {
         irqc_clr_pend(int_id);
     }

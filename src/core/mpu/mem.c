@@ -6,7 +6,7 @@
 #include <mem.h>
 #include <cpu.h>
 #include <vm.h>
-#include <bao.h>
+#include <crossconhyp.h>
 #include <fences.h>
 #include <platform_defs.h>
 #include <objpool.h>
@@ -263,6 +263,13 @@ void as_init(struct addr_space* as, enum AS_TYPE type, colormap_t colors)
         mem_vmpu_free_entry(as, i);
     }
 }
+
+void as_destroy(struct addr_space *as)
+{
+    /* TODO */
+    WARNING("%s not implemented\n", __func__);
+}
+
 
 static void mem_free_ppages(struct ppages* ppages)
 {
@@ -688,7 +695,7 @@ vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas,
             }
         }
     } else {
-        INFO("failed mem map cpy");
+        INFO("failed mem map cpy\n");
     }
 
     return va_res;

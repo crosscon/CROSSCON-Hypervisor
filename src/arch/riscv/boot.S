@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/csrs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -16,14 +16,14 @@
 #else
 #define PT_LVLS 2
 #define PTE_INDEX_SHIFT(LEVEL) ((10 * (PT_LVLS - 1 - (LEVEL))) + 12)
-#endif 
+#endif
 
 /**
  * Calculates the index or offset of a page table entry for given virtual address(addr) at a given
  * level of page table.
  */
 .macro PTE_INDEX_ASM	index, addr, level
-	srl \index, \addr, PTE_INDEX_SHIFT(\level) 
+	srl \index, \addr, PTE_INDEX_SHIFT(\level)
     li  s0, ((PAGE_SIZE/REGLEN)-1)
 	and \index, \index, s0
     li  s0, REGLEN
@@ -131,12 +131,12 @@ _reset_handler:
     csrw   sstatus, zero
     csrw   sie, zero
     csrw   sip, zero
-    csrw   satp, zero 
+    csrw   satp, zero
 
 
 #if defined(CPU_MASTER_FIXED)
 /**
- * All cpus set the CPU_MASTER with the same value to avoid synchronization.    
+ * All cpus set the CPU_MASTER with the same value to avoid synchronization.
  */
     la      t0, CPU_MASTER
     li      t1, CPU_MASTER_FIXED
@@ -154,24 +154,24 @@ _boot_lock:
 1:
     lr.w    t2, (t0)
     bnez    t2, 2f
-    sc.w    t2, t1, (t0)   
-    bnez    t2, 1b 
+    sc.w    t2, t1, (t0)
+    bnez    t2, 1b
     la      t0, CPU_MASTER
     STORE      a0, 0(t0)
 2:
 #endif
 
-    /* Setup bootstrap page tables. Assuming sv39 or sv32 support. */ 
+    /* Setup bootstrap page tables. Assuming sv39 or sv32 support. */
 
  	/* Skip initialy global page tables setup if not hart */
     LD_SYM  t0, CPU_MASTER
-	bne     a0, t0, wait_for_bsp   
+	bne     a0, t0, wait_for_bsp
 
- 	la	    a3, _page_tables_start	
-	la	    a4, _page_tables_end	
+ 	la	    a3, _page_tables_start
+	la	    a4, _page_tables_end
     add     a3, a3, s6
     add     a4, a4, s6
-	call	clear		 
+	call	clear
 
 
     la          t0, root_l1_pt
@@ -277,12 +277,12 @@ map_cpu:
     add     t2, t2, (PAGE_SIZE >> 2)
     sub     t3, t3, t4
     j       1b
-    
+
 setup_cpu:
     la      t0, _dmem_phys_beg
     li      t1, (CPU_SIZE + (PT_SIZE*PT_LVLS))
     mul     t1, t1, a0
-    add     t0, t0, t1   
+    add     t0, t0, t1
     li      t1, CPU_SIZE
     add     t0, t0, t1
     srl     t0, t0, PAGE_SHIFT
@@ -342,7 +342,7 @@ wait_for_bsp_2:
     j   init
 
 	/* This point should never be reached */
-	j	.	
+	j	.
 
 clear:
     sb  zero, 0(a3)

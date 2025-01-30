@@ -6,7 +6,7 @@
 #ifndef __ARCH_CPU_H__
 #define __ARCH_CPU_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define CPU_HAS_EXTENSION(EXT) (DEFINED(EXT))
 

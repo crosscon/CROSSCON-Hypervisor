@@ -6,7 +6,7 @@
 #ifndef __ARCH_SMMUV2_H__
 #define __ARCH_SMMUV2_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define SMMUV2_CR0_GFRE                 (0x1U << 1)
 #define SMMUV2_CR0_GFIE                 (0x1U << 2)

@@ -6,7 +6,7 @@
 #ifndef __ARCH_SPINLOCK__
 #define __ARCH_SPINLOCK__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 typedef struct {
     uint32_t ticket;

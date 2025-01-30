@@ -3,7 +3,7 @@
 
 SHELL:=bash
 
-PROJECT_NAME:=bao
+PROJECT_NAME:=crossconhyp
 
 # Helper functions
 
@@ -50,7 +50,9 @@ HOST_CC:=gcc
 DEBUG:=n
 OPTIMIZATIONS:=2
 CONFIG=
+DYN_CONFIG=
 PLATFORM=
+_SDEES = sdGPOS $(SDEES)
 
 # Setup version
 
@@ -68,6 +70,9 @@ CONFIG_REPO?=$(configs_dir)
 scripts_dir:=$(cur_dir)/scripts
 ci_dir:=$(cur_dir)/ci
 src_dirs:=
+
+sdees_base_dir=$(src_dir)/sdees
+sdees_dir:=$(addprefix $(sdees_base_dir)/, $(_SDEES))
 
 -include $(ci_dir)/ci.mk
 
@@ -100,30 +105,62 @@ ifneq ($(MAKECMDGOALS), clean)
  core_mem_prot_dir:=$(core_dir)/$(arch_mem_prot)
 endif
 
+sdees_arch_dir:=$(addsuffix /arch/$(ARCH), $(sdees_dir))
+
+# MAYBE NOT NEED
+-include $(sdees_base_dir)/sdees.mk
+
+build_dir:=$(cur_dir)/build/$(PLATFORM)
+builtin_build_dir:=$(build_dir)/builtin-configs
+bin_dir:=$(cur_dir)/bin/$(PLATFORM)
+ifeq ($(CONFIG_BUILTIN), y)
+bin_dir:=$(bin_dir)/builtin-configs/$(CONFIG)
+endif
+directories:=$(build_dir) $(bin_dir) $(builtin_build_dir)
+
 # Check configuration exists and set configurtion sources based on it
 config_dir:=$(CONFIG_REPO)
 config_src:=$(wildcard $(config_dir)/$(CONFIG).c)
+dyn_config_dir:=$(CONFIG_REPO)
+dyn_config_src:=$(wildcard $(config_dir)/$(DYN_CONFIG).c)
 ifeq ($(config_src),)
 config_dir:=$(CONFIG_REPO)/$(CONFIG)
 config_src:=$(wildcard $(config_dir)/config.c)
 endif
+ifeq ($(dyn_config_src),)
+dyn_config_dir:=$(CONFIG_REPO)/$(DYN_CONFIG)
+dyn_config_src:=$(wildcard $(dyn_config_dir)/config.c)
+
+endif
 
 ifneq ($(build_targets),)
 ifeq ($(CONFIG),)
-$(error Configuration (CONFIG) not defined.)
+ifeq ($(DYN_CONFIG),)
+$(error Neither configuration (CONFIG or DYN_CONFIG) defined.)
+endif
 endif
 ifeq ($(config_src),)
-$(error Cant find file for $(CONFIG) config!)
+ifeq ($(dyn_config_src),)
+$(error Cant find file for $(CONFIG) or $(DYN_CONFIG) config!)
+endif
 endif
 endif
 
 
+ifeq ($(DYN_CONFIG),)
 build_dir:=$(cur_dir)/build/$(PLATFORM)/$(CONFIG)
 bin_dir:=$(cur_dir)/bin/$(PLATFORM)/$(CONFIG)
 directories:=$(build_dir) $(bin_dir)
+else
+build_dir:=$(cur_dir)/build/$(PLATFORM)/$(DYN_CONFIG)
+bin_dir:=$(cur_dir)/bin/$(PLATFORM)/$(DYN_CONFIG)
+directories:=$(build_dir) $(bin_dir)
+endif
 
 src_dirs+=$(cpu_arch_dir) $(lib_dir) $(core_dir) $(core_mem_prot_dir) \
-	$(platform_dir) $(addprefix $(drivers_dir)/, $(drivers))
+	$(platform_dir) $(sdees_dir) $(sdees_arch_dir) \
+	$(addprefix $(drivers_dir)/, $(drivers))
+
 inc_dirs:=$(addsuffix /inc, $(src_dirs))
 
 build_dirs:=$(patsubst $(src_dir)%, $(build_dir)%, $(src_dirs) $(inc_dirs))
@@ -131,8 +168,10 @@ directories+=$(build_dirs)
 
 
 # Setup list of targets for compilation
+ifeq ($(DYN_CONFIG),)
 targets-y+=$(bin_dir)/$(PROJECT_NAME).elf
 targets-y+=$(bin_dir)/$(PROJECT_NAME).bin
+endif
 
 # Generated files variables
 
@@ -150,15 +189,20 @@ gens:=
 gens+=$(asm_defs_hdr)
 
 config_build_dir:=$(build_dir)/config
+dyn_config_build_dir:=$(build_dir)/dynconfig
 platform_build_dir:=$(build_dir)/platform
 scripts_build_dir:=$(build_dir)/scripts
-directories+=$(config_build_dir) $(platform_build_dir) $(scripts_build_dir)
+directories+=$(config_build_dir) $(dyn_config_build_dir) $(platform_build_dir) $(scripts_build_dir)
 
 config_def_generator_src:=$(scripts_dir)/config_defs_gen.c
 config_def_generator:=$(scripts_build_dir)/config_defs_gen
 config_defs:=$(config_build_dir)/config_defs_gen.h
+ifeq ($(dyn_config_src),)
 gens+=$(config_def_generator) $(config_defs)
-inc_dirs+=$(config_build_dir)
+else
+gens+=$(config_defs)
+endif
+inc_dirs+=$(config_build_dir) $(dyn_config_build_dir)
 
 platform_def_generator_src:=$(scripts_dir)/platform_defs_gen.c
 platform_arch_def_generator_src:=$(wildcard $(scripts_dir)/arch/$(ARCH)/platform_defs_gen.c)
@@ -172,7 +216,9 @@ inc_dirs+=$(platform_build_dir)
 # Setup list of objects for compilation
 -include $(addsuffix /objects.mk, $(src_dirs))
 
+ifeq ($(dyn_config_src),)
 objs-y:=
+objs-y+=$(addprefix $(sdees_base_dir)/, $(sdee-objs-y))
 objs-y+=$(addprefix $(cpu_arch_dir)/, $(cpu-objs-y))
 objs-y+=$(addprefix $(lib_dir)/, $(lib-objs-y))
 objs-y+=$(addprefix $(core_dir)/, $(core-objs-y))
@@ -191,6 +237,21 @@ config_dep:=$(config_src:$(config_dir)/%.c=$(config_build_dir)/%.d)
 
 deps+=$(config_dep)
 objs-y+=$(config_obj)
+else
+
+
+dyn_config_obj:=$(dyn_config_src:$(dyn_config_dir)/%.c=$(dyn_config_build_dir)/%.o)
+dyn_config_dep:=$(dyn_config_src:$(dyn_config_dir)/%.c=$(dyn_config_build_dir)/%.d)
+dyn_config_ld:=src/dynconfig.ld
+
+deps+=$(dyn_config_dep)
+objs-y+=$(dyn_config_obj)
+
+DYN_CONFIG_BIN:=$(config_dir)/$(DYN_CONFIG)/$(DYN_CONFIG).bin
+dyn_config_elf+=$(DYN_CONFIG_BIN:%.bin=%.elf)
+targets-y+=$(DYN_CONFIG_BIN)
+
+endif
 
 # Toolchain flags
 
@@ -226,7 +287,7 @@ override CPPFLAGS+=$(addprefix -I, $(inc_dirs)) $(arch-cppflags) \
 vpath:.=CPPFLAGS
 
 HOST_CPPFLAGS+=$(addprefix -I, $(inc_dirs)) $(arch-cppflags) \
-	$(platform-cppflags) $(build_macros)
+	$(platform-cppflags) $(build_macros) -Og -g
 
 ifeq ($(DEBUG), y)
 	debug_flags:=-g
@@ -271,6 +332,7 @@ override LDFLAGS+=-build-id=none -nostdlib --fatal-warnings \
 	$(arch-ldflags) $(platform-ldflags)
 
 ifneq ($(build_targets),)
+
 
 .PHONY: all
 all: $(targets-y)
@@ -337,14 +399,40 @@ $(config_dep): $(config_src)
 	@$(cc) $(CFLAGS) $(CPPFLAGS) -S $(config_src) -o - | grep ".incbin" | \
 		awk '{ gsub("\"", "", $$2); print "$(config_obj): " $$2 }' >> $@
 
+$(dyn_config_dep): $(dyn_config_src)
+	@echo "Creating dependency	$(patsubst $(cur_dir)/%, %,\
+		 $(patsubst %.d,%, $@))"
+	@$(cc) $(CFLAGS) -MM -MG -MT "$(dyn_config_obj) $@" $(CPPFLAGS) $(filter %.c, $^) > $@
+	@$(cc) $(CFLAGS) $(CPPFLAGS) -S $(dyn_config_src) -o - | grep ".incbin" | \
+		awk '{ gsub("\"", "", $$2); print "$(dyn_config_obj): " $$2 }' >> $@
+
 $(config_def_generator): $(config_def_generator_src) $(config_src)
 	@echo "Compiling generator	$(patsubst $(cur_dir)/%, %, $@)"
 	@$(HOST_CC) $^ $(build_macros) $(HOST_CPPFLAGS) -DGENERATING_DEFS \
 		$(addprefix -I, $(inc_dirs)) -o $@
 
+ifeq ($(dyn_config_src),)
 $(config_defs): $(config_def_generator)
 	@echo "Generating header	$(patsubst $(cur_dir)/%, %, $@)"
 	@$(config_def_generator) > $(config_defs)
+else
+$(config_defs):
+	@echo "Generating header	$(patsubst $(cur_dir)/%, %, $@)"
+	@echo "" > $(config_defs)
+endif
+
+
+ifneq ($(dyn_config_src),)
+$(dyn_config_elf): $(dyn_config_ld) $(dyn_config_obj)
+	@echo "Linking			$(patsubst $(cur_dir)/%, %, $@)"
+	$(ld) $(LDFLAGS) -T$(dyn_config_ld) $(dyn_config_obj) -o $@
+
+$(DYN_CONFIG_BIN): $(dyn_config_elf)
+	@echo "Generating		$(patsubst $(cur_dir)/%, %, $@)"
+	$(objcopy) -S -O binary $< $@
+
+
+endif
 
 $(platform_def_generator): $(platform_def_generator_src) $(platform_description)
 	@echo "Compiling generator	$(patsubst $(cur_dir)/%, %, $@)"

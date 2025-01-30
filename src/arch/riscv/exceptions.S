@@ -3,16 +3,16 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <asm_defs.h>
 #include <arch/csrs.h>
 
-.text 
+.text
 
 .macro VM_EXIT
 
     csrrw   x31, sscratch, x31
-    
+
     STORE   x1, 0*REGLEN(x31)
     STORE   x2, 1*REGLEN(x31)
     STORE   x3, 2*REGLEN(x31)
@@ -43,7 +43,7 @@
     STORE   x28, 27*REGLEN(x31)
     STORE   x29, 28*REGLEN(x31)
     STORE   x30, 29*REGLEN(x31)
-    
+
     mv      sp, x31
     csrrw   x31, sscratch, x31
     STORE   x31, 30*REGLEN(sp)
@@ -62,7 +62,7 @@
     .option push
     .option norelax
     la  gp, __global_pointer$
-    .option pop   
+    .option pop
 
 .endm
 
@@ -108,15 +108,15 @@
     LOAD   x27, 26*REGLEN(x31)
     LOAD   x28, 27*REGLEN(x31)
     LOAD   x29, 28*REGLEN(x31)
-    LOAD   x30, 29*REGLEN(x31) 
-    LOAD   x31, 30*REGLEN(x31)  
+    LOAD   x30, 29*REGLEN(x31)
+    LOAD   x31, 30*REGLEN(x31)
 
     sret
     j   .
 .endm
 
 .balign 0x4
-.global _hyp_trap_vector	
+.global _hyp_trap_vector
 _hyp_trap_vector:
     VM_EXIT
     csrr    t0, scause

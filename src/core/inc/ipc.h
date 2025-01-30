@@ -6,8 +6,9 @@
 #ifndef IPC_H
 #define IPC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem.h>
+#include <vm.h>
 
 struct ipc {
     paddr_t base;
@@ -19,7 +20,6 @@ struct ipc {
 
 struct vm_config;
 
-long int ipc_hypercall(void);
-void ipc_init(void);
+long int ipc_hypercall(struct vcpu * vcpu);
 
 #endif /* IPC_H */

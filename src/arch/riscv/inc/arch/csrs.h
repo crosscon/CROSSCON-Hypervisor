@@ -6,7 +6,7 @@
 #ifndef __ARCH_CSR_H__
 #define __ARCH_CSR_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define CSR_SISELECT      0x150
 #define CSR_SIREG         0x151

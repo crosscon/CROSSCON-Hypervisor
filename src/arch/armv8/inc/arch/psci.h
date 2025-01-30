@@ -6,7 +6,7 @@
 #ifndef __PSCI_H__
 #define __PSCI_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <spinlock.h>
 #include <plat/psci.h>
 #include <arch/gic.h>
@@ -100,7 +100,7 @@ int32_t psci_smc_handler(uint32_t smc_fid, unsigned long x1, unsigned long x2, u
 
 int32_t psci_standby(void);
 int32_t psci_power_down(void);
-void psci_wake_from_off(void);
+void psci_wake_from_off(uint64_t vmid);
 void psci_wake(uint32_t handler_id);
 
 /* --------------------------------

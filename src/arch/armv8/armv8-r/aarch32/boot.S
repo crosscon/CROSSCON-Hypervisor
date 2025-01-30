@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <asm_defs.h>
 
@@ -16,8 +16,8 @@
 .global boot_arch_profile_init
 boot_arch_profile_init:
     /* CPU physical based address */
-    ldr r3, =_dmem_phys_beg 
-    
+    ldr r3, =_dmem_phys_beg
+
     /* CPU_X physical base address */
     mov r7, #CPU_SIZE
     mla r3, r0, r7, r3

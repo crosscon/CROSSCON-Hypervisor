@@ -204,4 +204,7 @@ void vgic_cpu_init(struct vcpu* vcpu)
     }
 
     list_init(&vcpu->arch.vgic_spilled);
+    /* CROSSCON TODO */
+    bitmap_set_consecutive((bitmap_t*)&vcpu->arch.vgic_priv.gich.ELSR, 0,
+                           NUM_LRS);
 }

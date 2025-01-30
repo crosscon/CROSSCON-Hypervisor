@@ -6,7 +6,7 @@
 #ifndef __PAGE_TABLE_H__
 #define __PAGE_TABLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/page_table.h>
 
 #ifndef __ASSEMBLER__

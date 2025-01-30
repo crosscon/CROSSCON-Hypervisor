@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/page_table.h>
 #include <asm_defs.h>
@@ -36,7 +36,7 @@ boot_arch_profile_init:
     cmp  r9, #0
     bne  wait_for_bsp
 
-	get_phys_addr r11, r4, _page_tables_start	
+	get_phys_addr r11, r4, _page_tables_start
 	get_phys_addr r12, r4, _page_tables_end
     add r11, r11, r10
     add r12, r12, r10
@@ -77,7 +77,7 @@ _barrier: .4byte 0
 	get_phys_addr r5, r4, _barrier
     mov r4, #1
     str r4, [r5]
-    sev 
+    sev
     b map_cpu
 
 wait_for_bsp:
@@ -149,7 +149,7 @@ map_cpu:
 setup_cpu:
 
     /* setup translation configurations */
-    ldr r3, =HTCR_DFLT 
+    ldr r3, =HTCR_DFLT
     mcr p15, 4, r3, c2, c0, 2 // htcr
 
 	/* set hypervisor default memory attributes */
@@ -192,7 +192,7 @@ _enter_vas:
 
     ldr r3, =_hyp_vector_table
     mcr p15, 4, r3, c12, c0, 0 // hvbar
-    
+
     sub r13, r13, r1
     ldr r3, =_image_start
     add r13, r13, r3

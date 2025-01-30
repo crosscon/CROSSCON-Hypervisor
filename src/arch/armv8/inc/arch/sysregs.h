@@ -6,7 +6,7 @@
 #ifndef __ARCH_SYSREGS_H__
 #define __ARCH_SYSREGS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 #include <arch/subarch/sysregs.h>
 

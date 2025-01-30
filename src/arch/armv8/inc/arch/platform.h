@@ -6,7 +6,7 @@
 #ifndef __ARCH_PLATFORM_H__
 #define __ARCH_PLATFORM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #ifdef MEM_PROT_MMU
 #include <arch/smmuv2.h>
 #endif
@@ -43,4 +43,5 @@ struct arch_platform {
 
 struct platform;
 unsigned long platform_arch_cpuid_to_mpidr(const struct platform* plat, cpuid_t cpuid);
+cpuid_t platform_arch_mpidr_to_cpuid(const struct platform* plat, uint64_t mpidr);
 #endif /* __ARCH_PLATFORM_H__ */

@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <asm_defs.h>
 #include <config_defs.h>

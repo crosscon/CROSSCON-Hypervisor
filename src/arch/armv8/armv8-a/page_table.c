@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <page_table.h>
 #include <arch/sysregs.h>
 #include <cpu.h>

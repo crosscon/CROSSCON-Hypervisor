@@ -15,3 +15,5 @@ core-objs-y+=objpool.o
 core-objs-y+=hypercall.o
 core-objs-y+=shmem.o
 core-objs-y+=remio.o
+core-objs-y+=vmstack.o
+core-objs-y+=dynconfig.o

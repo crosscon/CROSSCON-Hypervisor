@@ -6,10 +6,10 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
-#include <vm.h>
 #include <config_defs.h>
+#include <vm.h>
 
 #ifndef GENERATING_DEFS
 // clang-format wont correctly recognize the syntax of assembly strings interleaved with
@@ -57,6 +57,8 @@
 #define CONFIG_HEADER
 
 struct vm_config {
+    /* for private Bao use */
+    vmid_t vm_id;
     /**
      * To setup the image field either the VM_IMAGE_BUILTIN or VM_IMAGE_LOADED macros should be
      * used.
@@ -91,6 +93,12 @@ struct vm_config {
      */
     colormap_t colors;
 
+    size_t type;
+    /* CROSSCON TODO Permissions */
+
+    size_t children_num;
+    struct vm_config **children;
+
     /**
      * A description of the virtual platform available to the guest, i.e., the virtual machine
      * itself.
@@ -122,7 +130,7 @@ extern struct config {
     size_t vmlist_size;
 
     /* Array list with VM configuration */
-    struct vm_config* vmlist;
+    struct vm_config** vmlist;
 
 } config;
 

@@ -16,8 +16,9 @@ struct platform platform = {
              * this is the default)
              */
             .base = 0x80000,
-            .size = 0x40000000 - 0x80000 - 0x4c00000,
+            .size = 0x40000000 - 0x80000 - 0x4c00000 + ((RPI4_MEM_GB-1) * 0x40000000ULL),
         },
+        /* TODO Remove second region */
         {
             .base = 0x40000000,
             .size = ((RPI4_MEM_GB-1) * 0x40000000ULL) - 0x4000000,

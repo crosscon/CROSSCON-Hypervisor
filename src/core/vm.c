@@ -3,13 +3,41 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
+#include "cpu.h"
+#include "emul.h"
+#include "inc/mem.h"
+#include "inc/types.h"
+#include "types.h"
+#include "util.h"
 #include <vm.h>
 #include <string.h>
 #include <mem.h>
 #include <cache.h>
 #include <config.h>
+#include <dynconfig.h>
 #include <shmem.h>
 #include <objpool.h>
+
+#include <sdtz.h>
+#include <sdgpos.h>
+#include <sdsgx.h>
+#include <vmstack.h>
+
+enum emul_type {EMUL_MEM, EMUL_REG};
+struct emul_node {
+    node_t node;
+    enum emul_type type;
+    union {
+        struct emul_mem emu_mem;
+        struct emul_reg emu_reg;
+    };
+};
+
+/* Number of sdTEES */
+OBJPOOL_ALLOC(irq_oc, struct hndl_irq_node, 10);
+OBJPOOL_ALLOC(hvc_oc, struct hndl_hvc_node, 10);
+OBJPOOL_ALLOC(smc_oc, struct hndl_smc_node, 10);
+OBJPOOL_ALLOC(mem_abort_oc, struct hndl_mem_abort_node, 3);
 
 static void vm_master_init(struct vm* vm, const struct vm_config* vm_config, vmid_t vm_id)
 {
@@ -21,6 +49,21 @@ static void vm_master_init(struct vm* vm, const struct vm_config* vm_config, vmi
     cpu_sync_init(&vm->sync, vm->cpu_num);
 
     vm_mem_prot_init(vm, vm_config);
+
+    /* CROSSCON TODO remove as_init(&vm->as, AS_VM, vm->id, NULL, vm_config->colors); */
+
+    vm->type = vm_config->type;
+
+}
+
+static void vm_master_destroy(struct vm* vm)
+{
+    cpu_sync_init(&vm->sync, vm->cpu_num);
+
+    // objpool_destroy(&vm->emul_oc);
+    // FREE this vms objects within the pool
+
+    as_destroy(&vm->as);
 }
 
 static void vm_cpu_init(struct vm* vm)
@@ -41,7 +84,7 @@ static vcpuid_t vm_calc_vcpu_id(struct vm* vm)
     return vcpu_id;
 }
 
-static void vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
+static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
 {
     vcpuid_t vcpu_id = vm_calc_vcpu_id(vm);
     struct vcpu* vcpu = vm_get_vcpu(vm, vcpu_id);
@@ -50,13 +93,46 @@ static void vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
     vcpu->phys_id = cpu()->id;
     vcpu->vm = vm;
     vcpu->active = true;
-    cpu()->vcpu = vcpu;
+    /* cpu()->vcpu = vcpu; */
+
+    memset(vcpu->stack, 0, sizeof(vcpu->stack));
+
+    vcpu->state = VCPU_INACTIVE;
+    vcpu->parent = NULL;
 
     vcpu_arch_init(vcpu, vm);
     vcpu_arch_reset(vcpu, vm_config->entry);
+
+     /* vmstacking */
+    list_init(&vcpu->vmstack_children);
+
+    cpu_add_vcpu(vcpu);
+
+    return vcpu;
 }
 
-static void vm_map_mem_region(struct vm* vm, struct vm_mem_region* reg)
+struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu);
+
+struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
+{
+    UNUSED_ARG(vm);
+    cpu_remove_vcpu(vcpu);
+
+    /* CROSSCON TODO */
+    WARNING("TODO: Must free vcpu array\n");
+    // list_rm(&vm->vcpu_list, (node_t*)vcpu);
+
+    memset(vcpu->stack, 0, sizeof(vcpu->stack));
+
+    size_t n = NUM_PAGES(sizeof(struct vcpu));
+    memset(vcpu, 0, n * PAGE_SIZE);
+
+    mem_unmap(&cpu()->as, (vaddr_t)vcpu, n, true);
+
+    return vcpu;
+}
+
+void vm_map_mem_region(struct vm* vm, struct vm_mem_region* reg)
 {
     size_t n = NUM_PAGES(reg->size);
 
@@ -171,13 +247,14 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
         struct ipc* ipc = &vm_config->platform.ipcs[i];
         struct shmem* shmem = shmem_get(ipc->shmem_id);
         if (shmem == NULL) {
-            WARNING("Invalid shmem id in configuration. Ignored.");
+            WARNING("Invalid shmem id in configuration. Ignored.\n");
             continue;
         }
+        INFO("VM %d adding IPC for shared memory %d at VA: 0x%lx  size: 0x%lx\n", vm->id, ipc->shmem_id, ipc->base, ipc->size);
         size_t size = ipc->size;
         if (ipc->size > shmem->size) {
             size = shmem->size;
-            WARNING("Trying to map region to smaller shared memory. Truncated");
+            WARNING("Trying to map region to smaller shared memory. Truncated\n");
         }
 
         spin_lock(&shmem->lock);
@@ -196,10 +273,21 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
     }
 }
 
+static void vm_destroy_ipc(struct vm* vm)
+{
+    UNUSED_ARG(vm);
+    /* for (size_t i = 0; i < vm->ipc_num; i++) { */
+    /*     struct ipc *ipc = &vm->ipcs[i]; */
+    /*     struct shmem *shmem = shmem_get(ipc->shmem_id); */
+	/* mem_unmap(&vm->as, ipc->base, shmem->size, true); */
+    /* } */
+}
+
 static void vm_init_dev(struct vm* vm, const struct vm_config* vm_config)
 {
     for (size_t i = 0; i < vm_config->platform.dev_num; i++) {
         struct vm_dev_region* dev = &vm_config->platform.devs[i];
+        INFO("VM %d adding MMIO region, VA: 0x%lx size: 0x%lx mapped at 0x%lx\n", vm->id, dev->va, dev->va, dev->pa);
 
         size_t n = ALIGN(dev->size, PAGE_SIZE) / PAGE_SIZE;
 
@@ -208,6 +296,7 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* vm_config)
         }
 
         for (size_t j = 0; j < dev->interrupt_num; j++) {
+            INFO("VM %d assigning interrupt %u\n", vm->id, dev->interrupts[j]);
             if (!interrupts_vm_assign(vm, dev->interrupts[j])) {
                 ERROR("Failed to assign interrupt id %d", dev->interrupts[j]);
             }
@@ -226,6 +315,14 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* vm_config)
     }
 }
 
+static void vm_destroy_dev(struct vm* vm, const struct dynconfig* dynconfig)
+{
+    UNUSED_ARG(vm);
+    UNUSED_ARG(dynconfig);
+    /* CROSSCON TODO */
+    WARNING("%s is not implemented\n", __func__);
+}
+
 static void vm_init_remio_dev(struct vm* vm, struct remio_dev* remio_dev)
 {
     struct shmem* shmem = shmem_get(remio_dev->shmem.shmem_id);
@@ -236,7 +333,7 @@ static void vm_init_remio_dev(struct vm* vm, struct remio_dev* remio_dev)
     size_t shmem_size = remio_dev->shmem.size;
     if (shmem_size > shmem->size) {
         shmem_size = shmem->size;
-        WARNING("Trying to map region to smaller shared memory. Truncated");
+        WARNING("Trying to map region to smaller shared memory. Truncated\n");
     }
     spin_lock(&shmem->lock);
     shmem->cpu_masters |= (1UL << cpu()->id);
@@ -259,6 +356,203 @@ static void vm_init_remio_dev(struct vm* vm, struct remio_dev* remio_dev)
         emu->handler = remio_mmio_emul_handler;
         vm_emul_add_mem(vm, emu);
     }
+}
+
+/* CROSSCON TODO: this should be done in two steps:
+ * 1: create array of memory regions corresponding to physical mappings and
+ * include it this to the config file
+ * 2: create the enclave vm dynamically using core features
+ * 3: unmap physical memory
+ * there's a performance tradeoff though */
+struct config;
+static void vm_dyn_host_donate(struct vm* host_vm, struct vm* dyn_vm, struct vm_config* dyn_vm_cfg, uint64_t donor_ipa)
+{
+    const struct dynconfig* dynconfig = dyn_vm->vmdyn_house_keeping.dynconfig;
+
+    /* struct vm_mem_region img_rgn = { */
+    /*     .phys = dyn_vm_cfg->image.load_addr, */
+    /*     .base = dyn_vm_cfg->image.base_addr, */
+    /*     .size = ALIGN(dyn_vm_cfg->image.size, PAGE_SIZE), */
+    /*     .place_phys = true, */
+    /*     .colors = 0, /1* CROSSCON TODO: support dynamic VM colors *1/ */
+    /* }; */
+    /* vm_map_mem_region(dyn_vm, &img_rgn); */
+
+    /* mem_unmap(&host_vm->as, donor_ipa, NUM_PAGES(dyn_vm_cfg->image.size), false); */
+
+    /* mem region 0 is special because it comes from the application */
+    /* CROSSCON TODO: Support multiple regions */
+    struct vm_mem_region* reg = &dyn_vm_cfg->platform.regions[0];
+
+    uintptr_t dyn_vm_mem_start = reg->base;
+    uintptr_t dyn_vm_mem_size = reg->size;
+
+    INFO("Donating host VM %d memory VA 0x%x size 0x%x to VM %d\n", host_vm->id, reg->base, reg->size, dyn_vm->id);
+
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_nclv_ipa = 0;
+
+    vaddr_t nclv_ipa = dyn_vm_mem_start;
+    vaddr_t host_ipa = donor_ipa + dynconfig->config_header_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(dyn_vm_mem_size);
+    size_t i = 1;
+    while (i <= n) {
+        bool last_page = (i == n);
+
+        mem_guest_ipa_translate(&host_vm->as, host_ipa, &pa);
+        if (contiguous_pages == 0) {
+            contiguous_pages = 1;
+            base_cont_pa = pa;
+            base_nclv_ipa = nclv_ipa;
+            if (!last_page) {
+                goto skip;
+            }
+        } else if (pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)) {
+            contiguous_pages++;
+            if (!last_page) {
+                goto skip;
+            }
+        }
+
+        /* give memory to nclv VM */
+        struct vm_mem_region rgn = {
+            .phys = base_cont_pa,
+            .base = base_nclv_ipa,
+            .size = contiguous_pages * PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(dyn_vm, &rgn);
+
+        contiguous_pages = 1;
+        base_cont_pa = pa;
+        base_nclv_ipa = nclv_ipa;
+    skip:
+        nclv_ipa += PAGE_SIZE;
+        host_ipa += PAGE_SIZE;
+        i++;
+    }
+    mem_unmap(&host_vm->as, donor_ipa + dynconfig->config_header_size,
+                   NUM_PAGES(dyn_vm_mem_size), false);
+
+    /* CROSSCON TODO: All memory should be given by the donor VM, this is temporary to
+     * test MPK domains */
+    /* we start at 1 because region 0 (including image) already mapped */
+    for (size_t j = 1; j < dyn_vm_cfg->platform.region_num; j++) {
+        struct vm_mem_region* new_reg = &dyn_vm_cfg->platform.regions[j];
+        vm_map_mem_region(dyn_vm, new_reg);
+    }
+}
+
+
+static void vm_dynamic_reclaim(struct vm* host_vm, struct vm* dyn_vm)
+{
+    vmstack_push(cpu_get_vcpu(dyn_vm->id));
+
+    struct dynconfig* enclv_config = dyn_vm->vmdyn_house_keeping.dynconfig;
+    const struct vm_config* dyn_vm_cfg = dyn_vm->config;
+    vaddr_t host_base_ipa = dyn_vm->vmdyn_house_keeping.donor_va;
+
+    struct vm_mem_region* reg = &dyn_vm_cfg->platform.regions[0];
+
+    size_t contiguous_pages = 0;
+    size_t base_cont_pa = 0;
+    vaddr_t base_host_ipa = 0;
+
+    vaddr_t dyn_vm_ipa = reg->base;
+    vaddr_t host_ipa = host_base_ipa + enclv_config->config_header_size;
+    paddr_t pa;
+    const size_t n = NUM_PAGES(reg->size);
+    size_t i = 1;
+    while (i <= n) {
+        bool last_page = (i == n);
+
+        mem_guest_ipa_translate(&dyn_vm->as, dyn_vm_ipa, &pa);
+        if (contiguous_pages == 0) {
+            contiguous_pages = 1;
+            base_cont_pa = pa;
+            base_host_ipa = host_ipa;
+            if (!last_page) {
+                goto skip;
+            }
+        } else if (pa == (base_cont_pa + contiguous_pages * PAGE_SIZE)) {
+            contiguous_pages++;
+            if (!last_page) {
+                goto skip;
+            }
+        }
+
+        /* clear the memory */
+        struct ppages pp = mem_ppages_get(base_cont_pa, contiguous_pages);
+        vaddr_t va = mem_alloc_map(&cpu()->as, SEC_HYP_GLOBAL, &pp, INVALID_VA, contiguous_pages, PTE_HYP_FLAGS);
+        memset((void*)va, 0, contiguous_pages * PAGE_SIZE);
+        /* CROSSCON TODO: Optimize flush */
+        cache_flush_range(va, contiguous_pages * PAGE_SIZE);
+        mem_unmap(&cpu()->as, va, pp.num_pages, true);
+
+        /* give back memory to host VM */
+        struct vm_mem_region rgn = {
+            .phys = base_cont_pa,
+            .base = base_host_ipa,
+            .size = contiguous_pages * PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(host_vm, &rgn);
+
+        contiguous_pages = 1;
+        base_cont_pa = pa;
+        base_host_ipa = host_ipa;
+    skip:
+        dyn_vm_ipa += PAGE_SIZE;
+        host_ipa += PAGE_SIZE;
+        i++;
+    }
+    /* remove page from enclave's AS */
+    mem_unmap(&dyn_vm->as, reg->base, n, false);
+
+    /* restore */
+    host_ipa = host_base_ipa;
+    /* we are done with everything, give the last piece of memory to the host */
+    size_t hdr_sz = enclv_config->config_header_size;
+    for (size_t j = 0; j < NUM_PAGES(hdr_sz); j++) {
+        memset((void*)enclv_config, 0, hdr_sz);
+        host_ipa = host_base_ipa + j * PAGE_SIZE;
+
+        mem_guest_ipa_translate(&cpu()->as, (vaddr_t)enclv_config, &pa);
+        struct vm_mem_region rgn = {
+            .phys = pa,
+            .base = host_ipa,
+            .size = PAGE_SIZE,
+            .place_phys = true,
+            .colors = 0,
+        };
+        vm_map_mem_region(host_vm, &rgn);
+
+        mem_unmap(&cpu()->as, (vaddr_t)enclv_config, NUM_PAGES(hdr_sz), false);
+    }
+    vmstack_pop();
+}
+
+
+void vm_destroy_dynamic(struct vm* vm)
+{
+    INFO("Destroying dynamic VM %d\n", vm->id);
+    vm_destroy_ipc(vm);
+    /* ERROR("fetch the correct config"); */
+    vm_destroy_dev(vm, vm->vmdyn_house_keeping.dynconfig);
+
+    /* CROSSCON TODO: This is not making much sense right now. We need to reclaim
+     * resources from the vm, not from the cpu */
+    vm_dynamic_reclaim(cpu()->vcpu->vm, vm);
+
+    vm_vcpu_destroy(vm, vm_get_vcpu(vm, 0));
+    /* CROSSCONM TODO */
+    /* vm_arch_destroy(vm, vm->config); */
+
+    vm_master_destroy(vm);
 }
 
 static void vm_init_remio(struct vm* vm, const struct vm_config* vm_config)
@@ -284,6 +578,33 @@ static struct vm* vm_allocation_init(struct vm_allocation* vm_alloc)
     return vm;
 }
 
+struct vm* vm_init_dynamic(struct vm_allocation* vm_alloc, struct vm_config *vm_cfg, uint64_t vm_addr, vmid_t vmid, struct dynconfig* dyn_config)
+{
+    INFO("Creating dynamic VM %d\n", vmid);
+    struct vm* dyn_vm = vm_allocation_init(vm_alloc);
+
+    vm_master_init(dyn_vm, vm_cfg, vmid);
+    dyn_vm->vmdyn_house_keeping.dynconfig = dyn_config;
+    vm_cpu_init(dyn_vm);
+
+    vm_vcpu_init(dyn_vm, vm_cfg);
+    vm_arch_init(dyn_vm, vm_cfg);
+
+    struct vm *host_vm = cpu()->vcpu->vm;
+    vm_dyn_host_donate(host_vm, dyn_vm, vm_cfg, vm_addr);
+
+    vm_init_dev(dyn_vm, vm_cfg);
+    vm_init_ipc(dyn_vm, vm_cfg);
+
+    sdsgx_handler_setup(dyn_vm);
+
+    dyn_vm->vmdyn_house_keeping.donor_va = vm_addr;
+    // CROSSCON TODO do this outside: vm->vmdyn_house_keeping.config = dyn_config;
+    INFO("Dynamic VM %d created\n", vmid);
+
+    return dyn_vm;
+}
+
 struct vm* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* vm_config, bool master,
     vmid_t vm_id)
 {
@@ -293,6 +614,7 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* vm_co
      * Before anything else, initialize vm structure.
      */
     if (master) {
+        INFO("Initializing VM %d\n", vm_id);
         vm_master_init(vm, vm_config, vm_id);
     }
 
@@ -306,7 +628,8 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* vm_co
     /*
      *  Initialize each virtual core.
      */
-    vm_vcpu_init(vm, vm_config);
+    struct vcpu* vcpu = vm_vcpu_init(vm, vm_config);
+    UNUSED_ARG(vcpu);
 
     cpu_sync_barrier(&vm->sync);
 
@@ -326,7 +649,26 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* vm_co
         vm_init_remio(vm, vm_config);
     }
 
-    cpu_sync_and_clear_msgs(&vm->sync);
+    if(master){
+        switch(vm->type){
+            case 0:
+                INFO("VM %d is sdGPOS (normal VM)\n", vm->id);
+                break;
+            case 1:
+            case 2:
+                INFO("VM %d is sdTZ (OP-TEE)\n", vm->id);
+                break;
+            default:
+                ERROR("VM %d type invalid");
+        }
+
+        /* CROSSCON TODO: use linker table */
+        sdtz_handler_setup(vm);
+        sdgpos_handler_setup(vm);
+        sdsgx_handler_setup(vm);
+    }
+
+    cpu_sync_barrier(&vm->sync);
 
     return vm;
 }
@@ -365,6 +707,42 @@ emul_handler_t vm_emul_get_reg(struct vm* vm, vaddr_t addr)
     }
 
     return handler;
+}
+
+void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs)
+{
+    struct hndl_irq_node* ptr = objpool_alloc(&irq_oc);
+    if (ptr != NULL) {
+        ptr->hndl_irq = *irqs;
+        list_push(&vm->irq_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs)
+{
+    struct hndl_smc_node* ptr = objpool_alloc(&smc_oc);
+    if (ptr != NULL) {
+        ptr->hndl_smc = *smcs;
+        list_push(&vm->smc_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs)
+{
+    struct hndl_hvc_node* ptr = objpool_alloc(&hvc_oc);
+    if (ptr != NULL) {
+        ptr->hndl_hvc = *hvcs;
+        list_push(&vm->hvc_list, (node_t*)ptr);
+    }
+}
+
+void vm_hndl_mem_abort_add(struct vm* vm, struct hndl_mem_abort* mem_aborts)
+{
+    struct hndl_mem_abort_node* ptr = objpool_alloc(&mem_abort_oc);
+    if (ptr != NULL) {
+        ptr->hndl_mem_abort = *mem_aborts;
+        list_push(&vm->mem_abort_list, (node_t*)ptr);
+    }
 }
 
 void vm_msg_broadcast(struct vm* vm, struct cpu_msg* msg)
@@ -412,4 +790,18 @@ void vcpu_run(struct vcpu* vcpu)
     } else {
         cpu_powerdown();
     }
+}
+
+struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
+{
+    int i = 0;
+    struct vcpu* child = NULL;
+    list_foreach(vcpu->vmstack_children, struct node_data, node)
+    {
+        if (i++ == index) {
+            child = node->data;
+            break;
+        }
+    }
+    return child;
 }

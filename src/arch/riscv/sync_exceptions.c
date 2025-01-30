@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <cpu.h>
 #include <vm.h>
 #include <arch/encoding.h>
@@ -73,7 +73,7 @@ static inline bool ins_ldst_decode(vaddr_t ins, struct emul_access* emul)
     return true;
 }
 
-static inline bool is_pseudo_ins(uint32_t ins)
+static inline bool is_pseudo_ins(long unsigned int ins)
 {
     return ins == TINST_PSEUDO_STORE || ins == TINST_PSEUDO_LOAD;
 }
@@ -122,14 +122,53 @@ static size_t guest_page_fault_handler(void)
             ERROR("emulation handler failed (0x%x at 0x%x)", addr, csrs_sepc_read());
         }
     } else {
-        ERROR("no emulation handler for abort(0x%x at 0x%x)", addr, csrs_sepc_read());
+        struct vcpu* vcpu = cpu()->vcpu;
+        WARNING("no emulation handler for abort(0x%x at 0x%x)\n", addr, csrs_sepc_read());
+        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
+        {
+            mem_abort_handler_t sdeehandler = node->hndl_mem_abort.handler;
+            if (sdeehandler != NULL) {
+                if (sdeehandler(vcpu, addr)) {
+                    ERROR("handler abort failed (0x%x)", addr);
+                }
+            }
+        }
     }
+    return 0;
+}
+
+static size_t guest_illegal_instr_handler(void)
+{
+    unsigned long ins = csrs_htinst_read();
+    size_t ins_size;
+    if(ins == 0) {
+        /**
+         * If htinst does not provide information about the trap,
+         * we must read the instruction from the guest's memory
+         * manually.
+         */
+        vaddr_t ins_addr = csrs_sepc_read();
+        ins = read_ins(ins_addr);
+        ins_size = INS_SIZE(ins);
+    } else if (is_pseudo_ins(ins)) {
+        //TODO: we should reinject this in the guest as a fault access
+        ERROR("fault on 1st stage page table walk");
+    } else {
+        /**
+         * If htinst is valid and is not a pseudo isntruction make sure
+         * the opcode is valid even if it was a compressed instruction,
+         * but before save the real instruction size.
+         */
+        ins_size = TINST_INS_SIZE(ins);
+    }
+    return ins_size;
 }
 
 sync_handler_t sync_handler_table[] = {
     [SCAUSE_CODE_ECV] = sbi_vs_handler,
     [SCAUSE_CODE_LGPF] = guest_page_fault_handler,
     [SCAUSE_CODE_SGPF] = guest_page_fault_handler,
+    [SCAUSE_CODE_ILI] = guest_illegal_instr_handler,
 };
 
 static const size_t sync_handler_table_size = sizeof(sync_handler_table) / sizeof(sync_handler_t);
@@ -139,9 +178,10 @@ void sync_exception_handler(void)
 {
     size_t pc_step = 0;
     unsigned long _scause = csrs_scause_read();
+    struct vcpu *calling_vcpu = cpu()->vcpu;
 
     if (!(csrs_hstatus_read() & HSTATUS_SPV)) {
-        internal_exception_handler(&cpu()->vcpu->regs.x[0]);
+        internal_exception_handler(&calling_vcpu->regs.x[0]);
     }
 
     // TODO: Do we need to check call comes from VS-mode and not VU-mode or U-mode ?
@@ -152,7 +192,8 @@ void sync_exception_handler(void)
         ERROR("unkown synchronous exception (%d)", _scause);
     }
 
-    vcpu_writepc(cpu()->vcpu, vcpu_readpc(cpu()->vcpu) + pc_step);
+    /* CROSSCON TODO */
+    vcpu_writepc(calling_vcpu, vcpu_readpc(calling_vcpu) + pc_step);
     if (vcpu_arch_is_on(cpu()->vcpu) && !cpu()->vcpu->active) {
         cpu_standby();
     }

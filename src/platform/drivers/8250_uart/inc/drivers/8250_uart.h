@@ -6,7 +6,7 @@
 #ifndef UART8250_H
 #define UART8250_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <plat/platform.h>
 
 #define UART8250_LSR_THRE (1U << 5)

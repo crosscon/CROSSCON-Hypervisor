@@ -6,7 +6,7 @@
 #ifndef __PRINTK_H
 #define __PRINTK_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <stdarg.h>
 
 size_t vsnprintk(char* buf, size_t buf_size, const char** fmt, va_list* args);

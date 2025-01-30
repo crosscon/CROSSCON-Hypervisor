@@ -6,7 +6,7 @@
 #ifndef __IOMMU_ARCH_H__
 #define __IOMMU_ARCH_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 // VM-specific IOMMU data
 struct iommu_vm_arch {

@@ -6,7 +6,7 @@
 #ifndef IMSIC_H
 #define IMSIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 #define IMSIC_MAX_INTERRUPTS (PLAT_IMSIC_MAX_INTERRUPTS)

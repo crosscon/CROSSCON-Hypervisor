@@ -6,7 +6,7 @@
 #ifndef __ARCH_VM_H__
 #define __ARCH_VM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <irqc.h>
 #include <arch/sbi.h>
 
@@ -66,11 +66,13 @@ struct vm_arch {
 #else
 #error "unknown IRQC type " IRQC
 #endif
+    unsigned long hgatp;
 };
 
 struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
+    unsigned long stime_value;
 };
 
 struct arch_regs {
@@ -124,6 +126,16 @@ struct arch_regs {
     // unsigned long vstval;
     // unsigned long vsip;
     // unsigned long vsatp;
+
+    unsigned long vsstatus;
+    unsigned long vstvec;
+    unsigned long vsscratch;
+    unsigned long vsepc;
+    unsigned long vscause;
+    unsigned long vstval;
+    unsigned long vsatp;
+    unsigned long hvip;
+    unsigned long hie;
 
 } __attribute__((__packed__, aligned(sizeof(unsigned long))));
 

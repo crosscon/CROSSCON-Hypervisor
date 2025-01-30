@@ -6,7 +6,7 @@
 #ifndef __PLIC_H__
 #define __PLIC_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 #define PLIC_MAX_INTERRUPTS (1024)

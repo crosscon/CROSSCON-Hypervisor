@@ -45,6 +45,6 @@ void objpool_free(struct objpool* objpool, void* obj)
         bitmap_clear(objpool->bitmap, n);
         spin_unlock(&objpool->lock);
     } else {
-        WARNING("leaked while trying to free stray object");
+        WARNING("leaked while trying to free stray object\n");
     }
 }

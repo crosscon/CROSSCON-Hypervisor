@@ -6,7 +6,7 @@
 #ifndef MEM_PROT_IO_H
 #define MEM_PROT_IO_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/iommu.h>
 
 struct vm_config;

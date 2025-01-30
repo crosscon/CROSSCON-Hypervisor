@@ -7,6 +7,10 @@
 
 #include <config.h>
 
+struct vm_config null_vm = {
+   .entry = 0,
+};
+
 struct config config = {
 
         /**
@@ -20,6 +24,6 @@ struct config config = {
          */
         .vmlist_size = 1,
 
-        .vmlist = (struct vm_config[]){ {.entry = 0 } },
+        .vmlist = (struct vm_config*[]){ &null_vm },
 
 };

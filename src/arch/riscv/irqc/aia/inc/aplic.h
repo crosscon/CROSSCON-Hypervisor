@@ -6,7 +6,7 @@
 #ifndef APLIC_H
 #define APLIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 #define APLIC_DOMAIN_NUM_HARTS   (PLAT_CPU_NUM)

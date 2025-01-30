@@ -6,7 +6,7 @@
 #ifndef __TLB_H__
 #define __TLB_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/tlb.h>
 
 #include <mem.h>

@@ -42,3 +42,21 @@ unsigned long platform_arch_cpuid_to_mpidr(const struct platform* plat, cpuid_t 
 
     return mpidr;
 }
+
+/* TODO */
+cpuid_t platform_arch_mpidr_to_cpuid(const struct platform* plat,
+                                      uint64_t mpidr){
+    cpuid_t cpuid = 0;
+    uint64_t i = 0;
+    for(i = 0; i < ((mpidr >> 8) & 0xff) && i <  (uint64_t)plat->arch.clusters.num; i++){
+        cpuid = (cpuid_t)plat->arch.clusters.core_num[i];
+    }
+
+    if(i < (uint64_t)plat->arch.clusters.num){
+        cpuid += (cpuid_t)plat->arch.clusters.core_num[i];
+    } else {
+        cpuid = (cpuid_t)(~0);
+    }
+
+    return cpuid;
+}

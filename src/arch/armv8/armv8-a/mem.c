@@ -3,6 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
+#include "arch/subarch/sysregs.h"
 #include <mem.h>
 #include <cpu.h>
 #include <arch/sysregs.h>
@@ -17,7 +18,7 @@ void as_arch_init(struct addr_space* as)
      * PT_CPU_REC index to navigate it, so we have to use the PT_VM_REC_IND.
      */
     if (as->type == AS_HYP_CPY || as->type == AS_VM) {
-        index = PT_VM_REC_IND;
+        index = PT_VM_REC_IND - (8*(as->id)); /* LPAE is 8bytes per entry */
     } else {
         index = PT_CPU_REC_IND;
     }
@@ -51,4 +52,18 @@ bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
         }
         return true;
     }
+}
+
+void mem_guest_ipa_translate(struct addr_space* as, vaddr_t ipa, paddr_t* pa)
+{
+    uint64_t tmp = 0, tmp2 = 0;
+    tmp = sysreg_sctlr_el1_read();
+    tmp2 = tmp & ~(1ULL << 0);
+    sysreg_sctlr_el1_write(tmp2);
+    ISB();
+    if(!mem_translate(as, ipa, pa)){
+        ERROR("Could not translate guest ipa");
+    }
+    sysreg_sctlr_el1_write(tmp);
+    ISB();
 }

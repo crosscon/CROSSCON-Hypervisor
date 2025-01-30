@@ -6,7 +6,7 @@
 #ifndef __MEM_PROT_H__
 #define __MEM_PROT_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/mem.h>
 #include <page_table.h>
 #include <spinlock.h>
@@ -23,6 +23,7 @@ struct addr_space {
 typedef pte_t mem_flags_t;
 
 void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, pte_t* root_pt, colormap_t colors);
+void as_destroy(struct addr_space *as);
 vaddr_t mem_alloc_vpage(struct addr_space* as, enum AS_SEC section, vaddr_t at, size_t n);
 
 #endif /* __MEM_PROT_H__ */

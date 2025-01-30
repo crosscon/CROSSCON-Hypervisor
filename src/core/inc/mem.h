@@ -6,7 +6,7 @@
 #ifndef __MEM_H__
 #define __MEM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <mem_prot/mem.h>
 #include <list.h>
 #include <spinlock.h>
@@ -86,6 +86,7 @@ bool pp_alloc_clr(struct page_pool* pool, size_t num_pages, colormap_t colors,
 
 void as_arch_init(struct addr_space* as);
 bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa);
+void mem_guest_ipa_translate(struct addr_space* as, vaddr_t va, paddr_t* pa);
 
 extern struct list page_pool_list;
 

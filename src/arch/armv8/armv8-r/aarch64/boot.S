@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/bao.h>
+#include <arch/crossconhyp.h>
 #include <arch/sysregs.h>
 #include <asm_defs.h>
 
@@ -20,14 +20,14 @@ boot_arch_profile_init:
     mov x20, lr
 
     /* CPU physical based address */
-    ldr x3, =_dmem_phys_beg 
-    
+    ldr x3, =_dmem_phys_beg
+
     /* CPU_X physical base address */
     mov x7, CPU_SIZE
     madd x3, x0, x7, x3
 
     /* Clear the CPU struct */
-	mov	x16, x3	
+	mov	x16, x3
 	add	x17, x3, x7
 	bl	boot_clear
 

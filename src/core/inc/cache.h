@@ -6,7 +6,7 @@
 #ifndef __CACHE_H__
 #define __CACHE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/cache.h>
 
 struct cache {

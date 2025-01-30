@@ -6,7 +6,7 @@
 #ifndef __ARCH_PAGE_TABLE_H__
 #define __ARCH_PAGE_TABLE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 #ifdef __ASSEMBLER__
@@ -20,7 +20,7 @@
 // counter-part defined above.
 // clang-format off
 .macro PTE_INDEX_ASM	index, addr, level
-	lsr \index, \addr, #PTE_INDEX_SHIFT(\level) 
+	lsr \index, \addr, #PTE_INDEX_SHIFT(\level)
 	and \index, \index, #0x1ff
 	lsl \index, \index, #3
 .endm

@@ -6,7 +6,7 @@
 #ifndef __IOMMU_ARCH_H__
 #define __IOMMU_ARCH_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/smmuv2.h>
 
 struct iommu_vm_arch {

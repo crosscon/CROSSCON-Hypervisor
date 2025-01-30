@@ -52,28 +52,28 @@ static void ipc_handler(uint32_t event, uint64_t data)
             ipc_notify(ipc_data.shmem_id, ipc_data.event_id);
             break;
         default:
-            WARNING("Unknown IPC IPI event");
+            WARNING("Unknown IPC IPI event\n");
             break;
     }
 }
 CPU_MSG_HANDLER(ipc_handler, IPC_CPUMSG_ID)
 
-long int ipc_hypercall(void)
+long int ipc_hypercall(struct vcpu* vcpu)
 {
-    unsigned long ipc_id = hypercall_get_arg(cpu()->vcpu, 0);
-    unsigned long ipc_event = hypercall_get_arg(cpu()->vcpu, 1);
+    unsigned long ipc_id = hypercall_get_arg(vcpu, 0);
+    unsigned long ipc_event = hypercall_get_arg(vcpu, 1);
 
     long int ret = -HC_E_SUCCESS;
 
     struct shmem* shmem = NULL;
-    bool valid_ipc_obj = ipc_id < cpu()->vcpu->vm->ipc_num;
+    bool valid_ipc_obj = ipc_id < vcpu->vm->ipc_num;
     if (valid_ipc_obj) {
-        shmem = shmem_get(cpu()->vcpu->vm->ipcs[ipc_id].shmem_id);
+        shmem = shmem_get(vcpu->vm->ipcs[ipc_id].shmem_id);
     }
     bool valid_shmem = shmem != NULL;
 
     if (valid_ipc_obj && valid_shmem) {
-        cpumap_t ipc_cpu_masters = shmem->cpu_masters & ~cpu()->vcpu->vm->cpus;
+        cpumap_t ipc_cpu_masters = shmem->cpu_masters & ~vcpu->vm->cpus;
 
         union ipc_msg_data data = {
             .shmem_id = (uint32_t)cpu()->vcpu->vm->ipcs[ipc_id].shmem_id,

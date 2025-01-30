@@ -74,4 +74,32 @@ static inline void gicc_dir(uint32_t dir)
     gicc->DIR = dir;
 }
 
+static inline uint32_t gich_get_vmcr(void)
+{
+    return gich->VMCR;
+}
+
+static inline void gich_set_vmcr(uint32_t vmcr)
+{
+    gich->VMCR = vmcr;
+}
+
+/*
+static uint32_t gich_get_apr(size_t i)
+{
+     if(i == 0) {
+        return gich->APR;
+    } else {
+        return 0;
+    }
+}
+
+static void gich_set_apr(size_t i, uint32_t val)
+{
+    if(i == 0) {
+        gich->APR = val;
+    }
+}
+//*/
+
 #endif /* __GICV2_H__ */

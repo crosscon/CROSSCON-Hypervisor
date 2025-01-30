@@ -6,7 +6,7 @@
 #ifndef VIMSIC_H
 #define VIMSIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 /**
  * @brief Maps the guest IMSIC addresses into the physical IMSIC adresses

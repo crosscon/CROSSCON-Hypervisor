@@ -28,10 +28,16 @@ void console_init(void)
         uart = (void*)mem_alloc_map_dev(&cpu()->as, SEC_HYP_GLOBAL, INVALID_VA,
             platform.console.base, NUM_PAGES(sizeof(*uart)));
 
+        // TODO:ARMV8M - This is temporary
+        mem_alloc_map_dev(&cpu()->as, SEC_HYP_GLOBAL, INVALID_VA, SYSCON_BASE, NUM_PAGES(0x2000));
+
         fence_sync_write();
 
         uart_init(uart);
         uart_enable(uart);
+
+        // TODO:ARMV8M - This is temporary
+        mem_unmap(&cpu()->as, SYSCON_BASE, NUM_PAGES(0x2000), false);
 
         console_ready = true;
     }

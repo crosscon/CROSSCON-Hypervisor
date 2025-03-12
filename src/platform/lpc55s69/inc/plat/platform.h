@@ -3,15 +3,16 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#ifndef __PLAT_PLATFORM_H__
-#define __PLAT_PLATFORM_H__
+#ifndef PLAT_PLATFORM_H
+#define PLAT_PLATFORM_H
 
 #ifndef __ASSEMBLER__
-#include <drivers/lpc_uart.h>
+#include <drivers/uart.h>
 #endif
 
 #define PLAT_MAX_INTERRUPTS  75
 
-#define PLAT_TIMER_FREQ      216000000UL
+#define PLAT_TIMER_FREQ      12000000UL
 #define PLAT_MAX_MPU_REGIONS 8
-#endif
+
+#endif /* PLAT_PLATFORM_H */

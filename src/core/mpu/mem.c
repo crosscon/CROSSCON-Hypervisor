@@ -475,7 +475,7 @@ bool mem_update(struct addr_space* as, struct mp_region* mpr, bool broadcast, bo
     mpid_t update_mpid = INVALID_MPID;
 
     list_foreach (as->vmpu.ordered_list, struct mpe, cur) {
-        if (cur->region.base == mpr->base) {
+        if (cur->region.base == mpr->base && cur->region.size != mpr->size) {
             update_mpid = cur->mpid;
             break;
         }
@@ -551,21 +551,21 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
         size_t top_size = limit >= r_limit ? 0 : r_limit - limit;
         size_t bottom_size = vaddr <= r_base ? 0 : vaddr - r_base;
 
-        mem_vmpu_remove_region(as, mpid, true);
+        mem_vmpu_remove_region(as, mpid, broadcast);
 
         if (top_size > 0) {
             struct mp_region top = reg;
             top.base = limit;
             top.size = top_size;
             mpid_t top_mpid = mem_vmpu_allocate_entry(as);
-            mem_vmpu_insert_region(as, top_mpid, &top, true, locked);
+            mem_vmpu_insert_region(as, top_mpid, &top, broadcast, locked);
         }
 
         if (bottom_size > 0) {
             struct mp_region bottom = reg;
             bottom.size = bottom_size;
             mpid_t bottom_mpid = mem_vmpu_allocate_entry(as);
-            mem_vmpu_insert_region(as, bottom_mpid, &bottom, true, locked);
+            mem_vmpu_insert_region(as, bottom_mpid, &bottom, broadcast, locked);
         }
 
         size_t overlap_size = reg.size - top_size - bottom_size;

@@ -124,5 +124,11 @@ void vcpu_save_state(struct vcpu* vcpu)
 
     vnvic_save_state(&vcpu->arch.vnvic, vcpu->vm->interrupt_bitmap);
     vmpu_save_state(&vcpu->arch.vmpu);
+
     // vfp_save_state(&vcpu->regs.vfp_regs);
+}
+
+bool vm_nvic_act_irq(void)
+{
+    return nvic_any_act_irq(nvic_ns);
 }

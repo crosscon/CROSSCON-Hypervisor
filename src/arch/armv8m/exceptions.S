@@ -93,7 +93,6 @@
     //TODO:ARMV8-M - Still missing some procedures (Security Extensions on Dev Tools)
 .endm
 
-
 .balign VECTTBL_ALIGN
 .global _hyp_vector_table
 _hyp_vector_table:
@@ -118,7 +117,7 @@ _hyp_vector_table:
 /* Handlers */
 define_handler _exception_handler
 _exception_handler:
-     b   fault_exception_handler
+    b   fault_exception_handler
     b   .
 
 define_handler _irq_handler
@@ -127,6 +126,15 @@ _irq_handler:
 
 define_handler _systick_handler
 _systick_handler:
+    /*
+    * This function is used to check if there is any active external interrupt. If there is, it will
+    * return to the preempted VM. If not, it will proceed with the scheduling of the next VM.
+    */
+    push {lr}
+    bl vm_nvic_act_irq
+    pop {lr}
+    cmp r0, #0
+    bne excep_return
     VM_EXIT
     mov r0, #SYSTICK_INT_N
     bl interrupts_handle

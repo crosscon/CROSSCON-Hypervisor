@@ -19,6 +19,7 @@
 #include <arch/vmpu.h>
 #include <arch/vnvic.h>
 #include <arch/sau.h>
+#include <arch/nvic.h>
 
 #define MAX_OF_GP_REGS (sizeof(union gp_regs) / sizeof(unsigned long))
 
@@ -145,5 +146,7 @@ struct vm;
 void nvic_assign_int_to_vm(struct vm* vm, irqid_t id);
 
 void nvic_assign_int_to_vm(struct vm* vm, irqid_t id);
+
+bool vm_nvic_act_irq(void);
 
 #endif /* __ARCH_VM_H__ */

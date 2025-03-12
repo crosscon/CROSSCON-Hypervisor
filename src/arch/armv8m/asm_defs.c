@@ -26,6 +26,8 @@ __attribute__((used)) static void sysregs_defines(void)
     DEFINE_OFFSET(SAU_RLAR_OFF, struct sau, rlar);
 
     DEFINE_OFFSET(SCB_SHCSR_OFF, struct scb, shcsr);
+
+    DEFINE_OFFSET(SCB_ICSR_OFF, struct scb, icsr);
 }
 
 __attribute__((used)) static void cpu_defines(void)

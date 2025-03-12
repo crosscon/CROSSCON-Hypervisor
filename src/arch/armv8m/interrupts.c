@@ -21,7 +21,8 @@ void interrupts_arch_init()
     nvic_init();
 
     // Prioritize secure exceptions
-    scb_s->aircr = (scb_s->aircr & ~SCB_AIRCR_VECTKEY_MSK) | (SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIS);
+    scb_s->aircr = (scb_s->aircr & ~SCB_AIRCR_VECTKEY_MSK) |
+        (SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIS | SCB_AIRCR_BFHFNMINS);
 
     // Enable all interrupts.
     interrupts_arch_enable_all();
@@ -29,7 +30,7 @@ void interrupts_arch_init()
 
 void interrupts_arch_enable(irqid_t int_id, bool en)
 {
-    if (int_id > EXT_INT_BASE) {
+    if (int_id > EXT_IRQ_BASE) {
         nvic_enable(nvic_s, int_id, en);
     } else if (int_id == EXC_SYSTICK) {
         systick_int_enable(systick_s, en);
@@ -43,7 +44,7 @@ void interrupts_arch_handle(void)
 
 bool interrupts_arch_check(irqid_t int_id)
 {
-    if (int_id > EXT_INT_BASE) {
+    if (int_id > EXT_IRQ_BASE) {
         return nvic_get_pend(nvic_s, int_id);
     } else if (int_id == EXC_SYSTICK) {
         return systick_get_pend(systick_s);
@@ -53,7 +54,7 @@ bool interrupts_arch_check(irqid_t int_id)
 
 void interrupts_arch_clear(irqid_t int_id)
 {
-    if (int_id > EXT_INT_BASE) {
+    if (int_id > EXT_IRQ_BASE) {
         nvic_clr_pend(nvic_s, int_id);
     } else if (int_id == EXC_SYSTICK) {
         systick_clr_pend(systick_s);
@@ -62,7 +63,7 @@ void interrupts_arch_clear(irqid_t int_id)
 
 irqid_t interrupts_arch_reserve(irqid_t int_id)
 {
-    if (int_id > EXT_INT_BASE) {
+    if (int_id > EXT_IRQ_BASE) {
         nvic_int_target(SECURE, int_id);
         return int_id;
     } else if (int_id == EXC_SYSTICK) {
@@ -80,10 +81,7 @@ inline bool interrupts_arch_conflict(bitmap_t* interrupt_bitmap, irqid_t int_id)
 void interrupts_arch_vm_assign(struct vm* vm, irqid_t int_id)
 {
     UNUSED_ARG(vm);
-
-    if (int_id > EXT_INT_BASE) {
-        nvic_int_target(NONSECURE, int_id);
-    }
+    UNUSED_ARG(int_id);
 }
 
 void interrupts_arch_ipi_send(cpuid_t cpu_target, irqid_t ipi_id)

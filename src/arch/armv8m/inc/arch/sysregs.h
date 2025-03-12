@@ -25,9 +25,11 @@
 #define SCB_AIRCR_VECTKEY        (0x5FAUL << 16)
 #define SCB_AIRCR_VECTKEY_MSK    (0xFFFFUL << 16)
 #define SCB_AIRCR_PRIS           (1 << 14)
+#define SCB_AIRCR_BFHFNMINS      (1 << 13)
 
 #define SCB_ICSR_PENDSTSET       (1 << 26)
 #define SCB_ICSR_PENDSTCLR       (1 << 25)
+#define SCB_ICSR_VECTACTIVE_MSK  (0x1FFUL)
 
 #define SCB_SHCSR_EN_ALL_FAULTS                                              \
     (SCB_SHCSR_MEMFAULTENA | SCB_SHCSR_BUSFAULTENA | SCB_SHCSR_USGFAULTENA | \
@@ -87,10 +89,12 @@ static struct dcb* const dcb_s = (struct dcb*)DCB_BASE;
 static struct dcb* const dcb_ns = (struct dcb*)DCB_BASE_NS;
 struct dcb {
     volatile uint32_t dhcsr;
+    volatile const uint32_t dcrsr;
     volatile uint32_t dcrdr;
     volatile uint32_t demcr;
     volatile const uint32_t dscemcr;
     volatile uint32_t dauthctrl;
+    volatile uint32_t dscsr;
 };
 
 #endif
@@ -251,18 +255,18 @@ struct systick {
 static struct nvic* const nvic_s = (struct nvic*)NVIC_BASE;
 static struct nvic* const nvic_ns = (struct nvic*)NVIC_NS_BASE;
 enum exc_numbers {
-    EXC_RESET = 1,
-    EXC_NMI = 2,
-    EXC_HARD_FAULT = 3,
-    EXC_MEM_MANAGE = 4,
-    EXC_BUS_FAULT = 5,
-    EXC_USAGE_FAULT = 6,
-    EXC_SEC_FAULT = 7,
-    EXC_SVCALL = 11,
-    EXC_DEBUG_MON = 12,
-    EXC_PENDSV = 14,
-    EXC_SYSTICK = 15,
-    EXT_INT_BASE = 16,
+    EXC_RESET = 1U,
+    EXC_NMI = 2U,
+    EXC_HARD_FAULT = 3U,
+    EXC_MEM_MANAGE = 4U,
+    EXC_BUS_FAULT = 5U,
+    EXC_USAGE_FAULT = 6U,
+    EXC_SEC_FAULT = 7U,
+    EXC_SVCALL = 11U,
+    EXC_DEBUG_MON = 12U,
+    EXC_PENDSV = 14U,
+    EXC_SYSTICK = 15U,
+    EXT_IRQ_BASE = 16U,
 };
 
 struct nvic {

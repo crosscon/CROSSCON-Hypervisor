@@ -241,12 +241,10 @@ void sau_arch_enable(void)
 void sau_restore(struct sau_vm* sau_vm)
 {
     for (mpid_t i = 0; i < SAU_ARCH_MAX_NUM_ENTRIES; i++) {
-        if (bitmap_get(sau_vm->bitmap, i) != 0) {
-            sau->rnr = i;
-            ISB();
-            sau->rbar = sau_vm->entry[i].rbar;
-            sau->rlar = sau_vm->entry[i].rlar;
-        }
+        sau->rnr = i;
+        ISB();
+        sau->rbar = sau_vm->entry[i].rbar;
+        sau->rlar = sau_vm->entry[i].rlar;
     }
 
     sau_read_and_save();

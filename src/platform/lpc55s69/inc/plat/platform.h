@@ -10,7 +10,7 @@
 #include <drivers/uart.h>
 #endif
 
-#define PLAT_MAX_INTERRUPTS  75
+#define PLAT_MAX_INTERRUPTS  64+15  //= 79 (64 interrupt slots, 59 for peripherals, 15 exceptions)
 
 #define PLAT_TIMER_FREQ      12000000UL
 #define PLAT_MAX_MPU_REGIONS 8

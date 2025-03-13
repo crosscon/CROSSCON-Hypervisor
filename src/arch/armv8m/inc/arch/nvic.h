@@ -144,6 +144,11 @@ static inline uint32_t systick_get_prio(struct systick* st)
     }
 }
 
+static inline void nvic_stir(struct nvic* ic, irqid_t int_id)
+{
+    ic->stir = int_id;
+}
+
 void nvic_init(void);
 void nvic_int_handle(void);
 bool nvic_any_act_irq(struct nvic* ic);

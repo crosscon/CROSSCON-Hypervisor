@@ -26,17 +26,14 @@ bool mpu_map(struct addr_space* as, struct mp_region* mpr, bool locked)
         } else {
             failed = false;
         }
-    } else {
-        if (as->type == AS_VM) {
-            /* Add region to SAU  */
-            if (!sau_add_region(as, mpr, locked)) {
-                ERROR("failed to register sau entry");
-            } else {
-                failed = false;
-            }
+    } else if (as->type == AS_VM) {
+        /* Add region to SAU  */
+        if (!sau_add_region(as, mpr, locked)) {
+            ERROR("failed to register sau entry");
+        } else {
+            failed = false;
         }
     }
-
     return !failed;
 }
 
@@ -45,11 +42,21 @@ bool mpu_unmap(struct addr_space* as, struct mp_region* mpr)
     bool failed = true;
 
     if (as->type == AS_HYP) {
-        /* Remove region */
-        if (!mpu_remove_region(mpr)) {
-            ERROR("failed to register mpu entry");
+        /* Distinguish if the region is for hypercall or part of Bao image */
+        if (mpr->as_sec == SEC_HYP_HC) {
+            /* Add region to SAU as NSC */
+            if (!sau_remove_region(as, mpr)) {
+                ERROR("failed to register sau nsc entry");
+            } else {
+                failed = false;
+            }
         } else {
-            failed = false;
+            /* Remove region */
+            if (!mpu_remove_region(mpr)) {
+                ERROR("failed to register mpu entry");
+            } else {
+                failed = false;
+            }
         }
     } else {
         if (as->type == AS_VM) {
@@ -70,7 +77,7 @@ bool mpu_update(struct addr_space* as, struct mp_region* mpr)
     bool failed = true;
 
     if (as->type == AS_HYP) {
-        /* Remove region */
+        /* Update region */
         if (!mpu_update_region(mpr)) {
             ERROR("failed to register mpu entry");
         } else {
@@ -78,7 +85,7 @@ bool mpu_update(struct addr_space* as, struct mp_region* mpr)
         }
     } else {
         if (as->type == AS_VM) {
-            /* Remove region */
+            /* Update region */
             if (!sau_update_region(as, mpr)) {
                 ERROR("failed to register sau entry");
             } else {

@@ -12,14 +12,19 @@
 struct mpu_temp {
     unsigned long rbar;
     unsigned long rlar;
+    unsigned long rbar_attr;
+    unsigned long rlar_attr;
 } mpu_temp[8];
 
 static void mpu_read_and_save(void)
 {
     for (uint32_t i = 0; i < 8; i++) {
         mpu_s->rnr = i;
+        ISB();
+        mpu_temp[i].rbar_attr = mpu_s->rbar & 0x1F;
         mpu_temp[i].rbar = mpu_s->rbar & MPU_RBAR_BASE_MSK;
         mpu_temp[i].rlar = mpu_s->rlar | 0x1F;
+        mpu_temp[i].rlar_attr = mpu_s->rlar & 0x1F;
     }
 }
 
@@ -150,14 +155,10 @@ bool mpu_remove_region(struct mp_region* reg)
             failed = false;
             mpu_entry_free(mpid);
         }
-
-        // TODO:ARMV8M - REMOVE
-        for (int i = 0; i < 8; i++) {
-            mpu_s->rnr = (uint32_t)i;
-            mpu_temp[i].rbar = mpu_s->rbar & MPU_RBAR_BASE_MSK;
-            mpu_temp[i].rlar = mpu_s->rlar | 0x1F;
-        }
     }
+
+    // TODO:ARMV8M - REMOVE
+    mpu_read_and_save();
 
     return !failed;
 }

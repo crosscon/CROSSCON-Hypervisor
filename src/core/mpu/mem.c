@@ -183,7 +183,11 @@ static void mem_init_boot_regions(void)
     mpr = (struct mp_region){
         .base = image_start,
         .size = (size_t)(first_region_end - image_start),
+#ifdef MEM_NON_UNIFIED
+        .mem_flags = PTE_HYP_FLAGS_CODE,
+#else
         .mem_flags = PTE_HYP_FLAGS,
+#endif
         .as_sec = SEC_HYP_IMAGE,
     };
     mem_map(&cpu()->as, &mpr, false, true);
@@ -418,6 +422,15 @@ static mpid_t mem_vmpu_find_overlapping_region(struct addr_space* as, struct mp_
             continue;
         }
 
+        if ((mpe->region.as_sec != region->as_sec) && (region->as_sec != SEC_UNKNOWN)) {
+            continue;
+        }
+
+        // TODO:ARMV8M - Should this be done?
+        /*if (!mpu_perms_compatible(as, mpe->region, region)) {
+            continue;
+        }*/
+
         if (mem_regions_overlap(region, &mpe->region)) {
             mpid = i;
             break;
@@ -529,6 +542,7 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
         struct mp_region reg;
         reg.base = vaddr;
         reg.size = size;
+        reg.as_sec = SEC_UNKNOWN;
 
         mpid_t mpid = mem_vmpu_find_overlapping_region(as, &reg);
         if (mpid == INVALID_MPID) {

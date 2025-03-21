@@ -102,8 +102,8 @@ struct dcb {
 /* Security Attribution Unit */
 #define SAU_BASE              (0xE000EDD0UL)
 
-#define SAU_CTRL_ENABLE       (1 << 0)
-#define SAU_CTRL_ALLNS        (1 << 1)
+#define SAU_CTRL_ENABLE       (1UL << 0)
+#define SAU_CTRL_ALLNS        (1UL << 1)
 
 #define SAU_TYPE_RNR_MSK      (0xFFUL)
 #define SAU_TYPE_N_RGN(REG)   (REG & SAU_TYPE_RNR_MSK)

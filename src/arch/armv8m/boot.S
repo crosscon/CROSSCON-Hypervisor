@@ -12,16 +12,26 @@
 .syntax unified
 
 /**
- *  The following code MUST be at the base of the image, as this is bao's entry point. Therefore
- * .boot section must also be the first in the linker script. DO NOT implement any code before the
- * _reset_handler in this section.
+ * In Armv8-M, the first instruction in the boot code is a branch to the "real" reset handler. We
+ * need to do this to fix the hypercall region in the start of Bao's image with a fixed offset of
+ * PAGE_SIZE.
  */
- .section ".boot", "ax"
+.section ".boot", "ax"
 .thumb
 .thumb_func
 .globl _reset_handler
 _reset_handler:
+    b _start
 
+.balign PAGE_SIZE
+.global _hypercall_start
+_hypercall_start:
+    sg
+    b _hypercall_handler
+
+.balign PAGE_SIZE
+.global _start
+_start:
     /**
      * Not following any ABI for registers in this boot code.
      * The following registers are however reserved to be passed to main

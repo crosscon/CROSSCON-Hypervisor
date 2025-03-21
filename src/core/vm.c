@@ -11,6 +11,8 @@
 #include <shmem.h>
 #include <objpool.h>
 
+extern uint8_t _hypercall_start, _start;
+
 static void vm_master_init(struct vm* vm, const struct vm_config* vm_config, vmid_t vm_id)
 {
     vm->master = cpu()->id;
@@ -185,6 +187,7 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
 
         spin_lock(&shmem->lock);
         shmem->cpu_masters |= (1UL << cpu()->id);
+        ipc->master = cpu()->id;
         spin_unlock(&shmem->lock);
 
         struct vm_mem_region reg = {
@@ -196,7 +199,33 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
         };
 
         vm_map_mem_region(vm, &reg);
+
+        for (size_t j = 0; j < ipc->interrupt_num; j++) {
+            if (!interrupts_vm_assign(vm, ipc->interrupts[j])) {
+                ERROR("Failed to assign interrupt id %d", ipc->interrupts[j]);
+            }
+        }
     }
+
+#ifdef MEM_NON_UNIFIED
+    if (vm->ipc_num) {
+        size_t num_pages = NUM_PAGES((size_t)(&_start - &_hypercall_start));
+        // size_t num_pages = 1;
+        struct ppages ppages = mem_ppages_get((paddr_t)&_hypercall_start, num_pages);
+        // struct ppages ppages = mem_ppages_get((paddr_t)0x40, num_pages);
+        vaddr_t va = mem_alloc_map(&vm->as, SEC_HYP_HC, &ppages, (paddr_t)&_hypercall_start,
+            num_pages, PTE_VM_HC_FLAGS);
+        // vaddr_t va = mem_alloc_map(&vm->as, SEC_HYP_HC, &ppages, (paddr_t)0x40, num_pages,
+        // PTE_VM_HC_FLAGS); mem_alloc_map(&cpu()->as, SEC_HYP_IMAGE, &ppages, (paddr_t)0x40,
+        // num_pages, PTE_HYP_FLAGS_CODE);
+        mem_alloc_map(&cpu()->as, SEC_HYP_IMAGE, &ppages, (paddr_t)&_hypercall_start, num_pages,
+            PTE_HYP_FLAGS_CODE);
+
+        if (va == INVALID_VA) {
+            ERROR("couldn't install hypercall region at 0x%lx", &_hypercall_start);
+        }
+    }
+#endif
 }
 
 static void vm_init_dev(struct vm* vm, const struct vm_config* vm_config)

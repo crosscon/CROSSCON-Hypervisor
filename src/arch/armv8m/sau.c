@@ -13,6 +13,8 @@
 struct sau_temp {
     unsigned long rbar;
     unsigned long rlar;
+    unsigned long rlar_attr;
+    unsigned long rbar_attr;
 } sau_temp[8];
 
 void sau_read_and_save(void);
@@ -21,13 +23,17 @@ void sau_read_and_save(void)
 {
     for (size_t i = 0; i < 8; i++) {
         sau->rnr = i;
-        sau_temp[i].rbar = sau->rbar & SAU_RBAR_BADDR_MSK;
+        /*sau_temp[i].rbar = sau->rbar & SAU_RBAR_BADDR_MSK;
 
         if (sau_temp[i].rbar & 0x1) {
             sau_temp[i].rlar = sau->rlar | 0x1F;
         } else {
             sau_temp[i].rlar = sau->rlar;
-        }
+        }*/
+        sau_temp[i].rbar_attr = sau->rbar & 0x1F;
+        sau_temp[i].rbar = sau->rbar & SAU_RBAR_BADDR_MSK;
+        sau_temp[i].rlar = sau->rlar | 0x1F;
+        sau_temp[i].rlar_attr = sau->rlar & 0x1F;
     }
 }
 
@@ -91,7 +97,6 @@ bool sau_add_region(struct addr_space* as, struct mp_region* reg, bool locked)
 {
     bool failed = true;
     struct sau_vm* sau_vm = sau_vm_get_local(as);
-    ;
 
     if (reg->size > 0) {
         mpid_t mpid = sau_entry_allocate();
@@ -234,18 +239,23 @@ void sau_arch_enable(void)
 {
     sau->ctrl |= SAU_CTRL_ENABLE;
     ISB();
+}
 
-    sau_read_and_save();
+void sau_arch_disable(void)
+{
+    sau->ctrl &= ~SAU_CTRL_ENABLE;
+    ISB();
 }
 
 void sau_restore(struct sau_vm* sau_vm)
 {
+    sau_arch_disable();
     for (mpid_t i = 0; i < SAU_ARCH_MAX_NUM_ENTRIES; i++) {
         sau->rnr = i;
         ISB();
-        sau->rbar = sau_vm->entry[i].rbar;
         sau->rlar = sau_vm->entry[i].rlar;
+        sau->rbar = sau_vm->entry[i].rbar;
     }
-
+    sau_arch_enable();
     sau_read_and_save();
 }

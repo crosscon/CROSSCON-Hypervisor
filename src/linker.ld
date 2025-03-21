@@ -15,6 +15,9 @@ SECTIONS
 	. = BAO_VAS_BASE;
 
 	_image_start = ABSOLUTE(.);
+#ifdef MEM_NON_UNIFIED
+	_image_start = ABSOLUTE(.) + 2*PAGE_SIZE;
+#endif
 
 	.boot : {
 		*(.boot)

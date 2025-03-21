@@ -24,6 +24,7 @@ struct sau_vm {
 
 void sau_arch_init(void);
 void sau_arch_enable(void);
+void sau_arch_disable(void);
 bool sau_add_region(struct addr_space* as, struct mp_region* reg, bool locked);
 bool sau_remove_region(struct addr_space* as, struct mp_region* reg);
 bool sau_update_region(struct addr_space* as, struct mp_region* reg);

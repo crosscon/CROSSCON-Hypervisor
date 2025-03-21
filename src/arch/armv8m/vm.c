@@ -16,6 +16,8 @@
 #include <arch/vnvic.h>
 #include <mem.h>
 
+typedef enum regs { r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc } regs_t;
+
 void vm_arch_init(struct vm* vm, const struct vm_config* vm_config)
 {
     UNUSED_ARG(vm);
@@ -58,10 +60,24 @@ bool vcpu_arch_is_on(struct vcpu* vcpu)
 
 unsigned long vcpu_readreg(struct vcpu* vcpu, unsigned long reg)
 {
-    if ((reg <= 0) || (reg > MAX_OF_GP_REGS)) {
+    if ((reg <= r0) || (reg > MAX_OF_GP_REGS)) {
         return 0;
     }
-    return vcpu->regs.gp_regs.r[reg - 1];
+    switch (reg) {
+        case r0:
+        case r1:
+        case r2:
+        case r3:
+            return vcpu->regs.esf_regs.r[reg];
+        case r12:
+            return vcpu->regs.esf_regs.r12;
+        case lr:
+            return vcpu->regs.gp_regs.lr;
+        case pc:
+            return vcpu->regs.gp_regs.pc;
+        default:
+            return vcpu->regs.gp_regs.r[reg - r4];
+    }
 }
 
 void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val)
@@ -69,7 +85,27 @@ void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val)
     if ((reg <= 0) || (reg > MAX_OF_GP_REGS)) {
         return;
     }
-    vcpu->regs.gp_regs.r[reg - 1] = val;
+    switch (reg) {
+        case r0:
+        case r1:
+        case r2:
+        case r3:
+            vcpu->regs.esf_regs.r[reg] = val;
+            break;
+        case r12:
+            vcpu->regs.esf_regs.r12 = val;
+            break;
+        case lr:
+            vcpu->regs.gp_regs.lr = val;
+            break;
+        case pc:
+            vcpu->regs.gp_regs.pc = val;
+            break;
+        default:
+            vcpu->regs.gp_regs.r[reg - r4] = val;
+            break;
+    }
+    return;
 }
 
 void vcpu_restore_state(struct vcpu* vcpu)

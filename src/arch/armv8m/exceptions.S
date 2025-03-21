@@ -26,6 +26,24 @@
 .syntax unified
 .text
 
+.macro VM_EXIT_ESF
+    push {r0,r1}
+    /* Read CPU pointer (psp) to r0 */
+    mrs r1, psp
+    ldr r0, [r1, #CPU_VCPU_OFF]
+
+    /* Point to end of esf struct */
+    add r0, #(VCPU_REGS_OFF+VCPU_ESF_OFF+VCPU_ESF_SIZE)
+
+    /* Save all esf registers */
+    mrs r1, psr
+    stmdb r0!, {r1}
+    stmdb r0!, {r2, r3, r12, lr}
+    mov r12, r0
+    pop {r0,r1}
+    stmdb r12!, {r0, r1}
+.endm
+
 .macro VM_EXIT
     /* Read CPU pointer (psp) to r0 */
     mrs r1, psp
@@ -48,6 +66,24 @@
     /* Save all registers */
     add r0, #4                  /* Point to LR */
     stmia   r0!, {r1-r8}
+.endm
+
+.macro VM_ENTRY_ESF
+    /* Read CPU pointer (psp) to r0 */
+    mrs r1, psp
+    ldr r0, [r1, #CPU_VCPU_OFF]
+
+    /* Point to end of esf struct */
+    add r0, #(VCPU_ESF_OFF+VCPU_ESF_SIZE)
+
+    /* Save all esf registers */
+    ldmdb r0!, {r2, r3, r12, lr}
+    ldmdb r0!, {r1}
+    msr apsr_nzcvq, r1
+    push {r4}
+    mov r4, r0
+    ldmdb r4!, {r0, r1}
+    pop {r4}
 .endm
 
 .macro VM_ENTRY
@@ -166,3 +202,16 @@ first_entry:
     mov r2, #0
     mov r1, #0
     bxns r0
+
+define_handler _hypercall_handler
+hypercall_handler:
+    cpsid i
+    push {r0}
+    VM_EXIT_ESF
+    VM_EXIT
+    pop {r0}
+    bl hypercall
+    VM_ENTRY
+    VM_ENTRY_ESF
+    cpsie i
+    bxns lr

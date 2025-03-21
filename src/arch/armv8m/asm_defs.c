@@ -50,6 +50,8 @@ __attribute__((used)) static void vcpu_defines(void)
     DEFINE_OFFSET(VCPU_SPREGS_OFF, struct arch_regs, sp_regs);
     DEFINE_SIZE(VCPU_GPREGS_SIZE, ((struct arch_regs*)NULL)->gp_regs);
     DEFINE_SIZE(VCPU_SPREGS_SIZE, struct special_regs);
+    DEFINE_OFFSET(VCPU_ESF_OFF, struct arch_regs, esf_regs);
+    DEFINE_SIZE(VCPU_ESF_SIZE, ((struct arch_regs*)NULL)->esf_regs);
     DEFINE_OFFSET(VCPU_BLOCKED_COUNT, struct vcpu, blocked_count);
 }
 

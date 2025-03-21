@@ -98,6 +98,19 @@ struct arch_regs {
 
     struct special_regs sp_regs;
 
+    union esf_regs {
+        unsigned long r[7];
+        struct {
+            unsigned long r0;
+            unsigned long r1;
+            unsigned long r2;
+            unsigned long r3;
+            unsigned long r12;
+            unsigned long lr;
+            unsigned long psr;
+        };
+    } esf_regs;
+
     // R/W sysregs from SCB
     unsigned long icsr;
     unsigned long vtor;
@@ -126,16 +139,12 @@ void vcpu_arch_entry(void);
 
 static inline void vcpu_arch_inject_hw_irq(struct vcpu* vcpu, irqid_t id)
 {
-    (void)vcpu;
-    (void)id;
-    /* virqc_inject(vcpu, id); */
+    vnvic_inject(vcpu, id);
 }
 
 static inline void vcpu_arch_inject_irq(struct vcpu* vcpu, irqid_t id)
 {
-    (void)vcpu;
-    (void)id;
-    /* virqc_inject(vcpu, id); */
+    vnvic_inject(vcpu, id);
 }
 
 void vnvic_vcpu_init(struct vcpu* vcpu);

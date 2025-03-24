@@ -190,13 +190,13 @@ static int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
             vmstack_push(ree_vcpu);
         }
         optee_crash = 1;
-        INFO("VM %d performed illegal access. Disabling.\n", vcpu->vm->id);
+        INFO("VM %d performed illegal access at 0x%x. Disabling.\n", vcpu->vm->id, addr);
         tee_arch_interrupt_enable();
     } else if(vcpu->vm->type == 2){
         vmstack_pop();
         tee_arch_interrupt_enable();
         optee2_crash = 1;
-        INFO("VM %d performed illegal access. Disabling.\n", vcpu->vm->id);
+        INFO("VM %d performed illegal access at 0x%x. Disabling.\n", vcpu->vm->id, addr);
     }
 
     /* CROSSCON TODO: arch specific */

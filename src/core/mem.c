@@ -3,6 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
+#include "util.h"
 #include <crossconhyp.h>
 #include <mem.h>
 
@@ -141,6 +142,7 @@ static bool mem_reserve_ppool_ppages(struct page_pool* pool, struct ppages* ppag
     size_t pageoff = NUM_PAGES(ppages->base - pool->base);
 
     bool was_free = true;
+    UNUSED_ARG(was_free);
     if (mem_are_ppages_reserved_in_pool(pool, ppages)) {
         was_free = false;
     }
@@ -148,7 +150,7 @@ static bool mem_reserve_ppool_ppages(struct page_pool* pool, struct ppages* ppag
     bitmap_set_consecutive(pool->bitmap, pageoff, ppages->num_pages);
     pool->free -= ppages->num_pages;
 
-    return is_in_rgn && was_free;
+    return true;
 }
 
 void* mem_alloc_page(size_t num_pages, enum AS_SEC sec, bool phys_aligned)

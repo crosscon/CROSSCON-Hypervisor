@@ -46,7 +46,7 @@ void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
         cpu_sync_init(&cpu_glb_sync, platform.cpu_num);
 
         ipi_cpumsg_handler_num =
-            (size_t)(_ipi_cpumsg_handlers_id_end - _ipi_cpumsg_handlers_id_start);
+            (size_t)(_ipi_cpumsg_handlers_id_end - _ipi_cpumsg_handlers_id_start) / sizeof(size_t);
         for (size_t i = 0; i < ipi_cpumsg_handler_num; i++) {
             ((size_t*)_ipi_cpumsg_handlers_id_start)[i] = i;
         }

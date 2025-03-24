@@ -107,8 +107,6 @@ static inline uint64_t interrupts_get_vmid(irqid_t int_id)
 enum irq_res interrupts_handle(irqid_t int_id)
 {
     struct vcpu *vcpu = NULL;
-    if(int_id != 27)
-        for (volatile int x = 1; x>0;x--);
 
     if(interrupts_is_shared(int_id) || (cpu()->vcpu->vm->id == interrupts_get_vmid(int_id))){
         vcpu = cpu()->vcpu;
@@ -116,8 +114,8 @@ enum irq_res interrupts_handle(irqid_t int_id)
         vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
     }
 
-    if ((vcpu != NULL) && vm_has_interrupt(cpu()->vcpu->vm, int_id)) {
-        // TODO JOAO SEE HAS TO SEE THIS
+    if ((vcpu != NULL) && vm_has_interrupt(vcpu->vm, int_id)) {
+        // TODO JOAO HAS TO SEE THIS
         //vcpu_inject_hw_irq(cpu()->vcpu, int_id);
         list_foreach(vcpu->vm->irq_list, struct hndl_irq_node, node) {
             sdirq_handler_t handler = node->hndl_irq.handler;

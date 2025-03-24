@@ -3,6 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
+#include "util.h"
 #include <crossconhyp.h>
 #include <mem.h>
 

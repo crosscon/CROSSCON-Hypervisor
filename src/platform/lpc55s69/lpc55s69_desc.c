@@ -21,8 +21,8 @@ struct platform platform = {
             .perms = RX,
         },
         {
-            .base = 0x30020000, //SRAM2+3 (64 + 64 KiB)
-            .size = 0x20000,    //128 KiB
+            .base = 0x30000000, //SRAM2+3 (64 + 64 KiB)
+            .size = 0x10000,    //128 KiB
             .perms = RWX,
         },
         {
@@ -42,6 +42,11 @@ struct platform platform = {
         },
         {
             .base = 0x20030000, //SRAM1 (64 + 64 KiB)
+            .size = 0x10000, //64 KiB
+            .perms = RWX,
+        },
+        {
+            .base = 0x20020000, //SRAM1 (64 + 64 KiB)
             .size = 0x10000, //64 KiB
             .perms = RWX,
         }

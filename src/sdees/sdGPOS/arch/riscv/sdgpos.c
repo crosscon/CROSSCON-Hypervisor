@@ -8,7 +8,6 @@
 #include <vmm.h>
 #include <arch/sdgpos.h>
 
-
 static int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
     UNUSED_ARG(vcpu);
@@ -29,13 +28,14 @@ static int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 
 static int64_t sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t fid)
 {
-    if(vcpu->vm->type != 0)
+    if (vcpu->vm->type != 0) {
         return 0;
+    }
 
     int64_t ret;
 
     /* CROSSCON TODO: sdee */
-    switch(fid) {
+    switch (fid) {
         case HC_IPC:
             ret = ipc_hypercall(vcpu);
             break;
@@ -58,17 +58,17 @@ static struct hndl_hvc hvc = {
     .handler = sdgpos_hvc_handler,
 };
 
-
-bool sdgpos_arch_setup(struct vm *vm)
+bool sdgpos_arch_setup(struct vm* vm)
 {
     int64_t ret = 0;
 
-    if(vm == NULL)
+    if (vm == NULL) {
         return -1;
+    }
 
     /* CROSSCON TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
-    if(vm->type == 0){
+    if (vm->type == 0) {
         vm_hndl_smc_add(vm, &smc);
         vm_hndl_hvc_add(vm, &hvc);
     }

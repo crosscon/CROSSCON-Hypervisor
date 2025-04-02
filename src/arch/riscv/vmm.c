@@ -39,7 +39,6 @@ void vmm_arch_init()
         csrs_henvcfg_clear(HENVCFG_STCE);
     }
 
-
     /**
      * TODO: consider delegating other exceptions e.g. breakpoint or ins misaligned
      */

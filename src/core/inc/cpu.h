@@ -144,8 +144,8 @@ static inline void cpu_sync_and_clear_msgs(struct cpu_synctoken* token)
 
 struct vcpu* cpu_get_vcpu(uint64_t vmid);
 
-void cpu_add_vcpu(struct vcpu * vcpu);
-void cpu_remove_vcpu(struct vcpu * vcpu);
+void cpu_add_vcpu(struct vcpu* vcpu);
+void cpu_remove_vcpu(struct vcpu* vcpu);
 
 #endif /* __ASSEMBLER__ */
 

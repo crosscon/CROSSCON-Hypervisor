@@ -19,23 +19,22 @@
 /* #define MASK 3 */
 
 enum {
-    SDSGX_CREATE  = 0,
-    SDSGX_ECALL   = 1,
-    SDSGX_OCALL   = 2,
-    SDSGX_RESUME  = 3,
+    SDSGX_CREATE = 0,
+    SDSGX_ECALL = 1,
+    SDSGX_OCALL = 2,
+    SDSGX_RESUME = 3,
     /* SDSGX_GOTO    = 4, */
-    SDSGX_EXIT    = 5,
-    SDSGX_DELETE  = 6,
+    SDSGX_EXIT = 5,
+    SDSGX_DELETE = 6,
     SDSGX_ADD_RGN = 7,
-    SDSGX_INFO    = 8,
-    SDSGX_FAULT   = 9,
+    SDSGX_INFO = 8,
+    SDSGX_FAULT = 9,
 };
 
 static struct vcpu* sdsgx_get_nclv(struct vcpu* vcpu, size_t nclv_id)
 {
     struct vcpu* child = NULL;
-    list_foreach(vcpu->vmstack_children, struct node_data, node)
-    {
+    list_foreach (vcpu->vmstack_children, struct node_data, node) {
         struct vcpu* tmp = NULL;
         tmp = node->data;
         if (tmp->nclv_data.id == nclv_id) {
@@ -55,7 +54,7 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
     bool pushed = 0;
 
     /* One page */
-    if(cpu()->vcpu->vm != host){
+    if (cpu()->vcpu->vm != host) {
         pushed = true;
         struct vcpu* vcpu = cpu_get_vcpu(host->id);
         vmstack_push(vcpu);
@@ -63,9 +62,9 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
     mem_guest_ipa_translate(&host->as, host_ipa, &paddr);
     struct ppages dyn_cfg_pp = mem_ppages_get(paddr, 1);
 
-
-    nclv_cfg_va = mem_alloc_map(&cpu()->as, SEC_HYP_GLOBAL, &dyn_cfg_pp, INVALID_VA, 1, PTE_HYP_FLAGS);
-    if(nclv_cfg_va == INVALID_VA){
+    nclv_cfg_va =
+        mem_alloc_map(&cpu()->as, SEC_HYP_GLOBAL, &dyn_cfg_pp, INVALID_VA, 1, PTE_HYP_FLAGS);
+    if (nclv_cfg_va == INVALID_VA) {
         ERROR("Failed to allocate and map memory for host sdsgx config");
     }
 
@@ -78,9 +77,9 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
         for (size_t i = 1; i < NUM_PAGES(cfg_size); i++) {
             mem_guest_ipa_translate(&host->as, (host_ipa + offset), &paddr);
             struct ppages pp = mem_ppages_get(paddr, 1);
-            nclv_cfg_va = mem_alloc_map(&cpu()->as, SEC_HYP_GLOBAL, &pp,
-                    nclv_cfg_va + offset, 1, PTE_HYP_FLAGS);
-            if(nclv_cfg_va == INVALID_VA){
+            nclv_cfg_va = mem_alloc_map(&cpu()->as, SEC_HYP_GLOBAL, &pp, nclv_cfg_va + offset, 1,
+                PTE_HYP_FLAGS);
+            if (nclv_cfg_va == INVALID_VA) {
                 ERROR("Failed to allocate and map memory for host sdsgx config");
             }
             offset += PAGE_SIZE;
@@ -90,7 +89,7 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
     mem_unmap(&host->as, host_ipa, NUM_PAGES(cfg_size), false);
     dynconfig_init(nclv_cfg, paddr);
 
-    if(pushed){
+    if (pushed) {
         vmstack_pop();
     }
 
@@ -129,7 +128,8 @@ static void sdsgx_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t nclv
     mem_guest_ipa_translate(&cpu()->vcpu->vm->as, donor_ipa, &pa);
 
     struct ppages pp = mem_ppages_get(pa, 1);
-    mem_alloc_map(&child->vm->as, SEC_VM_ANY, &pp, ALIGN_FLOOR((vaddr_t)nclv_va,PAGE_SIZE), 1, PTE_VM_FLAGS);
+    mem_alloc_map(&child->vm->as, SEC_VM_ANY, &pp, ALIGN_FLOOR((vaddr_t)nclv_va, PAGE_SIZE), 1,
+        PTE_VM_FLAGS);
 
     vcpu_writereg(cpu()->vcpu, 0, 0);
 }
@@ -288,8 +288,9 @@ static int64_t sdsgx_handle_abort(struct vcpu* vcpu, uint64_t addr)
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
 
-    if(vcpu->vm->type != 3)
+    if (vcpu->vm->type != 3) {
         return 0;
+    }
 
     enclv_aborts++;
     /* CROSSCON TODO: validate address space */
@@ -320,7 +321,9 @@ static void sdsgx_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     if (vcpu != cpu()->vcpu && vcpu->state == VCPU_STACKED) {
         /* TODO VM TYPES */
         if (cpu()->vcpu->vm->type == 3) { /* currently running enclave */
-            if (cpu()->vcpu->nclv_data.initialized == false) return;
+            if (cpu()->vcpu->nclv_data.initialized == false) {
+                return;
+            }
             vmstack_pop(); /* transition to normal world */
             irqs++;
             /* inform that enclave was interrupted */
@@ -341,7 +344,7 @@ static struct hndl_irq irq = {
     /* CROSSCON TODO: obtain this from config file */
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
-    .irqs = {27, 33, 72, 73, 74, 75, 76, 77, 78, 79},
+    .irqs = { 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
     .handler = sdsgx_handle_interrupt,
 };
 
@@ -353,7 +356,9 @@ int64_t sdsgx_handler_setup(struct vm* vm)
 {
     int64_t ret = 0;
 
-    if (vm == NULL) return -1;
+    if (vm == NULL) {
+        return -1;
+    }
 
     /* CROSSCON TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
@@ -361,8 +366,9 @@ int64_t sdsgx_handler_setup(struct vm* vm)
     vm_hndl_irq_add(vm, &irq);
 
     /* CROSSCON TODO */
-    if(vm->type == 3)
+    if (vm->type == 3) {
         vm_hndl_mem_abort_add(vm, &mem_abort);
+    }
 
     return ret;
 }

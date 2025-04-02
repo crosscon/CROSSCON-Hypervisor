@@ -181,7 +181,8 @@ static void rv_iommu_check_features(void)
     }
 
     if (!(caps & RV_IOMMU_CAPS_MSI_FLAT_BIT)) {
-        WARNING("RISC-V IOMMU HW does not support MSI Address Translation (basic-translate mode)\n");
+        WARNING("RISC-V IOMMU HW does not support MSI Address Translation (basic-translate "
+                "mode)\n");
     }
 
     uint64_t igs = bit64_extract(caps, RV_IOMMU_CAPS_IGS_OFF, RV_IOMMU_CAPS_IGS_LEN);

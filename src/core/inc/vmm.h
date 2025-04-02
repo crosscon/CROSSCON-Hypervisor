@@ -12,12 +12,12 @@
 #include <mem_prot/vmm.h>
 #include <objpool.h>
 
-struct vcpu_node{
+struct vcpu_node {
     node_t node;
     void* data;
 };
 
- struct partition {
+struct partition {
     spinlock_t lock;
     struct cpu_synctoken sync;
     uint64_t master;
@@ -27,7 +27,7 @@ struct vcpu_node{
     } init;
     struct vm* interrupts[MAX_INTERRUPT_LINES];
 };
-extern struct partition * parttn;
+extern struct partition* parttn;
 extern struct objpool nodes_pool;
 
 void vmm_init(void);
@@ -39,6 +39,6 @@ struct vm_install_info vmm_get_vm_install_info(struct vm_allocation* vm_alloc);
 void vmm_vm_install(struct vm_install_info* install_info);
 
 struct vm* vmm_init_dynamic(struct dynconfig* ptr_vm_config, uint64_t vm_addr);
-void vmm_destroy_dynamic(struct vm *vm);
+void vmm_destroy_dynamic(struct vm* vm);
 
 #endif /* __VMM_H__ */

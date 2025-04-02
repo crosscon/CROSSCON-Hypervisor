@@ -32,7 +32,7 @@ static struct vm_assignment {
     struct vm_install_info vm_install_info;
     volatile bool install_info_ready;
     size_t partition_id;
-    struct vm_config *vm_config;
+    struct vm_config* vm_config;
 } vm_assign[CONFIG_VM_NUM];
 
 /* needed for dynamic VMs */
@@ -49,10 +49,11 @@ static vmid_t vmm_alloc_vmid(void)
     return vmid;
 }
 
-static void vmm_init_child_vm_assign(struct vm_config* vm_cfg, size_t *idx, size_t part_id)
+static void vmm_init_child_vm_assign(struct vm_config* vm_cfg, size_t* idx, size_t part_id)
 {
-    if(vm_cfg == NULL)
+    if (vm_cfg == NULL) {
         ERROR("%s", __func__);
+    }
 
     vmid_t vm_id = *idx;
     vm_cfg->vm_id = vm_id;
@@ -61,7 +62,7 @@ static void vmm_init_child_vm_assign(struct vm_config* vm_cfg, size_t *idx, size
 
     *idx = (*idx) + 1;
     for (size_t i = 0; i < vm_cfg->children_num; i++) {
-        struct vm_config *tmp_vm_cfg = vm_cfg->children[i];
+        struct vm_config* tmp_vm_cfg = vm_cfg->children[i];
         vmm_init_child_vm_assign(tmp_vm_cfg, idx, part_id);
     }
 }
@@ -73,7 +74,7 @@ static void vmm_init_assign(void)
         vmm_init_child_vm_assign(config.vmlist[p], &idx, p);
     }
 }
-static inline bool vmm_assign_pcpu_aff(vmid_t vm_id, struct vm_config *vm_cfg, bool *master)
+static inline bool vmm_assign_pcpu_aff(vmid_t vm_id, struct vm_config* vm_cfg, bool* master)
 {
     bool assigned = false;
     if (!vm_assign[vm_id].master) {
@@ -90,7 +91,7 @@ static inline bool vmm_assign_pcpu_aff(vmid_t vm_id, struct vm_config *vm_cfg, b
     return assigned;
 }
 
-static inline bool vmm_assign_pcpu(vmid_t vm_id, struct vm_config *vm_cfg, bool *master)
+static inline bool vmm_assign_pcpu(vmid_t vm_id, struct vm_config* vm_cfg, bool* master)
 {
     bool assigned = false;
     if (vm_assign[vm_id].ncpus < vm_cfg->platform.cpu_num) {
@@ -205,7 +206,8 @@ static void vmm_free_vm(struct vm* vm)
     mem_unmap(&cpu()->as, (vaddr_t)vm, n, true);
 }
 
-static struct vm_allocation* vmm_alloc_install_vm(vmid_t vm_id, bool master, struct vm_config* vm_cfg)
+static struct vm_allocation* vmm_alloc_install_vm(vmid_t vm_id, bool master,
+    struct vm_config* vm_cfg)
 {
     struct vm_allocation* vm_alloc = &vm_assign[vm_id].vm_alloc;
     struct vm_config* vm_config = vm_cfg;
@@ -225,7 +227,8 @@ static struct vm_allocation* vmm_alloc_install_vm(vmid_t vm_id, bool master, str
     return vm_alloc;
 }
 
-static bool vmm_partition_cpu_assign_aff(struct partition* cur_parttn, struct vm_config *vm_cfg, bool *master)
+static bool vmm_partition_cpu_assign_aff(struct partition* cur_parttn, struct vm_config* vm_cfg,
+    bool* master)
 {
     spin_lock(&cur_parttn->lock);
     bool assigned = false;
@@ -233,7 +236,7 @@ static bool vmm_partition_cpu_assign_aff(struct partition* cur_parttn, struct vm
     bool all_cpus_init = (cur_parttn->init.ncpus == vm_cfg->platform.cpu_num);
     bool pcpu_is_in_aff = (1ULL << cpu()->id) & vm_cfg->cpu_affinity;
     if (!all_cpus_init && pcpu_is_in_aff) {
-        if (cur_parttn->init.ncpus == 0){
+        if (cur_parttn->init.ncpus == 0) {
             /* if we are the first in the affinity we are master */
             *master = true;
         } else {
@@ -247,13 +250,14 @@ static bool vmm_partition_cpu_assign_aff(struct partition* cur_parttn, struct vm
     return assigned;
 }
 
-static bool vmm_partition_cpu_assign(struct partition* cur_parttn, struct vm_config *vm_cfg, bool *master)
+static bool vmm_partition_cpu_assign(struct partition* cur_parttn, struct vm_config* vm_cfg,
+    bool* master)
 {
     spin_lock(&cur_parttn->lock);
     bool assigned = false;
     if (cur_parttn->init.ncpus < vm_cfg->platform.cpu_num) {
         if (cur_parttn->init.ncpus == 0) {
-             *master = true;
+            *master = true;
         }
         cur_parttn->init.ncpus++;
         assigned = true;
@@ -266,7 +270,7 @@ static struct vm* vmm_create_vms(struct vm_config* vm_config, struct vcpu* paren
 {
     vmid_t cur_vm_id = vm_config->vm_id;
     size_t partition_id = vm_assign[cur_vm_id].partition_id;
-    struct partition *cur_parttn = &partition[partition_id];
+    struct partition* cur_parttn = &partition[partition_id];
     struct vm_allocation* vm_alloc = vmm_alloc_install_vm(cur_vm_id, master, vm_config);
 
     /* CROSSCON TODO maybe just use master */
@@ -296,22 +300,21 @@ static struct vm* vmm_create_vms(struct vm_config* vm_config, struct vcpu* paren
         cpu_sync_barrier(&cur_parttn->sync);
     }
 
-    if(!assigned){
+    if (!assigned) {
         assigned = vmm_partition_cpu_assign(cur_parttn, vm_config, &vm_master);
     }
 
-
-    struct vm *vm = NULL;
-    if(assigned){
+    struct vm* vm = NULL;
+    if (assigned) {
         vm = vm_init(vm_alloc, vm_config, master, vm_config->vm_id);
-        struct vcpu *vcpu = cpu_get_vcpu(vm->id);
+        struct vcpu* vcpu = cpu_get_vcpu(vm->id);
 
-        for(size_t i = 0; i < vm_config->children_num; i++){
+        for (size_t i = 0; i < vm_config->children_num; i++) {
             struct vm_config* child_config = vm_config->children[i];
-            //CROSSCON TODO: do this without recursion
+            // CROSSCON TODO: do this without recursion
             struct vm* child_vm = vmm_create_vms(child_config, vcpu, master);
-            if(child_vm != NULL){
-                struct vcpu *child_vcpu = cpu_get_vcpu(child_vm->id);
+            if (child_vm != NULL) {
+                struct vcpu* child_vcpu = cpu_get_vcpu(child_vm->id);
                 struct node_data* node = objpool_alloc(&nodes_pool);
                 node->data = child_vcpu;
                 INFO("VM %u is parent of VM %u\n", vcpu->vm->id, child_vcpu->vm->id);
@@ -324,14 +327,13 @@ static struct vm* vmm_create_vms(struct vm_config* vm_config, struct vcpu* paren
     return vm;
 }
 
-
 struct vm* vmm_init_dynamic(struct dynconfig* dyn_config, uint64_t vm_addr)
 {
     /* CROSSCON TODO: support multicore dynamic VMs */
     vmid_t vmid = vmm_alloc_vmid();
-    struct vm_config *vm_cfg = &dyn_config->vm_cfg;
+    struct vm_config* vm_cfg = &dyn_config->vm_cfg;
     struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vmid, true, vm_cfg);
-    struct vm *dyn_vm = vm_init_dynamic(vm_alloc, vm_cfg, vm_addr, vmid, dyn_config);
+    struct vm* dyn_vm = vm_init_dynamic(vm_alloc, vm_cfg, vm_addr, vmid, dyn_config);
 
     /* CROSSCON TODO */
     struct node_data* node = objpool_alloc(&nodes_pool);
@@ -342,21 +344,20 @@ struct vm* vmm_init_dynamic(struct dynconfig* dyn_config, uint64_t vm_addr)
     return dyn_vm;
 }
 
-void vmm_destroy_dynamic(struct vm *vm)
+void vmm_destroy_dynamic(struct vm* vm)
 {
-    list_foreach(cpu()->vcpu->vmstack_children, struct node_data, node){
-	struct vcpu* child = node->data;
-	if(child->vm == vm){
+    list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
+        struct vcpu* child = node->data;
+        if (child->vm == vm) {
             /* CROSSCON TODO remove recursively */
-	    list_rm(&cpu()->vcpu->vmstack_children, (node_t*)node);
-	    objpool_free(&nodes_pool, node);
-	}
+            list_rm(&cpu()->vcpu->vmstack_children, (node_t*)node);
+            objpool_free(&nodes_pool, node);
+        }
     }
 
     vm_destroy_dynamic(vm);
     vmm_free_vm(vm);
 }
-
 
 void vmm_init()
 {
@@ -365,7 +366,7 @@ void vmm_init()
     shmem_init();
     remio_init();
 
-    if(cpu_is_master()){
+    if (cpu_is_master()) {
         objpool_init(&nodes_pool);
         vmm_init_assign();
     }
@@ -376,14 +377,14 @@ void vmm_init()
     vmid_t vm_id = INVALID_VMID;
     if (vmm_assign_vcpu(&master, &vm_id)) {
         size_t partition_id = vm_assign[vm_id].partition_id;
-        if(master){
+        if (master) {
             /* this pcpu is partition master */
             /* Initialize partition */
             cpu_sync_init(&partition[partition_id].sync, vm_assign[vm_id].ncpus);
             partition[partition_id].master = cpu()->id;
         }
         struct vm_config* vm_config = vm_assign[vm_id].vm_config;
-        struct vm *root = vmm_create_vms(vm_config, NULL, master);
+        struct vm* root = vmm_create_vms(vm_config, NULL, master);
         struct vcpu* root_vcpu = cpu_get_vcpu(root->id);
 
         cpu_sync_barrier(&partition[partition_id].sync);

@@ -7,8 +7,6 @@
 // NOT HERE
 #define SBI_EXTID_TEE (0x544545)
 
-bool sdgpos_arch_setup(struct vm *vm);
+bool sdgpos_arch_setup(struct vm* vm);
 
 #endif
-
-

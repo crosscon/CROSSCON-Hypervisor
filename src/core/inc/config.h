@@ -97,7 +97,7 @@ struct vm_config {
     /* CROSSCON TODO Permissions */
 
     size_t children_num;
-    struct vm_config **children;
+    struct vm_config** children;
 
     /**
      * A description of the virtual platform available to the guest, i.e., the virtual machine

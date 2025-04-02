@@ -21,13 +21,13 @@
 #include <string.h>
 #include "list.h"
 
-void vmstack_push(struct vcpu* vcpu){
-
-    if(cpu()->vcpu != NULL && vcpu->state != VCPU_INACTIVE){
+void vmstack_push(struct vcpu* vcpu)
+{
+    if (cpu()->vcpu != NULL && vcpu->state != VCPU_INACTIVE) {
         return;
     }
 
-    if(cpu()->vcpu != NULL){
+    if (cpu()->vcpu != NULL) {
         vcpu_save_state(cpu()->vcpu);
         cpu()->vcpu->state = VCPU_STACKED;
         list_push_front(&cpu()->vcpu_stack, &cpu()->vcpu->node);
@@ -41,15 +41,15 @@ void vmstack_push(struct vcpu* vcpu){
     /* INFO("Current VM on pCPU %d is VM %d\n", cpu()->id, cpu()->vcpu->vm->id); */
 }
 
-struct vcpu* vmstack_pop(){
-
+struct vcpu* vmstack_pop()
+{
     /* CROSSCON TODO: our nodes do not allow the same vcpu to be in the stack more than
      * once */
-    struct vcpu* vcpu = (struct vcpu*) list_pop(&cpu()->vcpu_stack);
+    struct vcpu* vcpu = (struct vcpu*)list_pop(&cpu()->vcpu_stack);
 
-    if(vcpu != NULL){
+    if (vcpu != NULL) {
         vcpu->parent = NULL;
-        struct vcpu *temp = vcpu;
+        struct vcpu* temp = vcpu;
         vcpu = cpu()->vcpu;
         cpu()->vcpu = temp;
         vcpu_save_state(vcpu);
@@ -63,19 +63,19 @@ struct vcpu* vmstack_pop(){
     return vcpu;
 }
 
-void vmstack_unwind(struct vcpu* vcpu){
-
-    if(vcpu->state != VCPU_STACKED){
+void vmstack_unwind(struct vcpu* vcpu)
+{
+    if (vcpu->state != VCPU_STACKED) {
         return;
     }
 
     struct vcpu* temp_vcpu = NULL;
 
     do {
-        temp_vcpu = (struct vcpu*) list_pop(&cpu()->vcpu_stack);
+        temp_vcpu = (struct vcpu*)list_pop(&cpu()->vcpu_stack);
         temp_vcpu->state = VCPU_INACTIVE;
         temp_vcpu->parent = NULL;
-    } while(temp_vcpu != vcpu);
+    } while (temp_vcpu != vcpu);
 
     vcpu_save_state(cpu()->vcpu);
     cpu()->vcpu->state = VCPU_INACTIVE;

@@ -45,50 +45,54 @@ extern volatile const size_t VGIC_IPI_ID;
 void vgic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vgic_ipi_handler, VGIC_IPI_ID)
 
-static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, uint64_t lr){
-    if(vcpu->state == VCPU_ACTIVE){
+static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, uint64_t lr)
+{
+    if (vcpu->state == VCPU_ACTIVE) {
         return gich_read_lr(lr);
     } else {
         return vcpu->arch.vgic_priv.gich.LR[lr];
     }
 }
 
-static inline void vgic_lr_wr(struct vcpu* vcpu, uint64_t lr, uint64_t val){
-    if(vcpu->state == VCPU_ACTIVE){
+static inline void vgic_lr_wr(struct vcpu* vcpu, uint64_t lr, uint64_t val)
+{
+    if (vcpu->state == VCPU_ACTIVE) {
         gich_write_lr(lr, val);
     } else {
         vcpu->arch.vgic_priv.gich.LR[lr] = val;
-        bitmap_set((bitmap_t*) &vcpu->arch.vgic_priv.gich.ELSR, lr);
+        bitmap_set((bitmap_t*)&vcpu->arch.vgic_priv.gich.ELSR, lr);
         /**
          * TODO: take this decision out of the vgic and make it more arch
          * indepenent
          */
-        if(vcpu->state == VCPU_STACKED && (val & GICH_LR_STATE_PND)){
-            //vmstack_unwind(vcpu);
+        if (vcpu->state == VCPU_STACKED && (val & GICH_LR_STATE_PND)) {
+            // vmstack_unwind(vcpu);
         }
     }
 }
 
-static inline bool vgic_lr_empty(struct vcpu* vcpu, uint64_t lr){
-    if(vcpu->state == VCPU_ACTIVE){
+static inline bool vgic_lr_empty(struct vcpu* vcpu, uint64_t lr)
+{
+    if (vcpu->state == VCPU_ACTIVE) {
         uint64_t elsr = gich_get_elrsr();
-        return bit_get(elsr, lr%64);
+        return bit_get(elsr, lr % 64);
     } else {
-        return bit_get(vcpu->arch.vgic_priv.gich.ELSR, lr%64);
+        return bit_get(vcpu->arch.vgic_priv.gich.ELSR, lr % 64);
     }
 }
 
-
-static inline void vgic_hcr_set(struct vcpu* vcpu, uint64_t mask){
-    if(vcpu->state == VCPU_ACTIVE){
+static inline void vgic_hcr_set(struct vcpu* vcpu, uint64_t mask)
+{
+    if (vcpu->state == VCPU_ACTIVE) {
         gich_set_hcr(gich_get_hcr() | (uint32_t)mask);
     } else {
         vcpu->arch.vgic_priv.gich.HCR |= (uint32_t)mask;
     }
 }
 
-static inline void vgic_hcr_clear(struct vcpu* vcpu, uint64_t mask){
-    if(vcpu->state == VCPU_ACTIVE){
+static inline void vgic_hcr_clear(struct vcpu* vcpu, uint64_t mask)
+{
+    if (vcpu->state == VCPU_ACTIVE) {
         gich_set_hcr(gich_get_hcr() & (uint32_t)~mask);
     } else {
         vcpu->arch.vgic_priv.gich.HCR &= (uint32_t)~mask;
@@ -128,7 +132,6 @@ static inline ssize_t gich_get_lr(struct vgic_int* interrupt, gic_lr_t* lr)
 
     return -1;
 }
-
 
 static inline uint8_t vgic_get_state(struct vgic_int* interrupt)
 {
@@ -293,7 +296,7 @@ static inline void vgic_write_lr(struct vcpu* vcpu, struct vgic_int* interrupt, 
     interrupt->in_lr = true;
     interrupt->lr = (uint8_t)lr_ind;
     vcpu->arch.vgic_priv.curr_lrs[lr_ind] = interrupt->id;
-    //gich_write_lr(lr_ind, lr);
+    // gich_write_lr(lr_ind, lr);
     vgic_lr_wr(vcpu, lr_ind, lr);
 }
 
@@ -1063,7 +1066,7 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
     struct vcpu* child = NULL;
 
     if (vm_id != cpu()->vcpu->vm->id) {
-        list_foreach(cpu()->vcpu->vmstack_children, struct node_data, node) {
+        list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
             child = node->data;
             if (child->vm->id == vm_id) {
                 vmstack_push(child);
@@ -1071,8 +1074,9 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
             }
         }
 
-        if(child == NULL)
+        if (child == NULL) {
             ERROR("received vgic3 msg target to another vcpu");
+        }
     }
 
     switch (event) {
@@ -1112,7 +1116,7 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
             break;
     }
 
-    if(child != NULL){
+    if (child != NULL) {
         /* this means vcpu is not for currently running vm, and we now the vcpu
          * is child. so we return to the parent */
         vmstack_pop();
@@ -1311,8 +1315,8 @@ void vgic_set_hw(struct vm* vm, irqid_t id)
  * If so, fix the commented out loops below
  */
 
-void vgic_save_state(struct vcpu* vcpu){
-
+void vgic_save_state(struct vcpu* vcpu)
+{
     vcpu->arch.vgic_priv.gich.HCR = gich_get_hcr();
     vcpu->arch.vgic_priv.gich.VMCR = gich_get_vmcr();
 
@@ -1322,14 +1326,13 @@ void vgic_save_state(struct vcpu* vcpu){
     //     vcpu->arch.vgic_priv.gich.APR[i] = gich_get_apr(i);
     // }
 
-    for(size_t i = 0; i < NUM_LRS; i++){
+    for (size_t i = 0; i < NUM_LRS; i++) {
         vcpu->arch.vgic_priv.gich.LR[i] = gich_read_lr(i);
     }
-
 }
 
-void vgic_restore_state(struct vcpu* vcpu){
-
+void vgic_restore_state(struct vcpu* vcpu)
+{
     gich_set_hcr(vcpu->arch.vgic_priv.gich.HCR);
     gich_set_vmcr(vcpu->arch.vgic_priv.gich.VMCR);
 
@@ -1337,8 +1340,7 @@ void vgic_restore_state(struct vcpu* vcpu){
     //     gich_set_apr(i, vcpu->arch.vgic_priv.gich.APR[i]);
     // }
 
-    for(size_t i = 0; i < NUM_LRS; i++){
+    for (size_t i = 0; i < NUM_LRS; i++) {
         gich_write_lr(i, vcpu->arch.vgic_priv.gich.LR[i]);
     }
-
 }

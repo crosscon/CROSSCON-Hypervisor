@@ -150,26 +150,34 @@ static inline void gich_set_vmcr(uint32_t vmcr)
 static inline uint32_t gich_get_apr(size_t i)
 {
     switch (i) {
-        case 0: return (uint32_t)sysreg_ich_ap1r0_el2_read();
-        case 1: return (uint32_t)sysreg_ich_ap1r1_el2_read();
-        case 2: return (uint32_t)sysreg_ich_ap1r2_el2_read();
-        case 3: return (uint32_t)sysreg_ich_ap1r3_el2_read();
-        default: return 0;
+        case 0:
+            return (uint32_t)sysreg_ich_ap1r0_el2_read();
+        case 1:
+            return (uint32_t)sysreg_ich_ap1r1_el2_read();
+        case 2:
+            return (uint32_t)sysreg_ich_ap1r2_el2_read();
+        case 3:
+            return (uint32_t)sysreg_ich_ap1r3_el2_read();
+        default:
+            return 0;
     }
 }
 
 static inline void gich_set_apr(size_t i, uint32_t val)
 {
     switch (i) {
-        case 0: sysreg_ich_ap1r0_el2_write(val);
-        case 1: sysreg_ich_ap1r1_el2_write(val);
-        case 2: sysreg_ich_ap1r2_el2_write(val);
-        case 3: sysreg_ich_ap1r3_el2_write(val);
+        case 0:
+            sysreg_ich_ap1r0_el2_write(val);
+        case 1:
+            sysreg_ich_ap1r1_el2_write(val);
+        case 2:
+            sysreg_ich_ap1r2_el2_write(val);
+        case 3:
+            sysreg_ich_ap1r3_el2_write(val);
         default:
             ERROR("Unkown GICH APR");
     }
 }
-
 
 static inline uint32_t gicc_iar(void)
 {

@@ -52,7 +52,6 @@ struct vcpu_arch {
     struct list vgic_spilled;
     struct psci_ctx psci_ctx;
     struct {
-
         struct {
             uint64_t elr_el2;
             uint64_t spsr_el2;

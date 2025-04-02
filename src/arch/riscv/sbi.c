@@ -445,8 +445,7 @@ static struct sbiret sbi_bao_handler(unsigned long fid)
     struct vcpu* vcpu = cpu()->vcpu;
     unsigned long arg0 = vcpu_readreg(vcpu, REG_A0);
 
-    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
-    {
+    list_foreach (vcpu->vm->hvc_list, struct hndl_hvc_node, node) {
         /* TODO: match range */
         hvc_handler_t handler = node->hndl_hvc.handler;
         if (handler != NULL) {
@@ -459,12 +458,12 @@ static struct sbiret sbi_bao_handler(unsigned long fid)
 
     // Any hypercall will always be successful from a purely SBI standpoint. A
     // bao-specific hypercall code is returned as the value.
-    //ret.error = SBI_SUCCESS;
-    //ret.value = hypercall(fid);
+    // ret.error = SBI_SUCCESS;
+    // ret.value = hypercall(fid);
 
-   ret.error = ret.value  < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
+    ret.error = ret.value < 0 ? SBI_ERR_FAILURE : SBI_SUCCESS;
 
-   return ret;
+    return ret;
 }
 
 size_t sbi_vs_handler()
@@ -472,7 +471,7 @@ size_t sbi_vs_handler()
     unsigned long extid = vcpu_readreg(cpu()->vcpu, REG_A7);
     unsigned long fid = vcpu_readreg(cpu()->vcpu, REG_A6);
     struct sbiret ret;
-    struct vcpu *calling_cpu = cpu()->vcpu;
+    struct vcpu* calling_cpu = cpu()->vcpu;
 
     switch (extid) {
         case SBI_EXTID_BASE:
@@ -494,8 +493,7 @@ size_t sbi_vs_handler()
             ret = sbi_bao_handler(fid);
             break;
         case SBI_EXTID_TEE:
-            list_foreach(calling_cpu->vm->smc_list, struct hndl_smc_node, node)
-            {
+            list_foreach (calling_cpu->vm->smc_list, struct hndl_smc_node, node) {
                 /* TODO: match range */
                 smc_handler_t handler = node->hndl_smc.handler;
                 if (handler != NULL) {
@@ -504,7 +502,7 @@ size_t sbi_vs_handler()
                     }
                 }
             }
-	    goto out;
+            goto out;
             break;
         default:
             WARNING("guest issued unsupport sbi extension call (%d)\n", extid);

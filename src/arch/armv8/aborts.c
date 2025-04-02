@@ -50,8 +50,7 @@ static void aborts_data_lower(unsigned long iss, unsigned long far, unsigned lon
         }
     } else {
         struct vcpu* vcpu = cpu()->vcpu;
-        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
-        {
+        list_foreach (vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node) {
             mem_abort_handler_t abort_handler = node->hndl_mem_abort.handler;
             if (abort_handler != NULL) {
                 if (abort_handler(vcpu, addr)) {
@@ -119,8 +118,7 @@ static void hvc_handler(unsigned long iss, unsigned long far, unsigned long il, 
 
     struct vcpu* vcpu = cpu()->vcpu;
 
-    list_foreach(vcpu->vm->hvc_list, struct hndl_hvc_node, node)
-    {
+    list_foreach (vcpu->vm->hvc_list, struct hndl_hvc_node, node) {
         /* TODO: match range */
         hvc_handler_t handler = node->hndl_hvc.handler;
         if (handler != NULL) {
@@ -141,9 +139,7 @@ static void smc_handler(unsigned long iss, unsigned long far, unsigned long il, 
 
     struct vcpu* vcpu = cpu()->vcpu;
 
-
-    list_foreach(vcpu->vm->smc_list, struct hndl_smc_node, node)
-    {
+    list_foreach (vcpu->vm->smc_list, struct hndl_smc_node, node) {
         /* TODO: match range */
         smc_handler_t handler = node->hndl_smc.handler;
         if (handler != NULL) {

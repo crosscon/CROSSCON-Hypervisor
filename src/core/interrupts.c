@@ -11,7 +11,6 @@
 #include <string.h>
 #include <vmstack.h>
 
-
 BITMAP_ALLOC(global_interrupt_bitmap, MAX_INTERRUPT_LINES);
 spinlock_t irq_reserve_lock = SPINLOCK_INITVAL;
 
@@ -93,10 +92,9 @@ static inline bool interrupt_assigned(irqid_t int_id)
     return bitmap_get(global_interrupt_bitmap, int_id);
 }
 
-
 void interrupts_vm_inject(struct vcpu* vcpu, irqid_t id)
 {
-   vcpu_inject_hw_irq(vcpu, id);
+    vcpu_inject_hw_irq(vcpu, id);
 }
 
 static inline uint64_t interrupts_get_vmid(irqid_t int_id)
@@ -106,9 +104,9 @@ static inline uint64_t interrupts_get_vmid(irqid_t int_id)
 
 enum irq_res interrupts_handle(irqid_t int_id)
 {
-    struct vcpu *vcpu = NULL;
+    struct vcpu* vcpu = NULL;
 
-    if(interrupts_is_shared(int_id) || (cpu()->vcpu->vm->id == interrupts_get_vmid(int_id))){
+    if (interrupts_is_shared(int_id) || (cpu()->vcpu->vm->id == interrupts_get_vmid(int_id))) {
         vcpu = cpu()->vcpu;
     } else {
         vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
@@ -116,8 +114,8 @@ enum irq_res interrupts_handle(irqid_t int_id)
 
     if ((vcpu != NULL) && vm_has_interrupt(vcpu->vm, int_id)) {
         // TODO
-        //vcpu_inject_hw_irq(cpu()->vcpu, int_id);
-        list_foreach(vcpu->vm->irq_list, struct hndl_irq_node, node) {
+        // vcpu_inject_hw_irq(cpu()->vcpu, int_id);
+        list_foreach (vcpu->vm->irq_list, struct hndl_irq_node, node) {
             sdirq_handler_t handler = node->hndl_irq.handler;
             if (handler != NULL) {
                 handler(vcpu, int_id);
@@ -142,8 +140,8 @@ bool interrupts_vm_assign(struct vm* vm, irqid_t id)
 
     spin_lock(&irq_reserve_lock);
     if (!interrupts_arch_conflict(global_interrupt_bitmap, id)) {
-        if(interrupt_assigned_to_hyp(id) ||
-                (!interrupts_is_shared(id) && interrupt_owner[id] != 0)){
+        if (interrupt_assigned_to_hyp(id) ||
+            (!interrupts_is_shared(id) && interrupt_owner[id] != 0)) {
             ERROR("Trying to assign cpu interrupt multiple times\n", id);
         }
         ret = true;
@@ -177,15 +175,16 @@ irqid_t interrupts_reserve(irqid_t pint_id, irq_handler_t handler)
     return int_id;
 }
 
-void interrupts_set_shared(irqid_t id){
-
-    if(interrupt_assigned_to_hyp(id) || interrupt_owner[id] != 0){
+void interrupts_set_shared(irqid_t id)
+{
+    if (interrupt_assigned_to_hyp(id) || interrupt_owner[id] != 0) {
         return;
     }
 
     bitmap_set(interrupt_shared, id);
 }
 
-bool interrupts_is_shared(irqid_t id){
+bool interrupts_is_shared(irqid_t id)
+{
     return !!bitmap_get(interrupt_shared, id);
 }

@@ -319,7 +319,7 @@ static bool mem_vm_img_in_phys_rgn(struct vm_config* vm_config)
     return img_in_rgn;
 }
 
-static bool vm_reserve_img_memory(struct vm_config *vm_cfg, struct page_pool* pool)
+static bool vm_reserve_img_memory(struct vm_config* vm_cfg, struct page_pool* pool)
 {
     size_t n_pg = NUM_PAGES(vm_cfg->image.size);
     struct ppages ppages = mem_ppages_get(vm_cfg->image.load_addr, n_pg);
@@ -337,7 +337,7 @@ static bool vm_reserve_img_memory(struct vm_config *vm_cfg, struct page_pool* po
     return true;
 }
 
-static bool vm_reserve_mem_rgn(struct vm_config *vm_cfg, struct page_pool* pool)
+static bool vm_reserve_mem_rgn(struct vm_config* vm_cfg, struct page_pool* pool)
 {
     /* for every mem region */
     for (size_t i = 0; i < vm_cfg->platform.region_num; i++) {
@@ -353,18 +353,18 @@ static bool vm_reserve_mem_rgn(struct vm_config *vm_cfg, struct page_pool* pool)
     return true;
 }
 
-static bool vm_reserve_physical_memory(struct vm_config *vm_cfg, struct page_pool* pool)
+static bool vm_reserve_physical_memory(struct vm_config* vm_cfg, struct page_pool* pool)
 {
-    if(!vm_reserve_img_memory(vm_cfg, pool)){
+    if (!vm_reserve_img_memory(vm_cfg, pool)) {
         return false;
     }
 
-    if(!vm_reserve_mem_rgn(vm_cfg, pool)){
+    if (!vm_reserve_mem_rgn(vm_cfg, pool)) {
         return false;
     }
 
-    for (size_t i = 0; i < vm_cfg->children_num; i++){
-        if(!vm_reserve_physical_memory(vm_cfg->children[i], pool)){
+    for (size_t i = 0; i < vm_cfg->children_num; i++) {
+        if (!vm_reserve_physical_memory(vm_cfg->children[i], pool)) {
             return false;
         }
     }
@@ -405,7 +405,7 @@ static bool mem_reserve_physical_memory(struct page_pool* pool)
     /* for every vm config */
     for (size_t i = 0; i < config.vmlist_size; i++) {
         struct vm_config* vm_cfg = config.vmlist[i];
-        if(!vm_reserve_physical_memory(vm_cfg, pool)){
+        if (!vm_reserve_physical_memory(vm_cfg, pool)) {
             return false;
         }
     }

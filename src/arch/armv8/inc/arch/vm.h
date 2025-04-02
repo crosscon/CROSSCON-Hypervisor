@@ -56,7 +56,6 @@ struct vcpu_arch {
     unsigned long mpu_entry_mask;
 #endif
     struct {
-
         struct {
             uint64_t elr_el2;
             uint64_t spsr_el2;

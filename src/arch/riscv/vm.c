@@ -94,12 +94,15 @@ bool vcpu_arch_is_on(struct vcpu* vcpu)
 }
 
 /* CROSSCON TODO */
-void vcpu_save_state(struct vcpu* vcpu){
-    if(vcpu == NULL) return;
+void vcpu_save_state(struct vcpu* vcpu)
+{
+    if (vcpu == NULL) {
+        return;
+    }
 
     vcpu->regs.hstatus = csrs_hstatus_read();
-    vcpu->regs.sstatus= csrs_sstatus_read();
-    vcpu->regs.sepc    = csrs_sepc_read();
+    vcpu->regs.sstatus = csrs_sstatus_read();
+    vcpu->regs.sepc = csrs_sepc_read();
 
     vcpu->regs.vsstatus = csrs_vsstatus_read();
     vcpu->regs.vstvec = csrs_vstvec_read();
@@ -108,7 +111,7 @@ void vcpu_save_state(struct vcpu* vcpu){
     vcpu->regs.vscause = csrs_vscause_read();
     vcpu->regs.vsatp = csrs_vsatp_read();
 
-    vcpu->regs.vstval =csrs_vstval_read();
+    vcpu->regs.vstval = csrs_vstval_read();
     vcpu->regs.hvip = csrs_hvip_read();
     vcpu->regs.hie = csrs_hie_read();
 
@@ -116,8 +119,11 @@ void vcpu_save_state(struct vcpu* vcpu){
     /* vtimer_save_state(vcpu); */
 }
 
-void vcpu_restore_state(struct vcpu* vcpu){
-    if(vcpu == NULL) return;
+void vcpu_restore_state(struct vcpu* vcpu)
+{
+    if (vcpu == NULL) {
+        return;
+    }
 
     // hstatus, sstatus ans sepc are restored in vcpu_arch_entry
     csrs_sepc_write(vcpu->regs.sepc);
@@ -140,7 +146,7 @@ void vcpu_restore_state(struct vcpu* vcpu){
     /* CROSSCON TODO */
     csrs_sscratch_write((uintptr_t)&vcpu->regs);
 
-    sbi_set_timer(vcpu->arch.stime_value);  // assumes always success
+    sbi_set_timer(vcpu->arch.stime_value); // assumes always success
     csrs_hvip_clear(HIP_VSTIP);
     csrs_sie_set(SIE_STIE);
 }

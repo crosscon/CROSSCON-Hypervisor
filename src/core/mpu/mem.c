@@ -264,12 +264,11 @@ void as_init(struct addr_space* as, enum AS_TYPE type, colormap_t colors)
     }
 }
 
-void as_destroy(struct addr_space *as)
+void as_destroy(struct addr_space* as)
 {
     /* TODO */
     WARNING("%s not implemented\n", __func__);
 }
-
 
 static void mem_free_ppages(struct ppages* ppages)
 {

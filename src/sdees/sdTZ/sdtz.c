@@ -29,14 +29,14 @@ static int64_t optee2_handle_nw(struct vcpu* ree_vcpu)
 {
     int64_t ret = -HC_E_FAILURE;
     struct vcpu* optee_vcpu = vcpu_get_child(ree_vcpu, 0);
-    if(optee_vcpu == NULL){
+    if (optee_vcpu == NULL) {
         ret = HC_E_SUCCESS;
         vcpu_writereg(ree_vcpu, 0, ~(unsigned long)0);
         return ret;
     }
 
     tee_arch_interrupt_disable();
-    if(optee_vcpu->vm->type == 2){
+    if (optee_vcpu->vm->type == 2) {
         vmstack_push(optee_vcpu);
         sdtz_copy_args(cpu()->vcpu, ree_vcpu, 7);
         /* CROSSCON TODO: more generic stepping */
@@ -47,11 +47,10 @@ static int64_t optee2_handle_nw(struct vcpu* ree_vcpu)
     return ret;
 }
 
-
 static int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
 {
     int64_t ret = -HC_E_FAILURE;
-    struct vcpu *ree_vcpu = vcpu_get_child(optee_vcpu, 0);
+    struct vcpu* ree_vcpu = vcpu_get_child(optee_vcpu, 0);
     if (ree_vcpu != NULL) {
         /* There is bulshit when copying regsiters */
         switch (ID_TO_FUNCID(fid)) {
@@ -62,20 +61,22 @@ static int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
                 tee_arch_interrupt_enable();
                 break;
             case TEEHC_FUNCID_RETURN_CALL_DONE:
-                if(vcpu_readreg(cpu()->vcpu, 1) == 0xffff0004){
+                if (vcpu_readreg(cpu()->vcpu, 1) == 0xffff0004) {
                     /* interrupted */
                     /* CROSSCON TODO Not sure if needed */
                     sdtz_copy_args_call_done(ree_vcpu, cpu()->vcpu, 4);
-                } else
+                } else {
                     sdtz_copy_args_call_done(ree_vcpu, cpu()->vcpu, 6);
+                }
                 vmstack_push(ree_vcpu);
                 tee_arch_interrupt_enable();
                 break;
             case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                 vmstack_push(ree_vcpu);
-                struct vcpu *guest_vcpu = vcpu_get_child(ree_vcpu, 0);
-                if(guest_vcpu != NULL)
+                struct vcpu* guest_vcpu = vcpu_get_child(ree_vcpu, 0);
+                if (guest_vcpu != NULL) {
                     vmstack_push(guest_vcpu);
+                }
 
                 break;
             default:
@@ -90,9 +91,9 @@ static int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
 static int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
 {
     int64_t ret = -HC_E_FAILURE;
-    struct vcpu *guest_vcpu = vmstack_pop();
-    (void) guest_vcpu;
-    struct vcpu *ree_vcpu = cpu()->vcpu;
+    struct vcpu* guest_vcpu = vmstack_pop();
+    (void)guest_vcpu;
+    struct vcpu* ree_vcpu = cpu()->vcpu;
     if (ree_vcpu != NULL) {
         switch (ID_TO_FUNCID(fid)) {
             case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
@@ -101,12 +102,13 @@ static int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
                 tee_arch_interrupt_enable();
                 break;
             case TEEHC_FUNCID_RETURN_CALL_DONE:
-                if(vcpu_readreg(cpu()->vcpu, 1) == 0xffff0004){
+                if (vcpu_readreg(cpu()->vcpu, 1) == 0xffff0004) {
                     /* interrupted */
                     /* CROSSCON TODO Not sure if needed */
                     sdtz_copy_args_call_done(ree_vcpu, optee_vcpu, 4);
-                } else
+                } else {
                     sdtz_copy_args_call_done(ree_vcpu, optee_vcpu, 6);
+                }
                 __attribute__((fallthrough));
             case TEEHC_FUNCID_RETURN_ENTRY_DONE:
                 tee_arch_interrupt_enable();
@@ -120,27 +122,28 @@ static int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
     return ret;
 }
 
-#define ARM_SMCCC_OWNER_MASK	0x3F
-#define ARM_SMCCC_OWNER_SHIFT	24
+#define ARM_SMCCC_OWNER_MASK  0x3F
+#define ARM_SMCCC_OWNER_SHIFT 24
 
-#define GET_OWNER(x) (((x) >> ARM_SMCCC_OWNER_SHIFT) & ARM_SMCCC_OWNER_MASK)
-#define IS_OPTEE(x)  (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
-#define IS_OPTEE2(x) (GET_OWNER(x) >= (0x12) && GET_OWNER(x) <= (0x1f))
+#define GET_OWNER(x)          (((x) >> ARM_SMCCC_OWNER_SHIFT) & ARM_SMCCC_OWNER_MASK)
+#define IS_OPTEE(x)           (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
+#define IS_OPTEE2(x)          (GET_OWNER(x) >= (0x12) && GET_OWNER(x) <= (0x1f))
 
-int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
+int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid)
+{
     int64_t ret = -HC_E_FAILURE;
 
     if (vcpu->vm->type == 0) {
-	/* normal world */
-        if(IS_OPTEE(fid)) {
-            if(!optee_crash){
+        /* normal world */
+        if (IS_OPTEE(fid)) {
+            if (!optee_crash) {
                 ret = optee_handle_nw(vcpu);
             } else {
                 /* CROSSCON TODO: arch specific */
                 vcpu_writereg(cpu()->vcpu, 10, 0x7);
             }
-        } else if(IS_OPTEE2(fid)) {
-            if(!optee2_crash){
+        } else if (IS_OPTEE2(fid)) {
+            if (!optee2_crash) {
                 ret = optee2_handle_nw(vcpu);
             } else {
                 /* CROSSCON TODO: arch specific */
@@ -150,9 +153,9 @@ int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid) {
     } else {
         /* secure world */
         /* CROSSCON TODO: get parent */
-        if(cpu()->vcpu->vm->type == 1){ /* host secure world */
+        if (cpu()->vcpu->vm->type == 1) {        /* host secure world */
             ret = optee_handle_sw(vcpu, fid);
-        } else if (cpu()->vcpu->vm->type == 2){ /* guest secure world */
+        } else if (cpu()->vcpu->vm->type == 2) { /* guest secure world */
             ret = optee2_handle_sw(vcpu, fid);
         }
     }
@@ -171,12 +174,12 @@ static void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     UNUSED_ARG(int_id);
     /* CROSSCON TODO: check current active handler */
 
-   if(vcpu != cpu()->vcpu && vcpu->state == VCPU_INACTIVE){
-       if (cpu()->vcpu->vm->type == 1) {
-           /* CROSSCON TODO */
-           /* interrupts_vm_inject(cpu()->vcpu, 40); */
-       }
-   }
+    if (vcpu != cpu()->vcpu && vcpu->state == VCPU_INACTIVE) {
+        if (cpu()->vcpu->vm->type == 1) {
+            /* CROSSCON TODO */
+            /* interrupts_vm_inject(cpu()->vcpu, 40); */
+        }
+    }
 }
 
 static int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
@@ -184,15 +187,15 @@ static int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
     UNUSED_ARG(addr);
     int64_t res = HC_E_SUCCESS;
 
-    if(vcpu->vm->type == 1){
-        struct vcpu *ree_vcpu = vcpu_get_child(vcpu, 0);
+    if (vcpu->vm->type == 1) {
+        struct vcpu* ree_vcpu = vcpu_get_child(vcpu, 0);
         if (ree_vcpu != NULL) {
             vmstack_push(ree_vcpu);
         }
         optee_crash = 1;
         INFO("VM %d performed illegal access at 0x%x. Disabling.\n", vcpu->vm->id, addr);
         tee_arch_interrupt_enable();
-    } else if(vcpu->vm->type == 2){
+    } else if (vcpu->vm->type == 2) {
         vmstack_pop();
         tee_arch_interrupt_enable();
         optee2_crash = 1;
@@ -208,7 +211,7 @@ static struct hndl_irq irq = {
     /* CROSSCON TODO: obtain this from config file */
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
-    .irqs = {27,33,72,73,74,75,76,77,78,79},
+    .irqs = { 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
     .handler = sdtz_handle_interrupt,
 };
 
@@ -216,13 +219,13 @@ static struct hndl_mem_abort mem_abort = {
     .handler = sdtz_handle_abort,
 };
 
-
-int64_t sdtz_handler_setup(struct vm *vm)
+int64_t sdtz_handler_setup(struct vm* vm)
 {
     int64_t ret = 0;
 
-    if(vm == NULL)
+    if (vm == NULL) {
         return -1;
+    }
 
     sdtz_arch_handler_setup(vm);
 

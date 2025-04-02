@@ -15,7 +15,7 @@ struct cpu_arch {
     struct cpu_arch_profile profile;
     unsigned long mpidr;
     struct {
-        struct vcpu * next_vcpu;
+        struct vcpu* next_vcpu;
         struct list event_list;
     } vtimer;
 };

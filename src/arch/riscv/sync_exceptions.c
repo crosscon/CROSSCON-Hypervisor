@@ -124,8 +124,7 @@ static size_t guest_page_fault_handler(void)
     } else {
         struct vcpu* vcpu = cpu()->vcpu;
         WARNING("no emulation handler for abort(0x%x at 0x%x)\n", addr, csrs_sepc_read());
-        list_foreach(vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node)
-        {
+        list_foreach (vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node) {
             mem_abort_handler_t sdeehandler = node->hndl_mem_abort.handler;
             if (sdeehandler != NULL) {
                 if (sdeehandler(vcpu, addr)) {
@@ -141,7 +140,7 @@ static size_t guest_illegal_instr_handler(void)
 {
     unsigned long ins = csrs_htinst_read();
     size_t ins_size;
-    if(ins == 0) {
+    if (ins == 0) {
         /**
          * If htinst does not provide information about the trap,
          * we must read the instruction from the guest's memory
@@ -151,7 +150,7 @@ static size_t guest_illegal_instr_handler(void)
         ins = read_ins(ins_addr);
         ins_size = INS_SIZE(ins);
     } else if (is_pseudo_ins(ins)) {
-        //TODO: we should reinject this in the guest as a fault access
+        // TODO: we should reinject this in the guest as a fault access
         ERROR("fault on 1st stage page table walk");
     } else {
         /**
@@ -178,7 +177,7 @@ void sync_exception_handler(void)
 {
     size_t pc_step = 0;
     unsigned long _scause = csrs_scause_read();
-    struct vcpu *calling_vcpu = cpu()->vcpu;
+    struct vcpu* calling_vcpu = cpu()->vcpu;
 
     if (!(csrs_hstatus_read() & HSTATUS_SPV)) {
         internal_exception_handler(&calling_vcpu->regs.x[0]);

@@ -10,12 +10,7 @@
 #include <arch/hypercall.h>
 #include <vm.h>
 
-enum { HC_INVAL = 0,
-       HC_IPC = 1,
-       HC_REMIO = 2,
-       HC_VMSTACK = 3,
-       HC_ENCLAVE = 4,
-       HC_TEE = 5};
+enum { HC_INVAL = 0, HC_IPC = 1, HC_REMIO = 2, HC_VMSTACK = 3, HC_ENCLAVE = 4, HC_TEE = 5 };
 
 enum { HC_E_SUCCESS = 0, HC_E_FAILURE = 1, HC_E_INVAL_ID = 2, HC_E_INVAL_ARGS = 3 };
 

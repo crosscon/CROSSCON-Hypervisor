@@ -943,7 +943,7 @@ void as_init(struct addr_space* as, enum AS_TYPE type, pte_t* root_pt, colormap_
     as_arch_init(as);
 }
 
-void as_destroy(struct addr_space *as)
+void as_destroy(struct addr_space* as)
 {
     size_t n = pt_size(&as->pt, 0) / PAGE_SIZE;
     memset((void*)as->pt.root, 0, n * PAGE_SIZE);
@@ -964,7 +964,7 @@ vaddr_t mem_alloc_map(struct addr_space* as, as_sec_t section, struct ppages* pa
     if (address == INVALID_VA) {
         WARNING("Failed to allocate vpage 0x%x\n", at);
     } else {
-        if(!mem_map(as, address, page, num_pages, flags)){
+        if (!mem_map(as, address, page, num_pages, flags)) {
             WARNING("Failed to map 0x%x at 0x%x\n", address, at);
         }
     }

@@ -18,10 +18,11 @@
 
 #define WARNING(...) console_printk("BAO WARNING: " __VA_ARGS__);
 
-#define ERROR(...)                            do{ \
+#define ERROR(...)                                 \
+    do {                                           \
         console_printk("BAO ERROR: " __VA_ARGS__); \
-        while (true) { }; \
-    }while(false);
+        while (true) { };                          \
+    } while (false);
 
 void init(cpuid_t cpu_id);
 

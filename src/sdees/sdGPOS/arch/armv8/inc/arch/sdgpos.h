@@ -4,7 +4,6 @@
 #include <crossconhyp.h>
 #include <vm.h>
 
-bool sdgpos_arch_setup(struct vm *vm);
+bool sdgpos_arch_setup(struct vm* vm);
 
 #endif
-

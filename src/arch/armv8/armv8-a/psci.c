@@ -70,7 +70,7 @@ void psci_wake(uint32_t handler_id)
     psci_restore_state();
 
     if (handler_id < PSCI_WAKEUP_NUM) {
-        psci_wake_handlers[handler_id](0/* TODO */);
+        psci_wake_handlers[handler_id](0 /* TODO */);
     } else {
         ERROR("unknown reason for cpu wake up");
     }

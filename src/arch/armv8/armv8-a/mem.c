@@ -18,7 +18,7 @@ void as_arch_init(struct addr_space* as)
      * PT_CPU_REC index to navigate it, so we have to use the PT_VM_REC_IND.
      */
     if (as->type == AS_HYP_CPY || as->type == AS_VM) {
-        index = PT_VM_REC_IND - (8*(as->id)); /* LPAE is 8bytes per entry */
+        index = PT_VM_REC_IND - (8 * (as->id)); /* LPAE is 8bytes per entry */
     } else {
         index = PT_CPU_REC_IND;
     }
@@ -61,7 +61,7 @@ void mem_guest_ipa_translate(struct addr_space* as, vaddr_t ipa, paddr_t* pa)
     tmp2 = tmp & ~(1ULL << 0);
     sysreg_sctlr_el1_write(tmp2);
     ISB();
-    if(!mem_translate(as, ipa, pa)){
+    if (!mem_translate(as, ipa, pa)) {
         ERROR("Could not translate guest ipa");
     }
     sysreg_sctlr_el1_write(tmp);

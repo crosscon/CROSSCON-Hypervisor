@@ -16,8 +16,7 @@ void vcpu_arch_profile_init(struct vcpu* vcpu, struct vm* vm)
     mem_translate(&cpu()->as, (vaddr_t)vm->as.pt.root, &root_pt_pa);
 
     vcpu->arch.sysregs.hyp.vttbr_el2 =
-        ((vcpu->vm->id << VTTBR_VMID_OFF) & VTTBR_VMID_MSK) |
-        (root_pt_pa & ~VTTBR_VMID_MSK);
+        ((vcpu->vm->id << VTTBR_VMID_OFF) & VTTBR_VMID_MSK) | (root_pt_pa & ~VTTBR_VMID_MSK);
 
     ISB(); // make sure vmid is commited befor tlbi
     tlb_vm_inv_all(vm->id);

@@ -21,6 +21,6 @@ struct ipc {
 
 struct vm_config;
 
-long int ipc_hypercall(struct vcpu * vcpu);
+long int ipc_hypercall(struct vcpu* vcpu);
 
 #endif /* IPC_H */

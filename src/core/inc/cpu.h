@@ -6,7 +6,7 @@
 #ifndef __CPU_H__
 #define __CPU_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/cpu.h>
 
 #include <spinlock.h>

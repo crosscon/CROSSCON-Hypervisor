@@ -71,7 +71,7 @@ void remio_assign_vm_cpus(struct vm* vm);
  * @note Used to exchange information between the Remote I/O system and the backend VM
  * @return Returns the number of pending I/O requests
  */
-long int remio_hypercall(struct vcpu * vcpu);
+long int remio_hypercall(struct vcpu* vcpu);
 
 /**
  * @brief Remote I/O MMIO emulation handler

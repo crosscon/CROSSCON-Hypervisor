@@ -5,7 +5,7 @@
 
 #include <config.h>
 
-static void config_adjust_child_vm_image_addr(struct vm_config *vm_cfg, paddr_t load_addr)
+static void config_adjust_child_vm_image_addr(struct vm_config* vm_cfg, paddr_t load_addr)
 {
     if (!vm_cfg->image.separately_loaded) {
         vm_cfg->image.load_addr = (vm_cfg->image.load_addr - BAO_VAS_BASE) + load_addr;

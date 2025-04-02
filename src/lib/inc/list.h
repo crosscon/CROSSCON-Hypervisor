@@ -62,8 +62,9 @@ static inline void list_push_front(struct list* list, node_t* node)
     if (list != NULL && node != NULL) {
         spin_lock(&list->lock);
 
-        if (list->head != NULL)
+        if (list->head != NULL) {
             *node = list->head;
+        }
 
         list->head = node;
 

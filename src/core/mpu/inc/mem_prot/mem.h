@@ -41,7 +41,7 @@ struct addr_space {
 };
 
 void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, colormap_t colors);
-void as_destroy(struct addr_space *as);
+void as_destroy(struct addr_space* as);
 
 static inline bool mem_regions_overlap(struct mp_region* reg1, struct mp_region* reg2)
 {

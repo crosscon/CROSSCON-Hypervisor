@@ -10,12 +10,13 @@
 //  #define SMCC_E_NOT_SUPPORTED  (-1)
 // #define SMCC32_FID_VND_HYP_SRVC (0x86000000)
 // #define SMCC64_FID_VND_HYP_SRVC (SMCC32_FID_VND_HYP_SRVC  | SMCC64_BIT)
-#define SMCC_FID_FN_NUM_MSK     (0xFFFF)
+#define SMCC_FID_FN_NUM_MSK (0xFFFF)
 
 static int64_t sdgpos_smc_handler(struct vcpu* vcpu, long unsigned int smc_fid)
 {
-    if(vcpu->vm->type != 0)
+    if (vcpu->vm->type != 0) {
         return 0;
+    }
     long unsigned int ret = (long unsigned)-HC_E_FAILURE;
     int res = 0;
     long unsigned int x1 = vcpu_readreg(vcpu, HYPCALL_IN_ARG_REG(0));
@@ -23,7 +24,7 @@ static int64_t sdgpos_smc_handler(struct vcpu* vcpu, long unsigned int smc_fid)
     long unsigned int x3 = vcpu_readreg(vcpu, HYPCALL_IN_ARG_REG(2));
 
     if (is_psci_fid(smc_fid)) {
-        res = psci_smc_handler((uint32_t) smc_fid, x1, x2, x3);
+        res = psci_smc_handler((uint32_t)smc_fid, x1, x2, x3);
         vcpu_writereg(vcpu, 0, ret);
     }
 
@@ -37,17 +38,18 @@ static int64_t sdgpos_smc_handler(struct vcpu* vcpu, long unsigned int smc_fid)
 static int64_t sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
     UNUSED_ARG(smc_fid);
-    if(vcpu->vm->type != 0)
+    if (vcpu->vm->type != 0) {
         return 0;
+    }
 
     long int res;
     unsigned long fid = vcpu_readreg(vcpu, 0);
 
-    switch(fid & SMCC_FID_FN_NUM_MSK){
+    switch (fid & SMCC_FID_FN_NUM_MSK) {
         case HC_IPC:
             res = ipc_hypercall(vcpu);
             vcpu_writereg(vcpu, 0, (unsigned long int)res);
-        break;
+            break;
         default:
             /* WARNING("Unknown hypercall id %x", fid); */
             res = -1;
@@ -68,17 +70,17 @@ static struct hndl_hvc hvc = {
     .handler = sdgpos_hvc_handler,
 };
 
-
-bool sdgpos_arch_setup(struct vm *vm)
+bool sdgpos_arch_setup(struct vm* vm)
 {
     int64_t ret = 0;
 
-    if(vm == NULL)
+    if (vm == NULL) {
         return -1;
+    }
 
     /* CROSSCON TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */
-    if(vm->type == 0){
+    if (vm->type == 0) {
         vm_hndl_smc_add(vm, &smc);
         vm_hndl_hvc_add(vm, &hvc);
     }

@@ -16,6 +16,6 @@
 #ifndef __PLAT_PLIC_H__
 #define __PLAT_PLIC_H__
 
-#define PLIC_PLAT_CNTXT_NUM     (2)
+#define PLIC_PLAT_CNTXT_NUM (2)
 
 #endif /* __PLAT_PLIC_H__ */

@@ -1,7 +1,7 @@
 #ifndef SCHED_H
 #define SCHED_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 void sched_start(void);
 void sched_yield(void);

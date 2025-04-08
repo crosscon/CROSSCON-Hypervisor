@@ -92,7 +92,6 @@ struct vm {
 
     struct list mem_abort_list;
 
-
     struct vm_io io;
 
     BITMAP_ALLOC(interrupt_bitmap, MAX_GUEST_INTERRUPTS);
@@ -110,7 +109,7 @@ struct vm {
 };
 
 struct vcpu {
-    node_t node;
+    node_t cpu_vcpu_list_node;
 
     struct arch_regs regs;
     struct vcpu_arch arch;
@@ -128,9 +127,9 @@ struct vcpu {
     struct list vmstack_children;
     struct vcpu* parent;
     struct {
-	bool initialized;
+        bool initialized;
         size_t id;
-    }nclv_data;
+    } nclv_data;
     uint8_t stack[STACK_SIZE] __attribute__((aligned(PAGE_SIZE)));
 };
 
@@ -140,7 +139,6 @@ struct vm_allocation {
     struct vm* vm;
     struct vcpu* vcpus;
 };
-
 
 typedef void (*sdirq_handler_t)(struct vcpu* vcpu, irqid_t int_id);
 struct hndl_irq {
@@ -186,9 +184,10 @@ struct hndl_mem_abort_node {
 };
 
 #ifndef GENERATING_DEFS
-struct vm* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* config, bool master,
+struct vcpu* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* config, bool master,
     vmid_t vm_id);
-struct vm* vm_init_dynamic(struct vm_allocation*, struct vm_config*, uint64_t, vmid_t vmid, struct dynconfig* dyn_config);
+struct vm* vm_init_dynamic(struct vm_allocation*, struct vm_config*, uint64_t, vmid_t vmid,
+    struct dynconfig* dyn_config);
 void vm_destroy_dynamic(struct vm* vm);
 void vm_start(struct vm* vm, vaddr_t entry);
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu);
@@ -223,7 +222,7 @@ static inline cpuid_t vm_translate_to_pcpuid(struct vm* vm, vcpuid_t vcpuid)
 static inline vcpuid_t vm_translate_to_vcpuid(struct vm* vm, cpuid_t pcpuid)
 {
     if (vm->cpus & (1UL << pcpuid)) {
-        return (cpuid_t)bit_count(vm->cpus & BIT_MASK(0, pcpuid)) -1;
+        return (cpuid_t)bit_count(vm->cpus & BIT_MASK(0, pcpuid)) - 1;
     } else {
         return INVALID_CPUID;
     }
@@ -262,8 +261,6 @@ bool vcpu_arch_is_on(struct vcpu* vcpu);
 void vcpu_save_state(struct vcpu* vcpu);
 void vcpu_restore_state(struct vcpu* vcpu);
 
-void vm_map_mem_region(struct vm* vm, struct vm_mem_region* reg);
-
 void vm_hndl_irq_add(struct vm* vm, struct hndl_irq* irqs);
 
 void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs);
@@ -271,6 +268,7 @@ void vm_hndl_smc_add(struct vm* vm, struct hndl_smc* smcs);
 void vm_hndl_hvc_add(struct vm* vm, struct hndl_hvc* hvcs);
 
 void vm_hndl_mem_abort_add(struct vm* vm, struct hndl_mem_abort* mem_aborts);
+void vcpu_context_switch(void);
 #endif /* GENERATING_DEFS */
 
 #endif /* __VM_H__ */

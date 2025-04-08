@@ -30,7 +30,7 @@ void vmstack_push(struct vcpu* vcpu)
     if (cpu()->vcpu != NULL) {
         vcpu_save_state(cpu()->vcpu);
         cpu()->vcpu->state = VCPU_STACKED;
-        list_push_front(&cpu()->vcpu_stack, &cpu()->vcpu->node);
+        list_push_front(&cpu()->vcpu_stack, &cpu()->vcpu->cpu_vcpu_list_node);
         vcpu->parent = cpu()->vcpu;
     }
 

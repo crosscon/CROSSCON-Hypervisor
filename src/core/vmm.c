@@ -35,12 +35,26 @@ static struct vm_assignment {
 
 struct vm_config* vm_config_by_id_table[CONFIG_VM_NUM];
 
-static vmid_t vmm_config_to_vmid(struct vm_config* config) {
+/* needed for dynamic VMs */
+static vmid_t vmm_alloc_vmid(void)
+{
+    static vmid_t id = CONFIG_VM_NUM;
+    static spinlock_t lock = SPINLOCK_INITVAL;
 
+    vmid_t vmid;
+    spin_lock(&lock);
+    vmid = id++;
+    spin_unlock(&lock);
+
+    return vmid;
+}
+
+static vmid_t vmm_config_to_vmid(struct vm_config* vm_config)
+{
     vmid_t vm_id = INVALID_VMID;
 
     for (size_t i = 0; i < CONFIG_VM_NUM; i++) {
-        if (config == vm_config_by_id_table[i]) {
+        if (vm_config == vm_config_by_id_table[i]) {
             vm_id = i;
             break;
         }
@@ -49,8 +63,8 @@ static vmid_t vmm_config_to_vmid(struct vm_config* config) {
     return vm_id;
 }
 
-static size_t max_vcpu_per_cpu() {
-
+static size_t max_vcpu_per_cpu(void)
+{
     size_t vcpu_num = 0;
     size_t exlusive_cpu_num = 0;
 
@@ -75,7 +89,7 @@ static void vmm_assign_child_vcpus(struct vm_config* vm_config)
     cpumap_t parent_cpus = vm_assign[parent_vmid].cpus;
 
     for (size_t i = 0; i < vm_config->children_num; i++) {
-        struct vm_config * child_config = vm_config->children[i];
+        struct vm_config* child_config = vm_config->children[i];
         size_t parent_num_cpus = vm_config->platform.cpu_num;
         size_t child_num_cpus = child_config->platform.cpu_num;
         if (child_num_cpus > parent_num_cpus) {
@@ -109,9 +123,9 @@ static bool vmm_assign_vcpus(void)
 
     for (size_t k = 0; k < 4; k++) {
         for (size_t i = 0; i < config.vmlist_size; i++) {
-            struct vm_config* vm_config = &config.vmlist[i];
+            struct vm_config* vm_config = config.vmlist[i];
             vmid_t vm_id = vmm_config_to_vmid(vm_config);
-            struct vm_assignment *vm_assignment = &vm_assign[vm_id];
+            struct vm_assignment* vm_assignment = &vm_assign[vm_id];
             size_t vm_cpu_num = vm_config->platform.cpu_num;
 
             if (cpu_search_params[k].find_exclusive && !vm_config->cpu_exclusivity) {
@@ -170,7 +184,7 @@ static void vmm_allocate_vmid_rec(struct vm_config* vm_config)
     }
 }
 
-static void vmm_allocate_vmids()
+static void vmm_allocate_vmids(void)
 {
     for (size_t i = 0; i < config.vmlist_size; i++) {
         vmm_allocate_vmid_rec(config.vmlist[i]);
@@ -205,8 +219,8 @@ static bool vmm_alloc_vm(struct vm_allocation* vm_alloc, struct vm_config* vm_co
     return true;
 }
 
-
-static struct vm_allocation* vmm_alloc_install_vm(struct vm_config* vm_config, vmid_t vm_id, bool master)
+static struct vm_allocation* vmm_alloc_install_vm(struct vm_config* vm_config, vmid_t vm_id,
+    bool master)
 {
     struct vm_allocation* vm_alloc = &vm_assign[vm_id].vm_alloc;
     if (master) {
@@ -233,15 +247,18 @@ static struct vcpu* vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, boo
         vmid_t child_vmid = vmm_config_to_vmid(vm_config->children[i]);
         if (vm_assign[child_vmid].cpus & (1ULL << cpu()->id)) {
             struct vcpu* child_vcpu = vmm_create_vm(vm_config->children[i], child_vmid, master);
-            list_push(&vcpu->children, &child_vcpu->parent_list_node);
+            struct node_data* node = objpool_alloc(&nodes_pool);
+            node->data = child_vcpu;
+            INFO("VM %u is parent of VM %u\n", vcpu->vm->id, child_vcpu->vm->id);
+            list_push(&vcpu->vmstack_children, (node_t*)node);
         }
     }
 
     return vcpu;
 }
 
-static bool vmm_get_next_assigned_root_vm(vmid_t *vm_id, bool *master) {
-
+static bool vmm_get_next_assigned_root_vm(vmid_t* vm_id, bool* master)
+{
     bool assigned = false;
     *master = false;
 
@@ -250,13 +267,13 @@ static bool vmm_get_next_assigned_root_vm(vmid_t *vm_id, bool *master) {
 
         if (vm_assign[vmid].cpus & (1ULL << cpu()->id)) {
             spin_lock(&vm_assign[vmid].lock);
-            vm_assign[vmid].cpus &= ~(1ULL << cpu()->id);
+            vm_assign[vmid].cpus &= ~(cpumap_t)(1ULL << cpu()->id);
             if (!vm_assign[vmid].master) {
                 vm_assign[vmid].master = true;
                 *master = true;
             }
             spin_unlock(&vm_assign[vmid].lock);
-    
+
             *vm_id = vmid;
             assigned = true;
             break;
@@ -270,28 +287,36 @@ struct vm* vmm_init_dynamic(struct dynconfig* dyn_config, uint64_t vm_addr)
 {
     /* CROSSCON TODO: support multicore dynamic VMs */
     vmid_t vmid = vmm_alloc_vmid();
-    struct vm_config *vm_cfg = &dyn_config->vm_cfg;
-    struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vmid, true, vm_cfg);
-    struct vm *dyn_vm = vm_init_dynamic(vm_alloc, vm_cfg, vm_addr, vmid, dyn_config);
+    struct vm_config* vm_cfg = &dyn_config->vm_cfg;
+    struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vm_cfg, vmid, true);
+    struct vm* dyn_vm = vm_init_dynamic(vm_alloc, vm_cfg, vm_addr, vmid, dyn_config);
 
     /* CROSSCON TODO */
     struct node_data* node = objpool_alloc(&nodes_pool);
-    struct vcpu* child = cpu_get_vcpu(dyn_vm->id);
+    struct vcpu* child = cpu_get_vcpu_by_vmid(dyn_vm->id);
     node->data = child;
     list_push(&cpu()->vcpu->vmstack_children, (node_t*)node);
 
     return dyn_vm;
 }
 
-void vmm_destroy_dynamic(struct vm *vm)
+static void vmm_free_vm(struct vm* vm)
 {
-    list_foreach(cpu()->vcpu->vmstack_children, struct node_data, node){
-	struct vcpu* child = node->data;
-	if(child->vm == vm){
+    /* CROSSCON TODO take into account vcpus as well */
+    size_t n = NUM_PAGES(sizeof(struct vm));
+    memset((void*)vm, 0, n * PAGE_SIZE);
+    mem_unmap(&cpu()->as, (vaddr_t)vm, n, true);
+}
+
+void vmm_destroy_dynamic(struct vm* vm)
+{
+    list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
+        struct vcpu* child = node->data;
+        if (child->vm == vm) {
             /* CROSSCON TODO remove recursively */
-	    list_rm(&cpu()->vcpu->vmstack_children, (node_t*)node);
-	    objpool_free(&nodes_pool, node);
-	}
+            list_rm(&cpu()->vcpu->vmstack_children, (node_t*)node);
+            objpool_free(&nodes_pool, node);
+        }
     }
 
     vm_destroy_dynamic(vm);

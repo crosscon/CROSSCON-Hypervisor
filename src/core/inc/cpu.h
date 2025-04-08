@@ -32,8 +32,14 @@ struct cpu {
 
     struct vcpu* vcpu;      // current vcpu
     struct vcpu* next_vcpu; // next scheduled vcpu
-    struct list vcpu_list
+    struct list vcpu_list;
     struct list vcpu_stack;
+
+    struct list timer_event_list;
+
+    struct {
+        struct timer_event timer_event;
+    } sched;
 
     struct cpu_arch arch;
 
@@ -77,7 +83,7 @@ void cpu_standby_wakeup(void);
 void cpu_powerdown_wakeup(void);
 
 void cpu_add_vcpu(struct vcpu* vcpu);
-void cpu_remove_vcpu(struct vcpu * vcpu);
+void cpu_remove_vcpu(struct vcpu* vcpu);
 struct vcpu* cpu_get_vcpu_by_vmid(vmid_t vmid);
 
 void cpu_arch_init(cpuid_t cpu_id, paddr_t load_addr);

@@ -253,6 +253,7 @@ void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, cpumap_t cpus,
 void as_destroy(struct addr_space* as)
 {
     /* TODO */
+    UNUSED_ARG(as);
     WARNING("%s not implemented\n", __func__);
 }
 

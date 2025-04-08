@@ -11,7 +11,7 @@
 #include <bit.h>
 #include <fences.h>
 #include <hypercall.h>
-#include <arch/sdtz.h>
+#include <arch/sdees.h>
 
 #define SBI_EXTID_BASE                  (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID    (0)

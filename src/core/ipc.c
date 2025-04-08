@@ -35,25 +35,6 @@ static struct ipc* ipc_find_by_shmemid(struct vm* vm, size_t shmem_id)
     return ipc_obj;
 }
 
-static void notify_local_vms(unsigned long shmem_id, unsigned long event_id);
-static void notify_remote_vms(unsigned long shmem_id, unsigned long event_id);
-
-static void ipc_handler(uint32_t event, uint64_t data)
-{
-    union ipc_msg_data ipc_data = { .raw = data };
-    switch (event) {
-        case IPC_NOTIFY:
-            notify_local_vms(ipc_data.shmem_id, ipc_data.event_id);
-            break;
-        default:
-
-            WARNING("Unknown IPC IPI event\n");
-            break;
-    }
-}
-
-CPU_MSG_HANDLER(ipc_handler, IPC_CPUMSG_ID)
-
 static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id)
 {
     struct vcpu* vcpu_tmp = NULL;
@@ -77,6 +58,22 @@ static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned
         }
     }
 }
+
+static void ipc_handler(uint32_t event, uint64_t data)
+{
+    union ipc_msg_data ipc_data = { .raw = data };
+    switch (event) {
+        case IPC_NOTIFY:
+            notify_local_vms(cpu()->vcpu, ipc_data.shmem_id, ipc_data.event_id);
+            break;
+        default:
+
+            WARNING("Unknown IPC IPI event\n");
+            break;
+    }
+}
+
+CPU_MSG_HANDLER(ipc_handler, IPC_CPUMSG_ID)
 
 static void notify_remote_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id)
 {

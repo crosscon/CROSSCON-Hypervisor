@@ -6,7 +6,7 @@
 #ifndef __ARCH_VM_H__
 #define __ARCH_VM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/csfrs.h>
 #include <cpu.h>
 #include <arch/interrupts.h>

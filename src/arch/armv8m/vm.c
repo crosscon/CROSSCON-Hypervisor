@@ -108,6 +108,16 @@ void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val)
     return;
 }
 
+unsigned long vcpu_readpc(struct vcpu* vcpu)
+{
+    return vcpu->regs.gp_regs.pc;
+}
+
+void vcpu_writepc(struct vcpu* vcpu, unsigned long reg)
+{
+    vcpu->regs.gp_regs.pc = reg;
+}
+
 void vcpu_restore_state(struct vcpu* vcpu)
 {
     scb_ns->icsr = vcpu->regs.icsr;

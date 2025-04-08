@@ -6,7 +6,7 @@
 #ifndef NVIC_H
 #define NVIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/systick.h>
 

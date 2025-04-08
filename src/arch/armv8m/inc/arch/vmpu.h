@@ -1,7 +1,7 @@
 #ifndef VMPU_H
 #define VMPU_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 
 #define MPU_MAX_REGIONS PLAT_MAX_MPU_REGIONS

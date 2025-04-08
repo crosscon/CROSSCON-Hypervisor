@@ -7,7 +7,7 @@
 #ifndef MPU_ARCH_H
 #define MPU_ARCH_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/mem.h>
 

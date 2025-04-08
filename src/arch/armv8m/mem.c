@@ -118,6 +118,13 @@ bool mpu_perms_compatible(struct addr_space* as, mem_flags_t perms1, mem_flags_t
     return !failed;
 }
 
+void mem_guest_ipa_translate(struct addr_space* as, vaddr_t ipa, paddr_t* pa)
+{
+    UNUSED_ARG(as);
+    UNUSED_ARG(ipa);
+    UNUSED_ARG(pa);
+}
+
 void mpu_init(void)
 {
     mpu_arch_init();

@@ -6,7 +6,7 @@
 #ifndef MEM_ARCH_H
 #define MEM_ARCH_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <arch/mpu.h>
 

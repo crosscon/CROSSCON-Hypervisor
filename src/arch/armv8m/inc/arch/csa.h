@@ -6,7 +6,7 @@
 #ifndef __CSA_H__
 #define __CSA_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define CSA_ENTRIES    64
 #define CSA_ARRAY_SIZE (CSA_ENTRIES * 16 * 4)

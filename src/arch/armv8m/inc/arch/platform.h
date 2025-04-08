@@ -6,7 +6,7 @@
 #ifndef __ARCH_PLATFORM_H__
 #define __ARCH_PLATFORM_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 // Arch-specific platform data
 struct arch_platform {

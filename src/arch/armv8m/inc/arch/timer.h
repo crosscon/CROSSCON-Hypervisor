@@ -1,7 +1,7 @@
 #ifndef TIMER_ARCH_H
 #define TIMER_ARCH_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <platform.h>
 #include <arch/cpu.h>
 #include <arch/sysregs.h>

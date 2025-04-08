@@ -7,7 +7,7 @@
 #ifndef __ARCH_SAU_H__
 #define __ARCH_SAU_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <mem.h>
 

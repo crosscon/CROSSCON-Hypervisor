@@ -6,7 +6,7 @@
 #ifndef __ARCH_CSFR_H__
 #define __ARCH_CSFR_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define csfr_dcon1   0x9008
 #define csfr_pcon1   0x9204

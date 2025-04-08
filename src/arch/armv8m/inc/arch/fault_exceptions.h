@@ -6,7 +6,7 @@
 #ifndef FAULT_EXCEPTIONS_H__
 #define FAULT_EXCEPTIONS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 void fault_exception_handler(void);
 

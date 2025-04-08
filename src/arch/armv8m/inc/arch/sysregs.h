@@ -6,7 +6,7 @@
 #ifndef __ARCH_SYSREGS_H__
 #define __ARCH_SYSREGS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bit.h>
 
 #define NS_ALIAS_OFFSET          (0x20000UL)

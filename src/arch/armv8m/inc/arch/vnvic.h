@@ -1,7 +1,7 @@
 #ifndef VNVIC_H
 #define VNVIC_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <bitmap.h>
 #include <arch/interrupts.h>
 

@@ -1,7 +1,7 @@
 #ifndef ARCH_VFP_H
 #define ARCH_VFP_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define VFP_NUM_REGS (32)
 

@@ -1,7 +1,7 @@
 #ifndef VTIMER_H
 #define VTIMER_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define VTIMER_IRQ_ID (15)
 

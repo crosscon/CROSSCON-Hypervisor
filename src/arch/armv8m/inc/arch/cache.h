@@ -6,7 +6,7 @@
 #ifndef __ARCH_CACHE_H__
 #define __ARCH_CACHE_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define CACHE_MAX_LVL 8 // Does this make sense in all architectures?
 

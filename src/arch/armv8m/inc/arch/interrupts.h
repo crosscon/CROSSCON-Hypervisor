@@ -6,7 +6,7 @@
 #ifndef __ARCH_INTERRUPTS_H__
 #define __ARCH_INTERRUPTS_H__
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <plat/platform.h>
 
 #define ARCH_MAX_INTERRUPTS    496

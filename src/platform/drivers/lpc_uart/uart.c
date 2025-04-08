@@ -3,7 +3,7 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <drivers/uart.h>
 #include <drivers/iocon.h>
 #include <drivers/syscon.h>

@@ -6,7 +6,7 @@
 #ifndef LPC_IOCON_H
 #define LPC_IOCON_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <drivers/syscon.h>
 
 #define ICON_BASE               (0x50001000UL)

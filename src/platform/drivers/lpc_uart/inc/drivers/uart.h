@@ -6,7 +6,7 @@
 #ifndef LPC_UART_H
 #define LPC_UART_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 #include <drivers/syscon.h>
 
 #define FC0_BASE      0x50086000UL

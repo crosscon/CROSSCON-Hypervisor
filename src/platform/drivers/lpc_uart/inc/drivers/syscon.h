@@ -6,7 +6,7 @@
 #ifndef LPC_SYSCON_H
 #define LPC_SYSCON_H
 
-#include <bao.h>
+#include <crossconhyp.h>
 
 #define SYSCON_BASE              (0x50000000UL)
 

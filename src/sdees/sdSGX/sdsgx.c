@@ -47,7 +47,7 @@ static struct vcpu* sdsgx_get_nclv(struct vcpu* vcpu, size_t nclv_id)
 
 static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_ipa)
 {
-    uint64_t paddr = 0;
+    paddr_t paddr = 0;
     vaddr_t nclv_cfg_va = (vaddr_t)NULL;
     struct dynconfig* nclv_cfg;
     size_t cfg_size;
@@ -56,10 +56,12 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
     /* One page */
     if (cpu()->vcpu->vm != host) {
         pushed = true;
-        struct vcpu* vcpu = cpu_get_vcpu(host->id);
+        struct vcpu* vcpu = cpu_get_vcpu_by_vmid(host->id);
         vmstack_push(vcpu);
     }
-    mem_guest_ipa_translate(&host->as, host_ipa, &paddr);
+    if (!DEFINED(MEM_NON_UNIFIED)) {
+        mem_guest_ipa_translate(&host->as, host_ipa, &paddr);
+    }
     struct ppages dyn_cfg_pp = mem_ppages_get(paddr, 1);
 
     nclv_cfg_va =
@@ -98,7 +100,7 @@ static struct dynconfig* sdsgx_get_cfg_from_host(struct vm* host, vaddr_t host_i
 
 static void sdsgx_create(uint64_t host_ipa)
 {
-    struct dynconfig* nclv_cfg = sdsgx_get_cfg_from_host(cpu()->vcpu->vm, host_ipa);
+    struct dynconfig* nclv_cfg = sdsgx_get_cfg_from_host(cpu()->vcpu->vm, (vaddr_t)host_ipa);
 
     /* Create enclave */
     /* CROSSCON TODO CHECKS */
@@ -108,7 +110,7 @@ static void sdsgx_create(uint64_t host_ipa)
     cpu()->vcpu->nclv_data.initialized = false;
 
     /* init */
-    struct vcpu* nclv_vcpu = cpu_get_vcpu(nclv_vm->id);
+    struct vcpu* nclv_vcpu = cpu_get_vcpu_by_vmid(nclv_vm->id);
     nclv_vcpu->nclv_data.id = nclv_vm->id;
     vcpu_writereg(nclv_vcpu, 0, 0);
     vmstack_push(nclv_vcpu);
@@ -119,13 +121,13 @@ static void sdsgx_add_rgn(uint64_t enclave_id, uint64_t donor_ipa, uint64_t nclv
 {
     /* CROSSCON TODO: handle multiple child */
     struct vcpu* child = NULL;
-    uint64_t pa = 0;
+    paddr_t pa = 0;
 
-    if ((child = sdsgx_get_nclv(cpu()->vcpu, enclave_id)) == NULL) {
+    if ((child = sdsgx_get_nclv(cpu()->vcpu, (size_t)enclave_id)) == NULL) {
         /* CROSSCON TODO HANDLE */
         return;
     }
-    mem_guest_ipa_translate(&cpu()->vcpu->vm->as, donor_ipa, &pa);
+    mem_guest_ipa_translate(&cpu()->vcpu->vm->as, (vaddr_t)donor_ipa, &pa);
 
     struct ppages pp = mem_ppages_get(pa, 1);
     mem_alloc_map(&child->vm->as, SEC_VM_ANY, &pp, ALIGN_FLOOR((vaddr_t)nclv_va, PAGE_SIZE), 1,
@@ -139,7 +141,7 @@ static void sdsgx_delete(uint64_t enclave_id)
     struct vcpu* nclv = NULL;
 
     /* CROSSCON TODO: search for enclave vm in host vm and then retrieve vcpu */
-    if ((nclv = sdsgx_get_nclv(cpu()->vcpu, enclave_id)) == NULL) {
+    if ((nclv = sdsgx_get_nclv(cpu()->vcpu, (size_t)enclave_id)) == NULL) {
         ERROR("non host invoked enclaved destruction");
     }
 
@@ -152,12 +154,12 @@ static void sdsgx_ecall(uint64_t enclave_id, uint64_t args_addr, uint64_t sp_el0
 {
     int64_t res = HC_E_SUCCESS;
     struct vcpu* child = NULL;
-    if ((child = sdsgx_get_nclv(cpu()->vcpu, enclave_id)) != NULL) {
+    if ((child = sdsgx_get_nclv(cpu()->vcpu, (size_t)enclave_id)) != NULL) {
         /* CROSSCON TODO separate architecture specific details. only works for Arm */
         /* child->arch.sysregs.vm.sp_el0 = sp_el0; */
         vmstack_push(child);
-        vcpu_writereg(cpu()->vcpu, 1, args_addr);
-        vcpu_writereg(cpu()->vcpu, 2, sp_el0);
+        vcpu_writereg(cpu()->vcpu, 1, (unsigned long)args_addr);
+        vcpu_writereg(cpu()->vcpu, 2, (unsigned long)sp_el0);
     } else {
         res = -HC_E_INVAL_ARGS;
         vcpu_writereg(cpu()->vcpu, 0, (unsigned long)res);
@@ -186,7 +188,7 @@ static void sdsgx_resume(uint64_t enclave_id)
 {
     int64_t res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
-    if ((enclave = sdsgx_get_nclv(cpu()->vcpu, enclave_id)) != NULL) {
+    if ((enclave = sdsgx_get_nclv(cpu()->vcpu, (size_t)enclave_id)) != NULL) {
         vmstack_push(enclave);
     } else {
         res = -HC_E_INVAL_ARGS;
@@ -254,9 +256,9 @@ static int64_t sdsgx_handle_hypercall(struct vcpu* vcpu, uint64_t fid)
             sdsgx_add_rgn(arg0, arg1, arg2);
             break;
         case SDSGX_INFO:
-            vcpu_writereg(cpu()->vcpu, 1, enclv_aborts);
+            vcpu_writereg(cpu()->vcpu, 1, (unsigned long)enclv_aborts);
             vcpu_writereg(cpu()->vcpu, 2, n_resumes);
-            vcpu_writereg(cpu()->vcpu, 3, irqs);
+            vcpu_writereg(cpu()->vcpu, 3, (unsigned long)irqs);
             vcpu_writereg(cpu()->vcpu, 4, n_calls);
             vcpu_writereg(cpu()->vcpu, 5, o_calls);
             vcpu_writereg(cpu()->vcpu, 0, (unsigned long)res);
@@ -299,7 +301,7 @@ static int64_t sdsgx_handle_abort(struct vcpu* vcpu, uint64_t addr)
     if (enclave != NULL) {
         vcpu_writereg(cpu()->vcpu, 0, SDSGX_FAULT);
         vcpu_writereg(cpu()->vcpu, 1, enclave->vm->id);
-        vcpu_writereg(cpu()->vcpu, 2, addr);
+        vcpu_writereg(cpu()->vcpu, 2, (unsigned long)addr);
     } else {
         res = -HC_E_INVAL_ARGS;
         vcpu_writereg(cpu()->vcpu, 0, (unsigned long)res);

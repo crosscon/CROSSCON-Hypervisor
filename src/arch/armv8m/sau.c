@@ -83,7 +83,8 @@ static struct sau_vm* sau_vm_get_local(struct addr_space* as)
 {
     struct sau_vm* sau_vm = NULL;
 
-    list_foreach (cpu()->vcpu_list, struct vcpu, vcpu) {
+    list_foreach (cpu()->vcpu_lst, node_t, node) {
+        struct vcpu* vcpu = CONTAINER_OF(struct vcpu, list_node, node);
         if (as == &vcpu->vm->as) {
             sau_vm = &vcpu->arch.sau_vm;
             break;

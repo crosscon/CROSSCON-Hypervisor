@@ -38,8 +38,8 @@ static struct ipc* ipc_find_by_shmemid(struct vm* vm, size_t shmem_id)
 static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id)
 {
     struct vcpu* vcpu_tmp = NULL;
-    list_foreach (cpu()->vcpu_list, node_t, node) {
-        vcpu_tmp = CONTAINER_OF(struct vcpu, cpu_vcpu_list_node, node);
+    list_foreach (cpu()->vcpu_lst, node_t, node) {
+        vcpu_tmp = CONTAINER_OF(struct vcpu, list_node, node);
         if (vcpu_tmp == vcpu) {
             continue;
         }

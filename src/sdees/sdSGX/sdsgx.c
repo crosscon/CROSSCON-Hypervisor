@@ -34,11 +34,10 @@ enum {
 static struct vcpu* sdsgx_get_nclv(struct vcpu* vcpu, size_t nclv_id)
 {
     struct vcpu* child = NULL;
-    list_foreach (vcpu->vmstack_children, struct node_data, node) {
-        struct vcpu* tmp = NULL;
-        tmp = node->data;
-        if (tmp->nclv_data.id == nclv_id) {
-            child = tmp;
+    list_foreach (vcpu->vmstack_children, node_t, node) {
+        struct vcpu* vcpu_tmp = CONTAINER_OF(struct vcpu, list_node, node);
+        if (vcpu_tmp->nclv_data.id == nclv_id) {
+            child = vcpu_tmp;
             break;
         }
     }

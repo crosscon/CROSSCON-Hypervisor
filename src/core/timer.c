@@ -6,7 +6,7 @@
 
 static inline struct list* timer_cpu_list(void)
 {
-    return &cpu()->timer_event_list;
+    return &cpu()->timer_event_lst;
 }
 
 static int timer_event_compare(void* cookie, node_t* n1, node_t* n2)

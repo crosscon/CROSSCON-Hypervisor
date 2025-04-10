@@ -109,7 +109,10 @@ struct vm {
 };
 
 struct vcpu {
-    node_t cpu_vcpu_list_node;
+    node_t sched_node;
+    node_t vmstack_node;
+    node_t list_node;
+    node_t vmstack_child_node;
 
     struct arch_regs regs;
     struct vcpu_arch arch;

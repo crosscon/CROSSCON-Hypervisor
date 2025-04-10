@@ -118,7 +118,7 @@ struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
 
     /* CROSSCON TODO */
     WARNING("TODO: Must free vcpu array\n");
-    // list_rm(&vm->vcpu_list, (node_t*)vcpu);
+    // list_rm(&vm->vcpu_lst, (node_t*)vcpu);
 
     memset(vcpu->stack, 0, sizeof(vcpu->stack));
 
@@ -834,9 +834,9 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
     struct vcpu* child = NULL;
-    list_foreach (vcpu->vmstack_children, struct node_data, node) {
+    list_foreach (vcpu->vmstack_children, node_t, node) {
         if (i++ == index) {
-            child = node->data;
+            child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);;
             break;
         }
     }

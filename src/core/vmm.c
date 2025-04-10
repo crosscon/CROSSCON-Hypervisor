@@ -247,10 +247,9 @@ static struct vcpu* vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, boo
         vmid_t child_vmid = vmm_config_to_vmid(vm_config->children[i]);
         if (vm_assign[child_vmid].cpus & (1ULL << cpu()->id)) {
             struct vcpu* child_vcpu = vmm_create_vm(vm_config->children[i], child_vmid, master);
-            struct node_data* node = objpool_alloc(&nodes_pool);
-            node->data = child_vcpu;
+
             INFO("VM %u is parent of VM %u\n", vcpu->vm->id, child_vcpu->vm->id);
-            list_push(&vcpu->vmstack_children, (node_t*)node);
+            list_push(&vcpu->vmstack_children, &child_vcpu->vmstack_child_node);
         }
     }
 
@@ -292,10 +291,9 @@ struct vm* vmm_init_dynamic(struct dynconfig* dyn_config, uint64_t vm_addr)
     struct vm* dyn_vm = vm_init_dynamic(vm_alloc, vm_cfg, vm_addr, vmid, dyn_config);
 
     /* CROSSCON TODO */
-    struct node_data* node = objpool_alloc(&nodes_pool);
-    struct vcpu* child = cpu_get_vcpu_by_vmid(dyn_vm->id);
-    node->data = child;
-    list_push(&cpu()->vcpu->vmstack_children, (node_t*)node);
+    struct vcpu* child_vcpu = cpu_get_vcpu_by_vmid(dyn_vm->id);
+
+    list_push(&cpu()->vcpu->vmstack_children, &child_vcpu->vmstack_child_node);
 
     return dyn_vm;
 }
@@ -310,12 +308,11 @@ static void vmm_free_vm(struct vm* vm)
 
 void vmm_destroy_dynamic(struct vm* vm)
 {
-    list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
-        struct vcpu* child = node->data;
-        if (child->vm == vm) {
+    list_foreach (&cpu()->vcpu->vmstack_children, node_t, node) {
+        struct vcpu* vcpu_child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);
+        if (vcpu_child->vm == vm) {
             /* CROSSCON TODO remove recursively */
-            list_rm(&cpu()->vcpu->vmstack_children, (node_t*)node);
-            objpool_free(&nodes_pool, node);
+            list_rm(&cpu()->vcpu->vmstack_children, &vcpu_child->vmstack_child_node);
         }
     }
 
@@ -346,5 +343,6 @@ void vmm_init()
         // TODO: implement proper scheduler
         cpu()->next_vcpu = cpu_get_vcpu_by_vmid(vm_id);
         vmstack_push(cpu()->next_vcpu);
+        list_push(&cpu()->vcpu_sched_lst, &cpu()->next_vcpu->sched_node);
     }
 }

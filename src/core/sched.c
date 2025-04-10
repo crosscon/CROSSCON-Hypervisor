@@ -27,10 +27,13 @@ static void sched_set_next_timer_event(void)
 
 static void sched_next(void)
 {
-    node_t* next_node = list_pop(&cpu()->vcpu_list);
-    list_push(&cpu()->vcpu_list, next_node);
-    struct vcpu* vcpu = CONTAINER_OF(struct vcpu, cpu_vcpu_list_node, next_node);
-    cpu()->next_vcpu = vcpu;
+    node_t* next_node = list_pop(&cpu()->vcpu_sched_lst);
+    list_push(&cpu()->vcpu_sched_lst, next_node);
+
+    node_t node = list_peek(&cpu()->vcpu_stack_lst);
+    struct vcpu* next = CONTAINER_OF(struct vcpu, vmstack_node, node);
+
+    cpu()->next_vcpu = next;
 }
 
 static void sched_timer_event_handler(struct timer_event* timer_event)
@@ -48,7 +51,7 @@ void sched_yield(void)
 void sched_start(void)
 {
     sched_next();
-    if (list_size(&cpu()->vcpu_list) > 1) {
+    if (list_size(&cpu()->vcpu_sched_lst) > 1) {
         sched_set_next_timer_event();
     }
 }

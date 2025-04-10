@@ -54,8 +54,8 @@ void psci_wake_from_off(uint64_t vmid)
                 /* TODO register optee hooks */
                 if (cpu()->vcpu->vm->type == 1) {
                     vcpu_arch_reset(cpu()->vcpu, 0x101017ec);
-                    list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
-                        struct vcpu* child = node->data;
+                    list_foreach (cpu()->vcpu->vmstack_children, node_t, node) {
+                        struct vcpu* child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);
                         if (child->vm->type == 2) {
                             vcpu_arch_reset(child, 0x201017ec);
                         }

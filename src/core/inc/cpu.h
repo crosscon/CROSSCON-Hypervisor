@@ -32,10 +32,14 @@ struct cpu {
 
     struct vcpu* vcpu;      // current vcpu
     struct vcpu* next_vcpu; // next scheduled vcpu
-    struct list vcpu_list;
-    struct list vcpu_stack;
 
-    struct list timer_event_list;
+    struct list vcpu_lst; /* all vcpus on this cpu */
+
+    struct list vcpu_sched_lst; /* only for root vcpus */
+
+    struct list vcpu_stack_lst; /* vm stack management */
+
+    struct list timer_event_lst;
 
     struct {
         struct timer_event timer_event;

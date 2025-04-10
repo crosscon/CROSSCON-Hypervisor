@@ -43,7 +43,8 @@ void cpu_init(cpuid_t cpu_id)
     cpu_arch_init(cpu_id, _load_addr);
 
     list_init(&cpu()->interface->event_list);
-    list_init(&cpu()->vcpu_list);
+    list_init(&cpu()->vcpu_lst);
+    list_init(&cpu()->vcpu_sched_lst);
 
     if (cpu_is_master()) {
         cpu_sync_init(&cpu_glb_sync, platform.cpu_num);
@@ -156,18 +157,18 @@ void cpu_idle_wakeup()
 
 void cpu_add_vcpu(struct vcpu* vcpu)
 {
-    if (vcpu->cpu_vcpu_list_node != NULL) {
+    if (vcpu->list_node != NULL) {
         ERROR("Trying to assigned vcpu to multiple cpus");
     }
     // TODO: need to assert no other vcpu from the same vm was added
-    list_push(&cpu()->vcpu_list, &vcpu->cpu_vcpu_list_node);
+    list_push(&cpu()->vcpu_lst, &vcpu->list_node);
 }
 
 struct vcpu* cpu_get_vcpu_by_vmid(vmid_t vmid)
 {
     struct vcpu* vcpu = NULL;
-    list_foreach (cpu()->vcpu_list, node_t, node) {
-        struct vcpu* tmp_vcpu = CONTAINER_OF(struct vcpu, cpu_vcpu_list_node, node);
+    list_foreach (cpu()->vcpu_lst, node_t, node) {
+        struct vcpu* tmp_vcpu = CONTAINER_OF(struct vcpu, list_node, node);
         if (tmp_vcpu->vm->id == vmid) {
             vcpu = tmp_vcpu;
             break;
@@ -187,5 +188,5 @@ void cpu_powerdown_wakeup(void)
 
 void cpu_remove_vcpu(struct vcpu* vcpu)
 {
-    list_rm(&cpu()->vcpu_list, (node_t*)vcpu);
+    list_rm(&cpu()->vcpu_lst, &vcpu->list_node);
 }

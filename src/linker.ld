@@ -80,7 +80,12 @@ SECTIONS
 #endif
 
 	. = ALIGN(PAGE_SIZE);
+#ifdef MEM_NON_UNIFIED
+/* TODO:ARMV8M - Align to PAGE_SIZE */
 	_vm_image_end = _vm_image_start + SIZEOF(.vm_images);
+#else
+	_vm_image_end = .;
+#endif
     _image_noload_start = .;
 
     extra_allocated_phys_mem = _image_noload_start - _image_load_end;

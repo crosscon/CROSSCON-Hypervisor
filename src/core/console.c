@@ -29,16 +29,19 @@ void console_init(void)
             platform.console.base, NUM_PAGES(sizeof(*uart)));
 
         // TODO:ARMV8M - This is temporary
+#ifdef MEM_NON_UNIFIED
         mem_alloc_map_dev(&cpu()->as, SEC_HYP_GLOBAL, INVALID_VA, SYSCON_BASE, NUM_PAGES(0x2000));
+#endif
 
         fence_sync_write();
 
         uart_init(uart);
         uart_enable(uart);
 
-        // TODO:ARMV8M - This is temporary
+// TODO:ARMV8M - This is temporary
+#ifdef MEM_NON_UNIFIED
         mem_unmap(&cpu()->as, SYSCON_BASE, NUM_PAGES(0x2000), false);
-
+#endif
         console_ready = true;
     }
 

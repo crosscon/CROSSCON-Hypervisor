@@ -15,35 +15,37 @@
 #include <fences.h>
 #include <config.h>
 
-extern uint8_t _image_start, _image_load_end, _image_end, _vm_image_start, _vm_image_end,
-    _data_vma_start;
-extern uint32_t _load_addr, _data_addr;
+extern uint8_t _image_start, _image_load_end, _image_end, _vm_image_start, _vm_image_end;
+extern uint32_t _load_addr;
+#ifdef MEM_NON_UNIFIED
+extern uint32_t _data_vma_start, _data_addr;
+#endif
 
 struct list page_pool_list;
 
 static size_t calc_root_mem_size(void)
 {
-    if (!DEFINED(MEM_NON_UNIFIED)) {
-        return (size_t)(&_image_end - &_image_start);
-    } else {
-        return (size_t)(&_image_end - &_data_vma_start);
-    }
+#ifndef MEM_NON_UNIFIED
+    return (size_t)(&_image_end - &_image_start);
+#else
+    return (size_t)(&_image_end - &_data_vma_start);
+#endif
 }
 
 static paddr_t get_root_pool_bitmap_base(void)
 {
     size_t cpu_size = platform.cpu_num * mem_cpu_boot_alloc_size();
 
-    if (!DEFINED(MEM_NON_UNIFIED)) {
-        size_t image_size = calc_root_mem_size();
-        size_t vm_image_size = (size_t)(&_vm_image_end - &_vm_image_start);
+#ifndef MEM_NON_UNIFIED
+    size_t image_size = calc_root_mem_size();
+    size_t vm_image_size = (size_t)(&_vm_image_end - &_vm_image_start);
 
-        return (paddr_t)(_load_addr + image_size + vm_image_size + cpu_size);
-    } else {
-        size_t data_size = (size_t)(&_image_end - &_data_vma_start);
+    return (paddr_t)(_load_addr + image_size + vm_image_size + cpu_size);
+#else
+    size_t data_size = (size_t)(&_image_end - &_data_vma_start);
 
-        return (paddr_t)(&_data_vma_start + data_size + cpu_size);
-    }
+    return (paddr_t)(&_data_vma_start + data_size + cpu_size);
+#endif
 }
 
 bool pp_alloc(struct page_pool* pool, size_t num_pages, bool aligned, struct ppages* ppages)
@@ -220,6 +222,7 @@ static bool pp_reserve_cpus(paddr_t load_addr, struct page_pool* pool)
     return mem_reserve_ppool_ppages(pool, &cpu_ppages);
 }
 
+#ifdef MEM_NON_UNIFIED
 static bool pp_reserve_hyp_data(struct page_pool* root_pool)
 {
     size_t data_size = (size_t)(&_image_end - &_data_vma_start);
@@ -235,17 +238,18 @@ static bool pp_reserve_hyp_data(struct page_pool* root_pool)
 
     return data_reserved && cpu_reserved;
 }
+#endif
 
 static bool pp_root_reserve_hyp_mem(paddr_t load_addr, struct page_pool* root_pool)
 {
-    if (!DEFINED(MEM_NON_UNIFIED)) {
-        bool hyp_image_load_mem = pp_reserve_hyp_image_load(load_addr, root_pool);
-        bool hyp_image_noload_mem = pp_reserve_hyp_image_noload(load_addr, root_pool);
-        bool cpus_mem = pp_reserve_cpus(load_addr, root_pool);
-        return hyp_image_load_mem && hyp_image_noload_mem && cpus_mem;
-    } else {
-        return pp_reserve_hyp_data(root_pool);
-    }
+#ifndef MEM_NON_UNIFIED
+    bool hyp_image_load_mem = pp_reserve_hyp_image_load(load_addr, root_pool);
+    bool hyp_image_noload_mem = pp_reserve_hyp_image_noload(load_addr, root_pool);
+    bool cpus_mem = pp_reserve_cpus(load_addr, root_pool);
+    return hyp_image_load_mem && hyp_image_noload_mem && cpus_mem;
+#else
+    return pp_reserve_hyp_data(root_pool);
+#endif
 }
 
 static bool pp_root_init(paddr_t load_addr, struct mem_region* root_region)
@@ -511,9 +515,15 @@ void mem_init(void)
     if (cpu_is_master()) {
         cache_enumerate();
 
+#ifndef MEM_NON_UNIFIED
+        if (!mem_setup_root_pool(_load_addr, &root_mem_region)) {
+            ERROR("couldn't not initialize root pool");
+        }
+#else
         if (!mem_setup_root_pool(_data_addr, &root_mem_region)) {
             ERROR("couldn't not initialize root pool");
         }
+#endif
 
         /* Insert root pool in pool list */
         list_init(&page_pool_list);

@@ -121,7 +121,7 @@ struct vcpu {
     enum { VCPU_OFF, VCPU_INACTIVE, VCPU_ACTIVE, VCPU_STACKED } state;
 
     spinlock_t blocked_count_lock;
-    int blocked_count;
+    long int blocked_count;
 
     struct vm* vm;
     struct list vmstack_children;
@@ -243,6 +243,51 @@ static inline void vcpu_inject_irq(struct vcpu* vcpu, irqid_t id)
     vcpu_arch_inject_irq(vcpu, id);
 }
 
+static inline void vcpu_block(struct vcpu* vcpu)
+{
+    // TODO check for overflows
+    vcpu->blocked_count += 1;
+}
+
+static inline void vcpu_unblock(struct vcpu* vcpu)
+{
+    if (vcpu->blocked_count > 0) {
+        vcpu->blocked_count -= 1;
+    }
+}
+
+static inline bool vcpu_is_blocked(struct vcpu* vcpu)
+{
+    return vcpu->blocked_count > 0;
+}
+
+static inline void vcpu_kill(struct vcpu* vcpu)
+{
+    vcpu->blocked_count = -1;
+}
+
+static inline bool vcpu_is_dead(struct vcpu* vcpu)
+{
+    return vcpu->blocked_count < 0;
+}
+
+static inline struct vcpu* vcpu_current(void)
+{
+    return cpu()->vcpu;
+}
+
+static inline struct vcpu* vcpu_next(void)
+{
+    return cpu()->vcpu;
+}
+
+static inline struct vcpu* vcpu_set_next(struct vcpu* vcpu)
+{
+    return cpu()->next_vcpu = vcpu;
+}
+
+void vcpu_context_switch(void);
+
 /* ------------------------------------------------------------*/
 
 void vm_mem_prot_init(struct vm* vm, const struct vm_config* config);
@@ -256,6 +301,7 @@ unsigned long vcpu_readreg(struct vcpu* vcpu, unsigned long reg);
 void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val);
 unsigned long vcpu_readpc(struct vcpu* vcpu);
 void vcpu_writepc(struct vcpu* vcpu, unsigned long pc);
+void vcpu_arch_run(struct vcpu* vcpu);
 void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry);
 bool vcpu_arch_is_on(struct vcpu* vcpu);
 void vcpu_save_state(struct vcpu* vcpu);

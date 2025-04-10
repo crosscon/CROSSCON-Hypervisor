@@ -97,6 +97,8 @@ _reset_handler:
 
     mv      a2, a1
     la      a1, _image_start
+    la      a3, _load_addr
+    STORE   a1, 0(a3)
     LD_SYM  s6, _extra_allocated_phys_mem_sym
 
     /**
@@ -297,6 +299,7 @@ _enter_vas:
     /* Init stack pointer and global pointer */
     /* TODO: what about tp? */
     li      t0, BAO_CPU_BASE
+    csrw    sscratch, t0
     li      sp, CPU_STACK_OFF + CPU_STACK_SIZE
     add     sp, t0, sp
 
@@ -337,3 +340,10 @@ clear:
     add a3, a3, 1
     blt a3, a4, clear
     ret
+
+.section ".data"
+.align 2
+.global _load_addr
+
+_load_addr:
+    .word 0xDEADBEEF

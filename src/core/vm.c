@@ -87,8 +87,8 @@ static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_confi
     vcpu->phys_id = cpu()->id;
     vcpu->vm = vm;
     vcpu->active = true;
-    //TODO:ARMV8M - Check this
-    if(DEFINED(MEM_NON_UNIFIED)) {
+    // TODO:ARMV8M - Check this
+    if (DEFINED(MEM_NON_UNIFIED)) {
         cpu()->vcpu = vcpu;
     }
     vcpu->blocked_count = 0;

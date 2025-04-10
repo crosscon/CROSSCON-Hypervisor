@@ -77,6 +77,8 @@ void cpu_send_msg(cpuid_t cpu, struct cpu_msg* msg);
 bool cpu_get_msg(struct cpu_msg* msg);
 void cpu_msg_handler(void);
 void cpu_msg_set_handler(cpuid_t id, cpu_msg_handler_t handler);
+void cpu_idle(void);
+void cpu_idle_wakeup(void);
 void cpu_standby(void);
 void cpu_powerdown(void);
 void cpu_standby_wakeup(void);
@@ -90,6 +92,7 @@ void cpu_arch_init(cpuid_t cpu_id, paddr_t load_addr);
 void cpu_arch_standby(void);
 void cpu_arch_powerdown(void);
 void cpu_arch_park(void);
+void cpu_arch_idle(void);
 
 extern struct cpuif cpu_interfaces[];
 static inline struct cpuif* cpu_if(cpuid_t cpu_id)

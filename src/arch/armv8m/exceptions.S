@@ -74,11 +74,11 @@
     ldr r0, [r1, #CPU_VCPU_OFF]
 
     /* Point to end of esf struct */
-    add r0, #(VCPU_ESF_OFF+VCPU_ESF_SIZE)
+    add r0, #(VCPU_REGS_OFF+VCPU_ESF_OFF+VCPU_ESF_SIZE)
 
     /* Save all esf registers */
-    ldmdb r0!, {r2, r3, r12, lr}
     ldmdb r0!, {r1}
+    ldmdb r0!, {r2, r3, r12, lr}
     msr apsr_nzcvq, r1
     push {r4}
     mov r4, r0

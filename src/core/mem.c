@@ -18,7 +18,8 @@
 extern uint8_t _image_start, _image_load_end, _image_end, _vm_image_start, _vm_image_end;
 extern uint32_t _load_addr;
 #ifdef MEM_NON_UNIFIED
-extern uint32_t _data_vma_start, _data_addr;
+extern uint8_t _data_vma_start;
+extern uint32_t _data_addr;
 #endif
 
 struct list page_pool_list;
@@ -195,6 +196,7 @@ static bool pp_reserve_hyp_image_load(paddr_t load_addr, struct page_pool* pool)
     return mem_reserve_ppool_ppages(pool, &images_load_ppages);
 }
 
+#ifndef MEM_NON_UNIFIED
 static bool pp_reserve_hyp_image_noload(paddr_t load_addr, struct page_pool* pool)
 {
     size_t image_load_size = (size_t)(&_image_load_end - &_image_start);
@@ -222,7 +224,8 @@ static bool pp_reserve_cpus(paddr_t load_addr, struct page_pool* pool)
     return mem_reserve_ppool_ppages(pool, &cpu_ppages);
 }
 
-#ifdef MEM_NON_UNIFIED
+#else
+
 static bool pp_reserve_hyp_data(struct page_pool* root_pool)
 {
     size_t data_size = (size_t)(&_image_end - &_data_vma_start);
@@ -248,6 +251,7 @@ static bool pp_root_reserve_hyp_mem(paddr_t load_addr, struct page_pool* root_po
     bool cpus_mem = pp_reserve_cpus(load_addr, root_pool);
     return hyp_image_load_mem && hyp_image_noload_mem && cpus_mem;
 #else
+    UNUSED_ARG(load_addr);
     return pp_reserve_hyp_data(root_pool);
 #endif
 }

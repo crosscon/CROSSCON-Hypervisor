@@ -40,3 +40,10 @@ void cpu_arch_park()
         __asm__ volatile("wfi");
     }
 }
+
+void cpu_arch_idle()
+{
+    while (true) {
+        __asm__ volatile("wfi");
+    }
+}

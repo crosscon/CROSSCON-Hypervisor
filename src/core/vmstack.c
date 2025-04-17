@@ -29,12 +29,12 @@ void vmstack_push(struct vcpu* vcpu)
 
     struct vcpu* old_vcpu = cpu()->vcpu;
 
-    if(old_vcpu != NULL){
+    if (old_vcpu != NULL) {
         vcpu_save_state(old_vcpu);
         old_vcpu->state = VCPU_STACKED;
     }
 
-    list_push_front(&cpu()->vcpu_stack_lst, &vcpu->vmstack_node);
+    list_push_front(&vcpu->root_vcpu->vcpu_stack_lst, &vcpu->vmstack_node);
     vcpu->parent = old_vcpu;
 
     vcpu_restore_state(vcpu);
@@ -49,16 +49,16 @@ struct vcpu* vmstack_pop()
 {
     /* CROSSCON TODO: our nodes do not allow the same vcpu to be in the stack more than
      * once */
-    if(cpu()->vcpu->parent == NULL){
+    if (cpu()->vcpu->parent == NULL) {
         ERROR("Cannot pop the root vcpu");
     }
-    node_t node = list_pop(&cpu()->vcpu_stack_lst);
+    node_t node = list_pop(&cpu()->vcpu->root_vcpu->vcpu_stack_lst);
     struct vcpu* popped_vcpu = CONTAINER_OF(struct vcpu, vmstack_node, node);
     if (popped_vcpu == NULL) {
         ERROR("Pop operation failed")
     }
 
-    node = list_peek(&cpu()->vcpu_stack_lst);
+    node = list_peek(&cpu()->vcpu->root_vcpu->vcpu_stack_lst);
     struct vcpu* stack_top = CONTAINER_OF(struct vcpu, vmstack_node, node);
 
     popped_vcpu->parent = NULL;
@@ -82,9 +82,9 @@ void vmstack_unwind(struct vcpu* vcpu)
     }
 
     struct vcpu* temp_vcpu = NULL;
-    
+
     do {
-        node_t node = list_pop(&cpu()->vcpu_stack_lst);
+        node_t node = list_pop(&vcpu->vcpu_stack_lst);
         temp_vcpu = CONTAINER_OF(struct vcpu, vmstack_node, node);
         temp_vcpu->state = VCPU_INACTIVE;
         temp_vcpu->parent = NULL;

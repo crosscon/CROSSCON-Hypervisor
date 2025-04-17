@@ -342,8 +342,10 @@ clear:
     ret
 
 .section ".data"
-.align 2
+.align 8
 .global _load_addr
 
 _load_addr:
     .word 0xDEADBEEF
+    .word 0xDEADD00D
+

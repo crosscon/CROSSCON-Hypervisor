@@ -127,6 +127,8 @@ struct vcpu {
     long int blocked_count;
 
     struct vm* vm;
+    struct list vcpu_stack_lst; /* vm stack management */
+    struct vcpu* root_vcpu;
     struct list vmstack_children;
     struct vcpu* parent;
     struct {
@@ -139,6 +141,7 @@ struct vcpu {
 struct vm_allocation {
     vaddr_t base;
     size_t size;
+    struct vcpu* root_vcpu;
     struct vm* vm;
     struct vcpu* vcpus;
 };

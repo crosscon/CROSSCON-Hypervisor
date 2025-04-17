@@ -30,18 +30,10 @@ static void sched_next(void)
     node_t* next_node = list_pop(&cpu()->vcpu_sched_lst);
     list_push(&cpu()->vcpu_sched_lst, next_node);
 
-    struct vcpu* next = NULL;
+    struct vcpu* next = CONTAINER_OF(struct vcpu, sched_node, next_node);
 
-    //TODO:ARMV8M - Temporary to work with lpc55s69
-    /*if (list_size(&cpu()->vcpu_stack_lst) > 1)
-    {
-        node_t node = list_peek(&cpu()->vcpu_stack_lst);
-        next = CONTAINER_OF(struct vcpu, vmstack_node, node);
-    }
-    else
-    {*/
-        next = CONTAINER_OF(struct vcpu, sched_node, next_node);
-    //}
+    node_t* node = list_peek(&next->vcpu_stack_lst);
+    next = CONTAINER_OF(struct vcpu, vmstack_node, node);
 
     cpu()->next_vcpu = next;
 }

@@ -239,14 +239,27 @@ static struct vm_allocation* vmm_alloc_install_vm(struct vm_config* vm_config, v
     return vm_alloc;
 }
 
-static struct vcpu* vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master)
+static struct vcpu* vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,
+    struct vcpu* root_vcpu)
 {
     struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vm_config, vm_id, master);
+    struct vcpu* tmp_root = NULL;
+
+    vm_alloc->root_vcpu = root_vcpu;
+
     struct vcpu* vcpu = vm_init(vm_alloc, vm_config, master, vm_id);
+
     for (size_t i = 0; i < vm_config->children_num; i++) {
         vmid_t child_vmid = vmm_config_to_vmid(vm_config->children[i]);
         if (vm_assign[child_vmid].cpus & (1ULL << cpu()->id)) {
-            struct vcpu* child_vcpu = vmm_create_vm(vm_config->children[i], child_vmid, master);
+            if (!root_vcpu) {
+                tmp_root = vcpu;
+            } else {
+                tmp_root = root_vcpu;
+            }
+
+            struct vcpu* child_vcpu =
+                vmm_create_vm(vm_config->children[i], child_vmid, master, tmp_root);
 
             INFO("VM %u is parent of VM %u\n", vcpu->vm->id, child_vcpu->vm->id);
             list_push(&vcpu->vmstack_children, &child_vcpu->vmstack_child_node);
@@ -338,7 +351,7 @@ void vmm_init()
     bool master = false;
     vmid_t vm_id = INVALID_VMID;
     while (vmm_get_next_assigned_root_vm(&vm_id, &master)) {
-        vmm_create_vm(vm_config_by_id_table[vm_id], vm_id, master);
+        vmm_create_vm(vm_config_by_id_table[vm_id], vm_id, master, NULL);
         // For now only the last vcpu assigned to this cpu will be scheduled
         // TODO: implement proper scheduler
         cpu()->next_vcpu = cpu_get_vcpu_by_vmid(vm_id);

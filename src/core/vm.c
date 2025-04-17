@@ -78,7 +78,8 @@ static vcpuid_t vm_calc_vcpu_id(struct vm* vm)
     return vcpu_id;
 }
 
-static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
+static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config,
+    struct vcpu* root_vcpu)
 {
     vcpuid_t vcpu_id = vm_calc_vcpu_id(vm);
     struct vcpu* vcpu = vm_get_vcpu(vm, vcpu_id);
@@ -92,6 +93,14 @@ static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_confi
         cpu()->vcpu = vcpu;
     }
     vcpu->blocked_count = 0;
+
+    if (!root_vcpu) {
+        list_init(&vcpu->vcpu_stack_lst);
+        vcpu->root_vcpu = vcpu;
+    }
+    else {
+        vcpu->root_vcpu = root_vcpu;
+    }
 
     memset(vcpu->stack, 0, sizeof(vcpu->stack));
 
@@ -619,7 +628,7 @@ struct vm* vm_init_dynamic(struct vm_allocation* vm_alloc, struct vm_config* vm_
     dyn_vm->vmdyn_house_keeping.dynconfig = dyn_config;
     vm_cpu_init(dyn_vm);
 
-    vm_vcpu_init(dyn_vm, vm_cfg);
+    vm_vcpu_init(dyn_vm, vm_cfg, NULL);
     vm_arch_init(dyn_vm, vm_cfg);
 
     struct vm* host_vm = cpu()->vcpu->vm;
@@ -662,7 +671,7 @@ struct vcpu* vm_init(struct vm_allocation* vm_alloc, const struct vm_config* vm_
     /*
      *  Initialize each virtual core.
      */
-    struct vcpu* vcpu = vm_vcpu_init(vm, vm_config);
+    struct vcpu* vcpu = vm_vcpu_init(vm, vm_config, vm_alloc->root_vcpu);
     UNUSED_ARG(vcpu);
 
     cpu_sync_barrier(&vm->sync);
@@ -836,7 +845,8 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
     struct vcpu* child = NULL;
     list_foreach (vcpu->vmstack_children, node_t, node) {
         if (i++ == index) {
-            child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);;
+            child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);
+            ;
             break;
         }
     }

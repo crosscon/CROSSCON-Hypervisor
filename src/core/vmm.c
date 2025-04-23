@@ -96,8 +96,22 @@ static void vmm_assign_child_vcpus(struct vm_config* vm_config)
             ERROR("Trying to assign more CPUs to a child VM than to its parent");
         }
         vmid_t child_vmid = vmm_config_to_vmid(child_config);
-        vm_assign[child_vmid].cpus = parent_cpus & BIT_MASK(0, parent_num_cpus);
-        vm_assign[child_vmid].ncpus = child_num_cpus;
+
+        size_t child_cpu_affinity = 0;
+        if(child_config->cpu_affinity == 0){
+            child_cpu_affinity = parent_cpus;
+        } else {
+            child_cpu_affinity = child_config->cpu_affinity;
+        }
+        for (size_t j = 0; (j < PLAT_CPU_NUM) && (vm_assign[child_vmid].ncpus < child_num_cpus); j++) {
+            if(child_cpu_affinity & parent_cpus & (1UL << j)){
+                vm_assign[child_vmid].cpus |= (1UL << j);
+                vm_assign[child_vmid].ncpus += 1;
+            }
+        }
+        if(vm_assign[child_vmid].ncpus < child_num_cpus){
+            ERROR("could not assign vcpus to vm");
+        }
 
         for (size_t j = 0; j < child_config->children_num; j++) {
             vmm_assign_child_vcpus(child_config);

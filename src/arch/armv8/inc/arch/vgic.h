@@ -139,6 +139,7 @@ void vgic_inject_sgi(struct vcpu* vcpu, struct vgic_int* interrupt, vcpuid_t sou
 void vgic_save_state(struct vcpu* vcpu);
 void vgic_restore_state(struct vcpu* vcpu);
 bool vgic_int_get_enabled(struct vcpu* vcpu, uint64_t int_id);
-void vgic_hw_commit(struct vcpu* vcpu, uint64_t int_id);
+void vgic_hw_irq_save_state(struct vcpu* vcpu, irqid_t irq_id);
+void vgic_hw_commit(struct vcpu* vcpu, irqid_t int_id);
 
 #endif /* __VGIC_H__ */

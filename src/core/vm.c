@@ -12,8 +12,6 @@
 #include <shmem.h>
 #include <objpool.h>
 #include <sdees.h>
-#include <sdees.h>
-#include <sdees.h>
 #include <vmstack.h>
 
 extern uint8_t _hypercall_start, _start;

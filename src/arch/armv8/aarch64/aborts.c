@@ -3,9 +3,10 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include <arch/aborts.h>
+#include <crossconhyp.h>
 #include <arch/sysregs.h>
 #include <cpu.h>
+#include <arch/aborts.h>
 
 void internal_abort_handler(unsigned long gprs[])
 {

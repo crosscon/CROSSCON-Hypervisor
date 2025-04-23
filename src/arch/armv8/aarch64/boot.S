@@ -175,6 +175,9 @@ _set_master_cpu:
 
 	isb
 
+        ldr x2, =_load_addr
+        str x1, [x2]
+
 	b init
 
 	/* This point should never be reached */
@@ -224,3 +227,10 @@ set_loop:
 	cmp x5, x3 // last way reached yet?
 	ble way_loop // if not, iterate way_loop
 	ret
+
+.section ".data"
+.align 8
+.global _load_addr
+
+_load_addr:
+    .xword _image_start

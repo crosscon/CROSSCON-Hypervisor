@@ -13,6 +13,10 @@
 #include <arch/vfp.h>
 #include <timer.h>
 
+#ifdef MEM_PROT_MPU
+#include <arch/spmp.h>
+#endif
+
 #define REG_RA  (1)
 #define REG_SP  (2)
 #define REG_GP  (3)
@@ -76,6 +80,9 @@ struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
     struct timer_event timer_event;
+#ifdef MEM_PROT_MPU
+    struct spmp spmp;
+#endif
 };
 
 struct arch_regs {
@@ -156,5 +163,7 @@ static inline void vcpu_arch_inject_irq(struct vcpu* vcpu, irqid_t id)
 {
     virqc_inject(vcpu, id);
 }
+
+void vm_arch_mem_prot_init(struct vm* vm);
 
 #endif /* __ARCH_VM_H__ */

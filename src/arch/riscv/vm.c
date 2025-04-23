@@ -13,6 +13,7 @@
 
 void vm_arch_init(struct vm* vm, const struct vm_config* vm_config)
 {
+#ifdef MEM_PROT_MMU
     paddr_t root_pt_pa;
     mem_translate(&cpu()->as, (vaddr_t)vm->as.pt.root, &root_pt_pa);
 
@@ -20,7 +21,9 @@ void vm_arch_init(struct vm* vm, const struct vm_config* vm_config)
         ((vm->id << HGATP_VMID_OFF) & HGATP_VMID_MSK);
 
     vm->arch.hgatp = hgatp;
+#endif
 
+    vm_arch_mem_prot_init(vm);
     virqc_init(vm, &vm_config->platform.arch.irqc);
 }
 
@@ -30,6 +33,10 @@ void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm)
 
     vcpu->arch.sbi_ctx.lock = SPINLOCK_INITVAL;
     vcpu->arch.sbi_ctx.state = vcpu->id == 0 ? STARTED : STOPPED;
+
+#ifdef MEM_PROT_MPU
+    spmp_init(&vcpu->arch.spmp, PRIV_VM);
+#endif
 }
 
 void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
@@ -43,6 +50,18 @@ void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
     vcpu->regs.sepc = entry;
     vcpu->regs.a0 = vcpu->arch.hart_id = vcpu->id;
     vcpu->regs.a1 = 0; // according to sbi it should be the dtb load address
+
+    vcpu->regs.vsstatus = SSTATUS_SD | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
+    vcpu->regs.vstvec = 0;
+    vcpu->regs.vsscratch = 0;
+    vcpu->regs.vsepc = 0;
+    vcpu->regs.vscause = 0;
+    vcpu->regs.vstval = 0;
+    vcpu->regs.vsatp = 0;
+    vcpu->regs.hie = 0;
+    vcpu->regs.vstimecmp = ~0U;
+
+    vfp_reset(&vcpu->regs.vfp);
 
     if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
         csrs_stimecmp_write(~0U);
@@ -109,6 +128,11 @@ void vcpu_restore_state(struct vcpu* vcpu)
 
     timer_event_add(&vcpu->arch.timer_event);
     vfp_restore_state(&vcpu->regs.vfp);
+
+#ifdef MEM_PROT_MPU
+    spmp_set_active(&vcpu->arch.spmp, true);
+    spmp_restore(&vcpu->arch.spmp);
+#endif
 }
 
 void vcpu_save_state(struct vcpu* vcpu)

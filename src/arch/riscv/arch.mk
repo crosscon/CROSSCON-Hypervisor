@@ -44,7 +44,16 @@ arch-cflags = -mcmodel=medany -march=$(riscv_march) -mstrict-align \
 arch-asflags =
 arch-ldflags = -m $(ld_emulation)
 
-arch_mem_prot:=mmu
+arch_mem_prot?=mmu
+
+ifeq ($(arch_mem_prot), mpu)
+riscv_mem_prot:=spmp
+PAGE_SIZE:=64
+else
+riscv_mem_prot:=sv
 PAGE_SIZE:=0x1000
+endif
+
+src_dirs+=$(current_directory)/$(riscv_mem_prot)
 
 clang_arch_target:=riscv64

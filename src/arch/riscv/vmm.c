@@ -39,6 +39,11 @@ void vmm_arch_init()
         csrs_henvcfg_clear(HENVCFG_STCE);
     }
 
+    csrs_hcounteren_write(HCOUNTEREN_TM);
+    csrs_htimedelta_write(0);
+
+    csrs_sstatus_write(SSTATUS_FS_INITIAL);
+
     /**
      * TODO: consider delegating other exceptions e.g. breakpoint or ins misaligned
      */

@@ -24,7 +24,7 @@
         while (true) { };                          \
     } while (false);
 
-void init(cpuid_t cpu_id, paddr_t load_addr);
+void init(cpuid_t cpu_id);
 
 #endif /* __ASSEMBLER__ */
 

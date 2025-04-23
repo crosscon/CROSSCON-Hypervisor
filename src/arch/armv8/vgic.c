@@ -1066,8 +1066,8 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
     struct vcpu* child = NULL;
 
     if (vm_id != cpu()->vcpu->vm->id) {
-        list_foreach (cpu()->vcpu->vmstack_children, struct node_data, node) {
-            child = node->data;
+        list_foreach (cpu()->vcpu->vmstack_children, node_t, node) {
+            child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);
             if (child->vm->id == vm_id) {
                 vmstack_push(child);
                 break;

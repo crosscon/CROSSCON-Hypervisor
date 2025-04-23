@@ -63,6 +63,18 @@
     li      t0, CPU_STACK_OFF + CPU_STACK_SIZE
     add     sp, x30, t0
 
+#ifdef MEM_PROT_MPU
+    li    t0, CPU_AS_ARCH_SPMP_SWITCHMSK_OFF
+    add   t0, t0, x30 
+    LOAD  t1, (t0)
+    csrw   CSR_SPMPSWITCH0, t1
+
+#if RV32
+    LOAD  t1, 4(t0)
+    csrw  CSR_SPMPSWITCH1, t1
+#endif /* RV32 */
+
+#endif /* MEM_PROT_MPU */
 
     .option push
     .option norelax
@@ -90,6 +102,23 @@
     call   cpu_arch_standby
     j .
 2:
+#ifdef MEM_PROT_MPU
+    li     x1, VCPU_ARCH_SPMP_SWITCHMSK_OFF
+    add    x1, x31, x1
+
+#if RV32
+    LOAD   x2, 4(x1)
+    LOAD   x3, CPU_ARCH_SPMP_LOCKED_OFF+4(t0)
+    or     x2, x2, x3
+    csrw   CSR_SPMPSWITCH1, x2
+#endif /* RV32 */
+
+    LOAD   x2, (x1)
+    LOAD   x3, CPU_ARCH_SPMP_LOCKED_OFF(t0)
+    or     x2, x2, x3
+    csrw   CSR_SPMPSWITCH0, x2
+
+#endif /* MEM_PROT_MPU */
 
     LOAD   x1, VCPU_REGS_HSTATUS_OFF(x31)
     csrw   CSR_HSTATUS, x1

@@ -47,6 +47,11 @@ static inline bool mem_regions_overlap(struct mp_region* reg1, struct mp_region*
     return range_in_range(reg1->base, reg1->size, reg2->base, reg2->size);
 }
 
+static inline vaddr_t mp_region_top(struct mp_region* reg)
+{
+    return reg->base + reg->size - 1;
+}
+
 bool mem_map(struct addr_space* as, struct mp_region* mpr, bool broadcast, bool locked);
 void mem_mmio_init_regions(struct addr_space* as);
 

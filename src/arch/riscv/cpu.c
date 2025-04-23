@@ -25,6 +25,11 @@ void cpu_arch_init(cpuid_t cpuid, paddr_t load_addr)
             }
         }
     }
+
+#ifdef MEM_PROT_MPU
+    spmp_init(&cpu()->arch.spmp_hyp, PRIV_HYP);
+    spmp_set_active(&cpu()->arch.spmp_hyp, true);
+#endif
 }
 
 void cpu_arch_standby(void)

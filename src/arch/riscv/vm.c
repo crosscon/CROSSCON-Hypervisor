@@ -36,7 +36,7 @@ void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
 {
     memset(&vcpu->regs, 0, sizeof(struct arch_regs));
 
-    csrs_sscratch_write((uintptr_t)&vcpu->regs);
+    // csrs_sscratch_write(cpu());
 
     vcpu->regs.hstatus = HSTATUS_SPV | (1ULL << HSTATUS_VGEIN_OFF);
 
@@ -88,65 +88,57 @@ void vcpu_writepc(struct vcpu* vcpu, unsigned long pc)
     vcpu->regs.sepc = pc;
 }
 
-bool vcpu_arch_is_on(struct vcpu* vcpu)
+void vcpu_arch_run(struct vcpu* vcpu)
 {
-    return vcpu->arch.sbi_ctx.state == STARTED;
-}
-
-/* CROSSCON TODO */
-void vcpu_save_state(struct vcpu* vcpu)
-{
-    if (vcpu == NULL) {
-        return;
+    if (vcpu->arch.sbi_ctx.state == STARTED) {
+        vcpu_arch_entry();
+    } else {
+        cpu_idle();
     }
-
-    vcpu->regs.hstatus = csrs_hstatus_read();
-    vcpu->regs.sstatus = csrs_sstatus_read();
-    vcpu->regs.sepc = csrs_sepc_read();
-
-    vcpu->regs.vsstatus = csrs_vsstatus_read();
-    vcpu->regs.vstvec = csrs_vstvec_read();
-    vcpu->regs.vsscratch = csrs_vsscratch_read();
-    vcpu->regs.vsepc = csrs_vsepc_read();
-    vcpu->regs.vscause = csrs_vscause_read();
-    vcpu->regs.vsatp = csrs_vsatp_read();
-
-    vcpu->regs.vstval = csrs_vstval_read();
-    vcpu->regs.hvip = csrs_hvip_read();
-    vcpu->regs.hie = csrs_hie_read();
-
-    /* vgic_save_state(vcpu); */
-    /* vtimer_save_state(vcpu); */
 }
 
 void vcpu_restore_state(struct vcpu* vcpu)
 {
-    if (vcpu == NULL) {
-        return;
-    }
-
-    // hstatus, sstatus ans sepc are restored in vcpu_arch_entry
-    csrs_sepc_write(vcpu->regs.sepc);
-    csrs_sstatus_write(vcpu->regs.sstatus);
-    csrs_hstatus_write(vcpu->regs.hstatus);
-
     csrs_vsstatus_write(vcpu->regs.vsstatus);
     csrs_vstvec_write(vcpu->regs.vstvec);
     csrs_vsscratch_write(vcpu->regs.vsscratch);
     csrs_vsepc_write(vcpu->regs.vsepc);
     csrs_vscause_write(vcpu->regs.vscause);
     csrs_vstval_write(vcpu->regs.vstval);
-
     csrs_vsatp_write(vcpu->regs.vsatp);
-    csrs_hvip_write(vcpu->regs.hvip);
-    csrs_hie_write(vcpu->regs.hie);
+    if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
+        csrs_vstimecmp_write(vcpu->regs.vstimecmp);
+    }
 
+    csrs_hie_write(vcpu->regs.hie);
+    csrs_hvip_write(vcpu->regs.hvip);
     csrs_hgatp_write(vcpu->vm->arch.hgatp);
 
-    /* CROSSCON TODO */
-    csrs_sscratch_write((uintptr_t)&vcpu->regs);
+    timer_event_add(&vcpu->arch.timer_event);
+    vfp_restore_state(&vcpu->regs.vfp);
+}
 
-    sbi_set_timer(vcpu->arch.stime_value); // assumes always success
-    csrs_hvip_clear(HIP_VSTIP);
-    csrs_sie_set(SIE_STIE);
+void vcpu_save_state(struct vcpu* vcpu)
+{
+    vcpu->regs.vsstatus = csrs_vsstatus_read();
+    vcpu->regs.vstvec = csrs_vstvec_read();
+    vcpu->regs.vsscratch = csrs_vsscratch_read();
+    vcpu->regs.vsepc = csrs_vsepc_read();
+    vcpu->regs.vscause = csrs_vscause_read();
+    vcpu->regs.vstval = csrs_vstval_read();
+    vcpu->regs.vsatp = csrs_vsatp_read();
+    if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
+        vcpu->regs.vstimecmp = csrs_vstimecmp_read();
+    }
+
+    vcpu->regs.hie = csrs_hie_read();
+    vcpu->regs.hvip = csrs_hvip_read();
+
+    timer_event_remove(&vcpu->arch.timer_event);
+    vfp_save_state(&vcpu->regs.vfp);
+}
+
+bool vcpu_arch_is_on(struct vcpu* vcpu)
+{
+    return vcpu->arch.sbi_ctx.state == STARTED;
 }

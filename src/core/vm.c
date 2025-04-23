@@ -3,12 +3,6 @@
  * Copyright (c) Bao Project and Contributors. All rights reserved.
  */
 
-#include "cpu.h"
-#include "emul.h"
-#include "inc/mem.h"
-#include "inc/types.h"
-#include "types.h"
-#include "util.h"
 #include <vm.h>
 #include <string.h>
 #include <mem.h>
@@ -17,12 +11,10 @@
 #include <dynconfig.h>
 #include <shmem.h>
 #include <objpool.h>
-#include <list.h>
-
-#include <sdtz.h>
-#include <sdgpos.h>
-#include <sdsgx.h>
+#include <sdees.h>
 #include <vmstack.h>
+
+extern uint8_t _hypercall_start, _start;
 
 enum emul_type { EMUL_MEM, EMUL_REG };
 struct emul_node {
@@ -87,7 +79,8 @@ static vcpuid_t vm_calc_vcpu_id(struct vm* vm)
     return vcpu_id;
 }
 
-static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
+static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config,
+    struct vcpu* root_vcpu)
 {
     vcpuid_t vcpu_id = vm_calc_vcpu_id(vm);
     struct vcpu* vcpu = vm_get_vcpu(vm, vcpu_id);
@@ -96,7 +89,19 @@ static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_confi
     vcpu->phys_id = cpu()->id;
     vcpu->vm = vm;
     vcpu->active = true;
-    /* cpu()->vcpu = vcpu; */
+    // TODO:ARMV8M - Check this
+    if (DEFINED(MEM_NON_UNIFIED)) {
+        cpu()->vcpu = vcpu;
+    }
+    vcpu->blocked_count = 0;
+
+    if (!root_vcpu) {
+        list_init(&vcpu->vcpu_stack_lst);
+        vcpu->root_vcpu = vcpu;
+    }
+    else {
+        vcpu->root_vcpu = root_vcpu;
+    }
 
     memset(vcpu->stack, 0, sizeof(vcpu->stack));
 
@@ -123,7 +128,7 @@ struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
 
     /* CROSSCON TODO */
     WARNING("TODO: Must free vcpu array\n");
-    // list_rm(&vm->vcpu_list, (node_t*)vcpu);
+    // list_rm(&vm->vcpu_lst, (node_t*)vcpu);
 
     memset(vcpu->stack, 0, sizeof(vcpu->stack));
 
@@ -135,7 +140,7 @@ struct vcpu* vm_vcpu_destroy(struct vm* vm, struct vcpu* vcpu)
     return vcpu;
 }
 
-void vm_map_mem_region(struct vm* vm, struct vm_mem_region* reg)
+static void vm_map_mem_region(struct vm* vm, struct vm_mem_region* reg)
 {
     size_t n = NUM_PAGES(reg->size);
 
@@ -271,6 +276,7 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
 
         spin_lock(&shmem->lock);
         shmem->cpu_masters |= (1UL << cpu()->id);
+        ipc->master = cpu()->id;
         spin_unlock(&shmem->lock);
 
         struct vm_mem_region reg = {
@@ -282,7 +288,33 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
         };
 
         vm_map_mem_region(vm, &reg);
+
+        for (size_t j = 0; j < ipc->interrupt_num; j++) {
+            if (!interrupts_vm_assign(vm, ipc->interrupts[j])) {
+                ERROR("Failed to assign interrupt id %d", ipc->interrupts[j]);
+            }
+        }
     }
+
+#ifdef MEM_NON_UNIFIED
+    if (vm->ipc_num) {
+        size_t num_pages = NUM_PAGES((size_t)(&_start - &_hypercall_start));
+        // size_t num_pages = 1;
+        struct ppages ppages = mem_ppages_get((paddr_t)&_hypercall_start, num_pages);
+        // struct ppages ppages = mem_ppages_get((paddr_t)0x40, num_pages);
+        vaddr_t va = mem_alloc_map(&vm->as, SEC_HYP_HC, &ppages, (paddr_t)&_hypercall_start,
+            num_pages, PTE_VM_HC_FLAGS);
+        // vaddr_t va = mem_alloc_map(&vm->as, SEC_HYP_HC, &ppages, (paddr_t)0x40, num_pages,
+        // PTE_VM_HC_FLAGS); mem_alloc_map(&cpu()->as, SEC_HYP_IMAGE, &ppages, (paddr_t)0x40,
+        // num_pages, PTE_HYP_FLAGS_CODE);
+        mem_alloc_map(&cpu()->as, SEC_HYP_IMAGE, &ppages, (paddr_t)&_hypercall_start, num_pages,
+            PTE_HYP_FLAGS_CODE);
+
+        if (va == INVALID_VA) {
+            ERROR("couldn't install hypercall region at 0x%lx", &_hypercall_start);
+        }
+    }
+#endif
 }
 
 static void vm_destroy_ipc(struct vm* vm)
@@ -410,7 +442,7 @@ static void vm_dyn_host_donate(struct vm* host_vm, struct vm* dyn_vm, struct vm_
     vaddr_t base_nclv_ipa = 0;
 
     vaddr_t nclv_ipa = dyn_vm_mem_start;
-    vaddr_t host_ipa = donor_ipa + dynconfig->config_header_size;
+    vaddr_t host_ipa = (vaddr_t)donor_ipa + dynconfig->config_header_size;
     paddr_t pa;
     const size_t n = NUM_PAGES(dyn_vm_mem_size);
     size_t i = 1;
@@ -418,6 +450,7 @@ static void vm_dyn_host_donate(struct vm* host_vm, struct vm* dyn_vm, struct vm_
         bool last_page = (i == n);
 
         mem_guest_ipa_translate(&host_vm->as, host_ipa, &pa);
+
         if (contiguous_pages == 0) {
             contiguous_pages = 1;
             base_cont_pa = pa;
@@ -450,8 +483,8 @@ skip:
         host_ipa += PAGE_SIZE;
         i++;
     }
-    mem_unmap(&host_vm->as, donor_ipa + dynconfig->config_header_size, NUM_PAGES(dyn_vm_mem_size),
-        false);
+    mem_unmap(&host_vm->as, (vaddr_t)(donor_ipa + dynconfig->config_header_size),
+        NUM_PAGES(dyn_vm_mem_size), false);
 
     /* CROSSCON TODO: All memory should be given by the donor VM, this is temporary to
      * test MPK domains */
@@ -464,7 +497,7 @@ skip:
 
 static void vm_dynamic_reclaim(struct vm* host_vm, struct vm* dyn_vm)
 {
-    vmstack_push(cpu_get_vcpu(dyn_vm->id));
+    vmstack_push(cpu_get_vcpu_by_vmid(dyn_vm->id));
 
     struct dynconfig* enclv_config = dyn_vm->vmdyn_house_keeping.dynconfig;
     const struct vm_config* dyn_vm_cfg = dyn_vm->config;
@@ -485,6 +518,7 @@ static void vm_dynamic_reclaim(struct vm* host_vm, struct vm* dyn_vm)
         bool last_page = (i == n);
 
         mem_guest_ipa_translate(&dyn_vm->as, dyn_vm_ipa, &pa);
+
         if (contiguous_pages == 0) {
             contiguous_pages = 1;
             base_cont_pa = pa;
@@ -538,6 +572,7 @@ skip:
         host_ipa = host_base_ipa + j * PAGE_SIZE;
 
         mem_guest_ipa_translate(&cpu()->as, (vaddr_t)enclv_config, &pa);
+
         struct vm_mem_region rgn = {
             .phys = pa,
             .base = host_ipa,
@@ -603,7 +638,7 @@ struct vm* vm_init_dynamic(struct vm_allocation* vm_alloc, struct vm_config* vm_
     dyn_vm->vmdyn_house_keeping.dynconfig = dyn_config;
     vm_cpu_init(dyn_vm);
 
-    vm_vcpu_init(dyn_vm, vm_cfg);
+    vm_vcpu_init(dyn_vm, vm_cfg, NULL);
     vm_arch_init(dyn_vm, vm_cfg);
 
     struct vm* host_vm = cpu()->vcpu->vm;
@@ -612,9 +647,11 @@ struct vm* vm_init_dynamic(struct vm_allocation* vm_alloc, struct vm_config* vm_
     vm_init_dev(dyn_vm, vm_cfg);
     vm_init_ipc(dyn_vm, vm_cfg);
 
+#if defined(SDSGX)
     sdsgx_handler_setup(dyn_vm);
+#endif
 
-    dyn_vm->vmdyn_house_keeping.donor_va = vm_addr;
+    dyn_vm->vmdyn_house_keeping.donor_va = (vaddr_t)vm_addr;
     // CROSSCON TODO do this outside: vm->vmdyn_house_keeping.config = dyn_config;
     INFO("Dynamic VM %d created\n", vmid);
 
@@ -646,7 +683,7 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
     /*
      *  Initialize each virtual core.
      */
-    struct vcpu* vcpu = vm_vcpu_init(vm, vm_config);
+    struct vcpu* vcpu = vm_vcpu_init(vm, vm_config, vm_alloc->root_vcpu);
     UNUSED_ARG(vcpu);
 
     cpu_sync_barrier(&vm->sync);
@@ -686,15 +723,19 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
                 ERROR("VM %d type invalid");
         }
 
-        /* CROSSCON TODO: use linker table */
+            /* CROSSCON TODO: use linker table */
+#if defined(SDTZ)
         sdtz_handler_setup(vm);
+#endif
         sdgpos_handler_setup(vm);
+#if defined(SDSGX)
         sdsgx_handler_setup(vm);
+#endif
     }
 
-    cpu_sync_barrier(&vm->sync);
+    cpu_sync_and_clear_msgs(&vm->sync);
 
-    return vm;
+    return vcpu;
 }
 
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu)
@@ -827,11 +868,21 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 {
     int i = 0;
     struct vcpu* child = NULL;
-    list_foreach (vcpu->vmstack_children, struct node_data, node) {
+    list_foreach (vcpu->vmstack_children, node_t, node) {
         if (i++ == index) {
-            child = node->data;
+            child = CONTAINER_OF(struct vcpu, vmstack_child_node, node);
+            ;
             break;
         }
     }
     return child;
+}
+
+void vcpu_context_switch(void)
+{
+    if (cpu()->vcpu != NULL) {
+        vcpu_save_state(cpu()->vcpu);
+    }
+    vcpu_restore_state(cpu()->next_vcpu);
+    cpu()->vcpu = cpu()->next_vcpu;
 }

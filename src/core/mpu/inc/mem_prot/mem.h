@@ -23,6 +23,7 @@ struct mp_region {
 struct addr_space {
     asid_t id;
     enum AS_TYPE type;
+    cpumap_t cpus;
     colormap_t colors;
     struct {
         struct list ordered_list;

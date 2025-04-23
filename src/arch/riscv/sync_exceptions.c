@@ -116,7 +116,7 @@ static size_t guest_page_fault_handler(void)
          * TODO: check if the access is aligned. If not, inject an exception in the vm.
          */
 
-        if (handler(&emul)) {
+        if (handler(cpu()->vcpu, &emul)) {
             return ins_size;
         } else {
             ERROR("emulation handler failed (0x%x at 0x%x)", addr, csrs_sepc_read());

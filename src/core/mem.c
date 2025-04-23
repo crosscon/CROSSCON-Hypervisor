@@ -10,7 +10,6 @@
 #include <cpu.h>
 #include <platform.h>
 #include <cache.h>
-#include <stdbool.h>
 #include <string.h>
 #include <vm.h>
 #include <fences.h>
@@ -559,6 +558,11 @@ void mem_init(void)
         if (!mem_setup_root_pool(&root_mem_region)) {
             ERROR("couldn't not initialize root pool");
         }
+#else
+        if (!mem_setup_root_pool(_data_addr, &root_mem_region)) {
+            ERROR("couldn't not initialize root pool");
+        }
+#endif
 
         /* Insert root pool in pool list */
         list_init(&page_pool_list);

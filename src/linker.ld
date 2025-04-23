@@ -15,6 +15,9 @@ SECTIONS
 	. = BAO_VAS_BASE;
 
 	_image_start = ABSOLUTE(.);
+#ifdef MEM_NON_UNIFIED
+	_image_start = ABSOLUTE(.) + 2*PAGE_SIZE;
+#endif
 
 	.boot : {
 		*(.boot)
@@ -96,6 +99,7 @@ SECTIONS
 	. = ALIGN(PAGE_SIZE);
 	_vm_image_end = ALIGN(_vm_image_start + SIZEOF(.vm_images), PAGE_SIZE);
     _image_noload_start = .;
+
     extra_allocated_phys_mem = _image_noload_start - _image_load_end;
 
 #ifdef MEM_PROT_MMU
@@ -111,17 +115,17 @@ SECTIONS
 
 	.bss (NOLOAD) : {
 		_bss_start = .;
-		*(.bss* .sbss*)
-		*(COMMON)
+		*(.bss* .sbss*)  
+		*(COMMON)	
 		_bss_end = .;
-	}
+	} 
 
 	.glb_page_tables (NOLOAD) : ALIGN(PAGE_SIZE) {
 		_page_tables_start = .;
 		*(.glb_page_tables)
 		_page_tables_end = .;
 	}
-
+	
 	. = ALIGN(PAGE_SIZE);
 	_image_end = ABSOLUTE(.);
 
@@ -134,7 +138,7 @@ SECTIONS
 	. = ALIGN(PAGE_SIZE);
 	_dmem_beg = ABSOLUTE(.);
 
-#ifdef MEM_PROT_MMU
+#ifdef MEM_PROT_MMU	
 	/* Global dynamic memory virtual address space here */
 
 	. = BAO_CPU_BASE;

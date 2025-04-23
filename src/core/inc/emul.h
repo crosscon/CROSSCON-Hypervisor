@@ -22,7 +22,9 @@ struct emul_access {
     struct emul_access_arch arch;
 };
 
-typedef bool (*emul_handler_t)(struct emul_access*);
+struct vcpu;
+
+typedef bool (*emul_handler_t)(struct vcpu*, struct emul_access*);
 
 struct emul_mem {
     node_t node;

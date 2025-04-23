@@ -59,6 +59,10 @@ __attribute__((weak)) void interrupts_arch_ipi_init(void)
         if (interrupts_ipi_id == INVALID_IRQID) {
             ERROR("Failed to reserve IPI_CPU_MSG interrupt");
         }
+
+        cpu_sync_barrier(&cpu_glb_sync);
+
+        interrupts_cpu_enable(interrupts_ipi_id, true);
     }
 }
 #endif
@@ -109,7 +113,7 @@ enum irq_res interrupts_handle(irqid_t int_id)
     if (interrupts_is_shared(int_id) || (cpu()->vcpu->vm->id == interrupts_get_vmid(int_id))) {
         vcpu = cpu()->vcpu;
     } else {
-        vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
+        vcpu = cpu_get_vcpu_by_vmid((vmid_t)interrupts_get_vmid(int_id));
     }
 
     if ((vcpu != NULL) && vm_has_interrupt(vcpu->vm, int_id)) {

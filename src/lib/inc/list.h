@@ -138,9 +138,12 @@ static inline bool list_rm(struct list* list, node_t* node)
     return true;
 }
 
-typedef int (*node_cmp_t)(node_t*, node_t*);
+struct node_cmp {
+    int (*cmp)(void* cookie, node_t*, node_t*);
+    void* cookie;
+};
 
-static inline void list_insert_ordered(struct list* list, node_t* node, node_cmp_t cmp)
+static inline void list_insert_ordered(struct list* list, node_t* node, const struct node_cmp* cmp)
 {
     if (list != NULL && node != NULL) {
         *node = NULL;
@@ -150,7 +153,7 @@ static inline void list_insert_ordered(struct list* list, node_t* node, node_cmp
         node_t* tail = NULL;
 
         while (cur != NULL) {
-            if (cmp(cur, node) > 0) {
+            if (cmp->cmp(cmp->cookie, cur, node) > 0) {
                 break;
             }
             tail = cur;
@@ -171,6 +174,17 @@ static inline void list_insert_ordered(struct list* list, node_t* node, node_cmp
 
         spin_unlock(&list->lock);
     }
+}
+
+static inline size_t list_size(struct list* list)
+{
+    size_t size = 0;
+    node_t* node = list->head;
+    while (node != NULL) {
+        size += 1;
+        node = *node;
+    }
+    return size;
 }
 
 #endif /* __LIST_H__ */

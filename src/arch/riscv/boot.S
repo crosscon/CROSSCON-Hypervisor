@@ -312,6 +312,7 @@ _enter_vas:
     /* Init stack pointer and global pointer */
     /* TODO: what about tp? */
     li      t0, BAO_CPU_BASE
+    csrw    sscratch, t0
     li      sp, CPU_STACK_OFF + CPU_STACK_SIZE
     add     sp, t0, sp
 
@@ -349,3 +350,12 @@ clear:
     add a3, a3, 1
     blt a3, a4, clear
     ret
+
+.section ".data"
+.align 8
+.global _load_addr
+
+_load_addr:
+    .word 0xDEADBEEF
+    .word 0xDEADD00D
+

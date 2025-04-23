@@ -38,6 +38,26 @@ void cpu_arch_standby(void)
     ERROR("returned from standby wake up");
 }
 
+void cpu_arch_idle()
+{
+    __asm__ volatile("wfi\n\t" ::: "memory");
+    __asm__ volatile("mv sp, %0\n\r"
+                     "j cpu_idle_wakeup\n\r" ::"r"(&cpu()->stack[STACK_SIZE]));
+    ERROR("returned from idle wake up");
+}
+
+void cpu_arch_park()
+{
+    // reset stack
+    __asm__ volatile("mv sp, %0\n\r" ::"r"(&cpu()->stack[STACK_SIZE]));
+
+    csrs_sstatus_set(SSTATUS_SIE_BIT);
+
+    while (true) {
+        __asm__ volatile("wfi");
+    }
+}
+
 void cpu_arch_powerdown(void)
 {
     __asm__ volatile("wfi\n\t" ::: "memory");

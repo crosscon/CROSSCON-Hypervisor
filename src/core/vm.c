@@ -680,6 +680,15 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
     cpu_sync_barrier(&vm->sync);
 
     /*
+     *  Initialize vm memory structures
+     */
+    if (master) {
+        vm_mem_prot_init(vm, vm_config);
+    }
+
+    cpu_sync_barrier(&vm->sync);
+
+    /*
      *  Initialize each virtual core.
      */
     struct vcpu* vcpu = vm_vcpu_init(vm, vm_config, vm_alloc->root_vcpu);

@@ -20,6 +20,7 @@ SECTIONS
 #endif
 
 	.boot : {
+        *(.boot_head)
 		*(.boot)
 	}
 
@@ -28,6 +29,7 @@ SECTIONS
 	}
 
     . = ALIGN(PAGE_SIZE); /* start RO sections in separate page */
+    _text_end = .;
 
 	.rodata :  {
 		*(.rdata .rodata .rodata.*)

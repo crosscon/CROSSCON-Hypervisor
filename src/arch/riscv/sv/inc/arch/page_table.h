@@ -14,7 +14,7 @@
 
 #define PT_SHARED_LVL    (0)
 
-#if defined(RV32)
+#if (RV32)
 #define PTE_MASK     BIT32_MASK
 #define PTE_ADDR_MSK PTE_MASK(12, 22)
 #else
@@ -62,9 +62,16 @@
 #define PT_CPU_REC_IND            (pt_nentries(&cpu()->as.pt, 0) - 1)
 #define PT_VM_REC_IND             (pt_nentries(&cpu()->as.pt, 0) - 2)
 
+#define PTE_INVALID               (0)
+#define PTE_HYP_FLAGS             (PTE_GLOBAL | PTE_ACCESS | PTE_DIRTY)
+#define PTE_HYP_DEV_FLAGS         PTE_HYP_FLAGS
+
+#define PTE_VM_FLAGS              (PTE_ACCESS | PTE_DIRTY | PTE_USER)
+#define PTE_VM_DEV_FLAGS          PTE_VM_FLAGS
+
 #ifndef __ASSEMBLER__
 
-#if defined(RV32)
+#if (RV32)
 typedef uint32_t pte_t;
 #else
 typedef uint64_t pte_t;
@@ -109,7 +116,6 @@ static inline bool pte_table(struct page_table* pt, pte_t* pte, size_t lvl)
 {
     UNUSED_ARG(pt);
     UNUSED_ARG(lvl);
-
     return (*pte & 0xf) == PTE_VALID;
 }
 

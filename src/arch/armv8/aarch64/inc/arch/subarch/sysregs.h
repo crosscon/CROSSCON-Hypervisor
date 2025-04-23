@@ -72,15 +72,17 @@ SYSREG_GEN_ACCESSORS(ctr_el0)
 SYSREG_GEN_ACCESSORS(mpidr_el1)
 SYSREG_GEN_ACCESSORS(vmpidr_el2)
 SYSREG_GEN_ACCESSORS(cntvoff_el2)
-SYSREG_GEN_ACCESSORS(sctlr_el1)
-SYSREG_GEN_ACCESSORS(cntkctl_el1)
 SYSREG_GEN_ACCESSORS(cntfrq_el0)
+SYSREG_GEN_ACCESSORS(cnthp_cval_el2)
+SYSREG_GEN_ACCESSORS(cnthp_ctl_el2)
+SYSREG_GEN_ACCESSORS(cntpct_el0)
 SYSREG_GEN_ACCESSORS(pmcr_el0)
 SYSREG_GEN_ACCESSORS(par_el1)
 SYSREG_GEN_ACCESSORS(tcr_el2)
 SYSREG_GEN_ACCESSORS(ttbr0_el2)
 SYSREG_GEN_ACCESSORS(mair_el2)
 SYSREG_GEN_ACCESSORS(cptr_el2)
+SYSREG_GEN_ACCESSORS(spsr_el2)
 SYSREG_GEN_ACCESSORS(hcr_el2)
 SYSREG_GEN_ACCESSORS(vtcr_el2)
 SYSREG_GEN_ACCESSORS(vttbr_el2)
@@ -122,69 +124,77 @@ SYSREG_GEN_ACCESSORS(ich_lr12_el2)
 SYSREG_GEN_ACCESSORS(ich_lr13_el2)
 SYSREG_GEN_ACCESSORS(ich_lr14_el2)
 SYSREG_GEN_ACCESSORS(ich_lr15_el2)
-
-SYSREG_GEN_ACCESSORS(ich_vmcr_el2)
 SYSREG_GEN_ACCESSORS(ich_ap1r0_el2)
 SYSREG_GEN_ACCESSORS(ich_ap1r1_el2)
 SYSREG_GEN_ACCESSORS(ich_ap1r2_el2)
 SYSREG_GEN_ACCESSORS(ich_ap1r3_el2)
-SYSREG_GEN_ACCESSORS(spsr_el2)
+SYSREG_GEN_ACCESSORS(ich_vmcr_el2)
+
+SYSREG_GEN_ACCESSORS(sp_el0)
+SYSREG_GEN_ACCESSORS(sp_el1)
+SYSREG_GEN_ACCESSORS(sctlr_el1)
+SYSREG_GEN_ACCESSORS(cntkctl_el1)
+SYSREG_GEN_ACCESSORS(cntv_ctl_el0)
+SYSREG_GEN_ACCESSORS(cntv_cval_el0)
+SYSREG_GEN_ACCESSORS(cntv_tval_el0)
 SYSREG_GEN_ACCESSORS(vbar_el1)
-SYSREG_GEN_ACCESSORS(tpidr_el1)
-SYSREG_GEN_ACCESSORS(mair_el1)
-SYSREG_GEN_ACCESSORS(amair_el1)
 SYSREG_GEN_ACCESSORS(tcr_el1)
 SYSREG_GEN_ACCESSORS(ttbr0_el1)
 SYSREG_GEN_ACCESSORS(ttbr1_el1)
-SYSREG_GEN_ACCESSORS(sp_el0)
-SYSREG_GEN_ACCESSORS(sp_el1)
-SYSREG_GEN_ACCESSORS(spsr_el1)
-SYSREG_GEN_ACCESSORS(actlr_el1)
+SYSREG_GEN_ACCESSORS(mair_el1)
+SYSREG_GEN_ACCESSORS(amair_el1)
 SYSREG_GEN_ACCESSORS(far_el1)
 SYSREG_GEN_ACCESSORS(esr_el1)
 SYSREG_GEN_ACCESSORS(elr_el1)
+SYSREG_GEN_ACCESSORS(spsr_el1)
+SYSREG_GEN_ACCESSORS(actlr_el1)
 SYSREG_GEN_ACCESSORS(afsr0_el1)
 SYSREG_GEN_ACCESSORS(afsr1_el1)
-SYSREG_GEN_ACCESSORS(tpidrro_el0)
+SYSREG_GEN_ACCESSORS(cpacr_el1)
+SYSREG_GEN_ACCESSORS(contextidr_el1)
 SYSREG_GEN_ACCESSORS(tpidr_el0)
-SYSREG_GEN_ACCESSORS(cntv_ctl)
-SYSREG_GEN_ACCESSORS(cntv_ctl_el0)
-SYSREG_GEN_ACCESSORS(cntv_cval)
-SYSREG_GEN_ACCESSORS(cntv_cval_el0)
+SYSREG_GEN_ACCESSORS(tpidrro_el0)
+SYSREG_GEN_ACCESSORS(tpidr_el1)
+SYSREG_GEN_ACCESSORS(fpcr)
+SYSREG_GEN_ACCESSORS(fpexc32_el2)
+SYSREG_GEN_ACCESSORS(fpsr)
+
 
 static inline void arm_dc_civac(vaddr_t cache_addr)
 {
-    __asm__ volatile("dc civac, %0\n\t" ::"r"(cache_addr));
+    __asm volatile("dc civac, %0\n\t" ::"r"(cache_addr));
 }
 
 static inline void arm_at_s1e2w(vaddr_t vaddr)
 {
-    __asm__ volatile("at s1e2w, %0" ::"r"(vaddr));
+    __asm volatile("at s1e2w, %0" ::"r"(vaddr));
 }
 
 static inline void arm_at_s12e1w(vaddr_t vaddr)
 {
-    __asm__ volatile("at s12e1w, %0" ::"r"(vaddr));
+    __asm volatile("at s12e1w, %0" ::"r"(vaddr));
 }
 
-static inline void arm_tlbi_alle2is(void)
+static inline void arm_tlbi_alle2is(void);
+static inline void arm_tlbi_alle2is()
 {
-    __asm__ volatile("tlbi alle2is");
+    __asm volatile("tlbi alle2is");
 }
 
-static inline void arm_tlbi_vmalls12e1is(void)
+static inline void arm_tlbi_vmalls12e1is(void);
+static inline void arm_tlbi_vmalls12e1is()
 {
-    __asm__ volatile("tlbi vmalls12e1is");
+    __asm volatile("tlbi vmalls12e1is");
 }
 
 static inline void arm_tlbi_vae2is(vaddr_t vaddr)
 {
-    __asm__ volatile("tlbi vae2is, %0" ::"r"(vaddr >> 12));
+    __asm volatile("tlbi vae2is, %0" ::"r"(vaddr >> 12));
 }
 
 static inline void arm_tlbi_ipas2e1is(vaddr_t vaddr)
 {
-    __asm__ volatile("tlbi ipas2e1is, %0" ::"r"(vaddr >> 12));
+    __asm volatile("tlbi ipas2e1is, %0" ::"r"(vaddr >> 12));
 }
 
 #endif /* |__ASSEMBLER__ */

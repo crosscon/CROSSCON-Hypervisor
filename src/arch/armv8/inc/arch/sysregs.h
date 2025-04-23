@@ -515,6 +515,10 @@
 #define PRLAR_LIMIT(LIMIT)       (((LIMIT) & PRLAR_LIMIT_MSK) | 0x3FUL)
 #define PRLAR_MEM_ATTR_FLAGS_MSK (0x0EUL)
 
+/* Generic Timer */
+
+#define CNT_CTL_ENABLE          (1ULL)
+
 #ifndef __ASSEMBLER__
 
 #define SYSREG_ENC_ADDR(Op0, Op1, CRn, CRm, Op2)                             \

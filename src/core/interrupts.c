@@ -45,16 +45,18 @@ void interrupts_init(void)
 {
     interrupts_arch_init();
 
-    if (cpu_is_master()) {
-        interrupts_ipi_id = interrupts_reserve(IPI_CPU_MSG, (irq_handler_t)cpu_msg_handler);
-        if (interrupts_ipi_id == INVALID_IRQID) {
-            ERROR("Failed to reserve IPI_CPU_MSG interrupt");
+    if (!DEFINED(SINGLE_CORE)) {
+        if (cpu_is_master()) {
+            interrupts_ipi_id = interrupts_reserve(IPI_CPU_MSG, (irq_handler_t)cpu_msg_handler);
+            if (interrupts_ipi_id == INVALID_IRQID) {
+                ERROR("Failed to reserve IPI_CPU_MSG interrupt");
+            }
         }
+
+        cpu_sync_barrier(&cpu_glb_sync);
+
+        interrupts_cpu_enable(interrupts_ipi_id, true);
     }
-
-    cpu_sync_barrier(&cpu_glb_sync);
-
-    interrupts_cpu_enable(interrupts_ipi_id, true);
 }
 
 static inline bool interrupt_assigned_to_hyp(irqid_t int_id)
@@ -92,7 +94,7 @@ enum irq_res interrupts_handle(irqid_t int_id)
     if (interrupts_is_shared(int_id) || (cpu()->vcpu->vm->id == interrupts_get_vmid(int_id))) {
         vcpu = cpu()->vcpu;
     } else {
-        vcpu = cpu_get_vcpu(interrupts_get_vmid(int_id));
+        vcpu = cpu_get_vcpu_by_vmid((vmid_t)interrupts_get_vmid(int_id));
     }
 
     if ((vcpu != NULL) && vm_has_interrupt(vcpu->vm, int_id)) {

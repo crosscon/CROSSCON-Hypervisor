@@ -32,15 +32,19 @@ static size_t ipi_cpumsg_handler_num;
 
 struct cpuif cpu_interfaces[PLAT_CPU_NUM];
 
-void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
+extern uint32_t _load_addr;
+
+void cpu_init(cpuid_t cpu_id)
 {
     cpu()->id = cpu_id;
     cpu()->handling_msgs = false;
     cpu()->interface = cpu_if(cpu()->id);
 
-    cpu_arch_init(cpu_id, load_addr);
+    cpu_arch_init(cpu_id, _load_addr);
 
     list_init(&cpu()->interface->event_list);
+    list_init(&cpu()->vcpu_lst);
+    list_init(&cpu()->vcpu_sched_lst);
 
     if (cpu_is_master()) {
         cpu_sync_init(&cpu_glb_sync, platform.cpu_num);
@@ -126,6 +130,53 @@ void cpu_standby_wakeup(void)
     }
 }
 
+void cpu_idle()
+{
+    cpu_arch_idle();
+
+    /**
+     * Should not return here. cpu should "wake up" from idle in cpu_idle_wakeup with a rewinded
+     * stack.
+     */
+    ERROR("Spurious idle wake up");
+}
+
+void cpu_idle_wakeup()
+{
+    if (interrupts_check(IPI_CPU_MSG)) {
+        interrupts_clear(IPI_CPU_MSG);
+        cpu_msg_handler();
+    }
+
+    if (cpu()->vcpu != NULL) {
+        vcpu_run(cpu()->vcpu);
+    } else {
+        cpu_idle();
+    }
+}
+
+void cpu_add_vcpu(struct vcpu* vcpu)
+{
+    if (vcpu->list_node != NULL) {
+        ERROR("Trying to assigned vcpu to multiple cpus");
+    }
+    // TODO: need to assert no other vcpu from the same vm was added
+    list_push(&cpu()->vcpu_lst, &vcpu->list_node);
+}
+
+struct vcpu* cpu_get_vcpu_by_vmid(vmid_t vmid)
+{
+    struct vcpu* vcpu = NULL;
+    list_foreach (cpu()->vcpu_lst, node_t, node) {
+        struct vcpu* tmp_vcpu = CONTAINER_OF(struct vcpu, list_node, node);
+        if (tmp_vcpu->vm->id == vmid) {
+            vcpu = tmp_vcpu;
+            break;
+        }
+    }
+    return vcpu;
+}
+
 void cpu_powerdown_wakeup(void)
 {
     if (cpu()->vcpu != NULL) {
@@ -135,25 +186,7 @@ void cpu_powerdown_wakeup(void)
     }
 }
 
-void cpu_add_vcpu(struct vcpu* vcpu)
-{
-    struct node_data* node = objpool_alloc(&nodes_pool);
-    node->data = vcpu;
-    list_push(&cpu()->vcpus, (node_t*)node);
-}
-
 void cpu_remove_vcpu(struct vcpu* vcpu)
 {
-    list_rm(&cpu()->vcpus, (node_t*)vcpu);
-}
-
-struct vcpu* cpu_get_vcpu(uint64_t vmid)
-{
-    list_foreach (cpu()->vcpus, struct node_data, node) {
-        struct vcpu* vcpu = node->data;
-        if (vcpu->vm->id == vmid) {
-            return vcpu;
-        }
-    }
-    return NULL;
+    list_rm(&cpu()->vcpu_lst, &vcpu->list_node);
 }

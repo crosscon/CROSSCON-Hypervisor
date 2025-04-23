@@ -43,6 +43,7 @@ enum irq_res { HANDLED_BY_HYP, FORWARD_TO_VM };
 enum irq_res interrupts_handle(irqid_t int_id);
 
 bool interrupts_vm_assign(struct vm* vm, irqid_t id);
+void interrupts_set_shared(irqid_t int_id);
 
 /* Must be implemented by architecture */
 
@@ -57,7 +58,6 @@ bool interrupts_arch_conflict(bitmap_t* interrupt_bitmap, irqid_t id);
 
 void interrupts_vm_inject(struct vcpu* vcpu, irqid_t id);
 
-void interrupts_set_shared(irqid_t id);
 bool interrupts_is_shared(irqid_t id);
 
 #endif /* __INTERRUPTS_H__ */

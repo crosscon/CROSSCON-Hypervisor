@@ -59,6 +59,7 @@ typedef enum AS_SEC {
     SEC_HYP_IMAGE,
     SEC_HYP_PRIVATE,
     SEC_HYP_VM,
+    SEC_HYP_HC,  /* used if hypercall handlers need a special region (armv8m)*/
     SEC_HYP_ANY, /* must be last */
     /*--- VM AS SECTIONS -----*/
     SEC_VM_ANY = 0, /* must be last */

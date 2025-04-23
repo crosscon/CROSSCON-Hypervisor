@@ -187,30 +187,56 @@ static const size_t NUM_EXT = sizeof(ext_table) / sizeof(unsigned long);
 
 enum SBI_MSG_EVENTS { SEND_IPI, HART_START };
 
+union sbi_msg_data {
+    uint64_t raw;
+    struct {
+        uint16_t vm_id;
+    };
+};
+
 void sbi_msg_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(sbi_msg_handler, SBI_MSG_ID)
 
 void sbi_msg_handler(uint32_t event, uint64_t data)
 {
-    UNUSED_ARG(data);
+    union sbi_msg_data msg_data = { .raw = data };
+
+    struct vcpu* vcpu = cpu()->vcpu;
+
+    if (msg_data.vm_id != vcpu->vm->id) {
+        vcpu = cpu_get_vcpu_by_vmid(msg_data.vm_id);
+    }
+
+    if (vcpu == NULL) {
+        ERROR("sbi received message for unknown vcpu");
+    }
 
     switch (event) {
         case SEND_IPI:
-            csrs_hvip_set(HIP_VSSIP);
+            if (vcpu == cpu()->vcpu) {
+                csrs_hvip_set(HIP_VSSIP);
+            } else {
+                vcpu->regs.hvip |= HIP_VSSIP;
+            }
             break;
         case HART_START: {
-            spin_lock(&cpu()->vcpu->arch.sbi_ctx.lock);
-            if (cpu()->vcpu->arch.sbi_ctx.state == START_PENDING) {
-                vcpu_arch_reset(cpu()->vcpu, cpu()->vcpu->arch.sbi_ctx.start_addr);
-                vcpu_writereg(cpu()->vcpu, REG_A1, cpu()->vcpu->arch.sbi_ctx.priv);
-                cpu()->vcpu->arch.sbi_ctx.state = STARTED;
+            spin_lock(&vcpu->arch.sbi_ctx.lock);
+            if (vcpu->arch.sbi_ctx.state == START_PENDING) {
+                vcpu_arch_reset(vcpu, vcpu->arch.sbi_ctx.start_addr);
+                vcpu_writereg(vcpu, REG_A1, vcpu->arch.sbi_ctx.priv);
+                vcpu->arch.sbi_ctx.state = STARTED;
             }
-            spin_unlock(&cpu()->vcpu->arch.sbi_ctx.lock);
+            spin_unlock(&vcpu->arch.sbi_ctx.lock);
         } break;
         default:
             WARNING("unknown sbi msg\n");
             break;
     }
+}
+
+static void sbi_timer_irq_handler(void)
+{
+    csrs_hvip_set(HIP_VSTIP);
 }
 
 static struct sbiret sbi_time_handler(unsigned long fid)
@@ -225,21 +251,16 @@ static struct sbiret sbi_time_handler(unsigned long fid)
     }
 
     if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
+        cpu()->vcpu->regs.vstimecmp = stime_value;
         csrs_vstimecmp_write(stime_value);
     } else {
-        sbi_set_timer(stime_value); // assumes always success
-        cpu()->vcpu->arch.stime_value = stime_value;
-        csrs_hvip_clear(HIP_VSTIP);
-        csrs_sie_set(SIE_STIE);
+        struct timer_event* timer_event = &cpu()->vcpu->arch.timer_event;
+        timer_event_remove(timer_event);
+        timer_event_set(timer_event, stime_value, (timer_event_handler_t)sbi_timer_irq_handler);
+        csrs_hvip_write(HIP_VSTIP);
     }
 
     return (struct sbiret){ SBI_SUCCESS, 0 };
-}
-
-static void sbi_timer_irq_handler(void)
-{
-    csrs_hvip_set(HIP_VSTIP);
-    csrs_sie_clear(SIE_STIE);
 }
 
 static struct sbiret sbi_ipi_handler(unsigned long fid)
@@ -531,10 +552,5 @@ void sbi_init()
         if (ret.error != SBI_SUCCESS || ret.value == 0) {
             ERROR("sbi does not support ext 0x%x", ext_table[i]);
         }
-    }
-
-    irqc_timer_int_id = interrupts_reserve(TIMR_INT_ID, (irq_handler_t)sbi_timer_irq_handler);
-    if (irqc_timer_int_id == INVALID_IRQID) {
-        ERROR("Failed to reserve SBI TIMR_INT_ID interrupt");
     }
 }

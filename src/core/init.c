@@ -11,6 +11,8 @@
 #include <console.h>
 #include <printk.h>
 #include <platform.h>
+#include <sched.h>
+#include <timer.h>
 #include <vmm.h>
 
 void init(cpuid_t cpu_id)
@@ -29,7 +31,6 @@ void init(cpuid_t cpu_id)
     console_init();
 
     if (cpu_is_master()) {
-        console_printk("\n");
         console_printk("   _____ _____   ____   _____ _____  _____ ____  _   _ \n");
         console_printk("  / ____|  __ \\ / __ \\ / ____/ ____|/ ____/ __ \\| \\ | |\n");
         console_printk(" | |    | |__) | |  | | (___| (___ | |   | |  | |  \\| |\n");
@@ -43,13 +44,19 @@ void init(cpuid_t cpu_id)
         console_printk(" | |  | | |_| | |_) |  __/ |   \\ V /| \\__ \\ (_) | |    \n");
         console_printk(" |_|  |_|\\__, | .__/ \\___|_|    \\_/ |_|___/\\___/|_|    \n");
         console_printk("          __/ | |                                      \n");
-        console_printk("         |___/|_| \n");
+        console_printk("         |___/|_| %s\n", __TIME__);
         console_printk("\n");
     }
 
     interrupts_init();
 
+    timer_init();
+
     vmm_init();
+
+    sched_start();
+
+    vcpu_arch_entry();
 
     /* Should never reach here */
     while (1) { }

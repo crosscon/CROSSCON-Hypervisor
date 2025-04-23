@@ -47,7 +47,7 @@ endif
 HOST_CC:=gcc
 
 #Makefile arguments and default values
-DEBUG:=n
+DEBUG:=y
 OPTIMIZATIONS:=2
 CONFIG=
 DYN_CONFIG=
@@ -158,7 +158,7 @@ directories:=$(build_dir) $(bin_dir)
 endif
 
 src_dirs+=$(cpu_arch_dir) $(lib_dir) $(core_dir) $(core_mem_prot_dir) \
-	$(platform_dir) $(sdees_dir) $(sdees_arch_dir) \
+	$(platform_dir) $(sdees_dir) $(sdees_arch_dir) $(sdees_base_dir) \
 	$(addprefix $(drivers_dir)/, $(drivers))
 
 inc_dirs:=$(addsuffix /inc, $(src_dirs))
@@ -280,6 +280,15 @@ ifeq ($(CC_IS_GCC),y)
 	build_macros+=-DCC_IS_GCC
 else ifeq ($(CC_IS_CLANG),y)
 	build_macros+=-DCC_IS_CLANG
+endif
+ifneq ($(findstring sdGPOS, $(_SDEES)),)
+    build_macros += -DSDGPOS
+endif
+ifneq ($(findstring sdTZ, $(_SDEES)),)
+    build_macros += -DSDTZ
+endif
+ifneq ($(findstring sdSGX, $(_SDEES)),)
+    build_macros += -DSDSGX
 endif
 
 override CPPFLAGS+=$(addprefix -I, $(inc_dirs)) $(arch-cppflags) \

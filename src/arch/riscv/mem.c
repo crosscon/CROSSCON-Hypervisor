@@ -69,3 +69,15 @@ bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
         return false;
     }
 }
+
+void mem_guest_ipa_translate(struct addr_space* as, vaddr_t ipa, paddr_t* pa)
+{
+    // uint64_t tmp = 0, tmp2 = 0;
+    // tmp = sysreg_sctlr_el1_read();
+    // tmp2 = tmp & ~(1ULL << 0);
+    // sysreg_sctlr_el1_write(tmp2);
+    if (!mem_translate(as, ipa, pa)) {
+        ERROR("Could not translate guest ipa");
+    }
+    // sysreg_sctlr_el1_write(tmp);
+}

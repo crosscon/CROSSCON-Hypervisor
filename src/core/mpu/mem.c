@@ -11,6 +11,7 @@
 #include <platform_defs.h>
 #include <objpool.h>
 #include <config.h>
+#include <arch/mpu.h>
 
 #define MEM_BROADCAST      (true)
 #define MEM_DONT_BROADCAST (false)
@@ -262,11 +263,17 @@ void as_init(struct addr_space* as, enum AS_TYPE type, colormap_t colors)
     for (size_t i = 0; i < VMPU_NUM_ENTRIES; i++) {
         mem_vmpu_free_entry(as, i);
     }
+
+    list_init(&(as->vmpu.ordered_list));
+    // TODO:ARMV8M - makes sense to init all nodes on list here?
+
+    as_arch_init(as);
 }
 
 void as_destroy(struct addr_space* as)
 {
     /* TODO */
+    UNUSED_ARG(as);
     WARNING("%s not implemented\n", __func__);
 }
 
@@ -288,7 +295,8 @@ static void mem_msg_handler(uint32_t event, uint64_t data)
 }
 CPU_MSG_HANDLER(mem_msg_handler, MEM_PROT_SYNC)
 
-static cpumap_t mem_section_shared_cpus(struct addr_space* as, as_sec_t section)
+static void mem_region_broadcast(struct addr_space* as, struct mp_region* mpr, uint32_t op,
+    bool locked)
 {
     cpumap_t cpus = 0;
     if (as->type == AS_HYP) {
@@ -505,6 +513,15 @@ static mpid_t mem_vmpu_find_overlapping_region(struct addr_space* as, struct mp_
             continue;
         }
 
+        if ((mpe->region.as_sec != region->as_sec) && (region->as_sec != SEC_UNKNOWN)) {
+            continue;
+        }
+
+        // TODO:ARMV8M - Should this be done?
+        /*if (!mpu_perms_compatible(as, mpe->region, region)) {
+            continue;
+        }*/
+
         if (mem_regions_overlap(region, &mpe->region)) {
             mpid = i;
             break;
@@ -601,6 +618,7 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
         struct mp_region reg;
         reg.base = vaddr;
         reg.size = size;
+        reg.as_sec = SEC_UNKNOWN;
 
         mpid_t mpid = mem_vmpu_find_overlapping_region(as, &reg);
         if (mpid == INVALID_MPID) {

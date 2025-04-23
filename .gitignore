@@ -4,7 +4,7 @@ build/*
 *.elf
 *.bin
 *.d
-
+.vscode/*
 configs/*
 !configs/configs.mk
 !configs/linker.ld 

@@ -88,15 +88,6 @@ void vcpu_writepc(struct vcpu* vcpu, unsigned long pc)
     vcpu->regs.sepc = pc;
 }
 
-void vcpu_arch_run(struct vcpu* vcpu)
-{
-    if (vcpu->arch.sbi_ctx.state == STARTED) {
-        vcpu_arch_entry();
-    } else {
-        cpu_idle();
-    }
-}
-
 void vcpu_restore_state(struct vcpu* vcpu)
 {
     csrs_vsstatus_write(vcpu->regs.vsstatus);

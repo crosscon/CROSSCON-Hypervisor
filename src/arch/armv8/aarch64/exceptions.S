@@ -75,22 +75,20 @@
 .global vcpu_arch_entry
 vcpu_arch_entry:
     mrs x0, tpidr_el2
-
-    #ifdef MEM_PROT_MPU
-    ldr x1, [x0, #CPU_VCPU_OFF]
-    ldr x1, [x1, #VCPU_ARCH_MASK_OFF]
-
-    mov x2, #CPU_ARCH_PROFILE_MPU_LOCKED_OFF
-    add x2, x2, x0
-    ldr x2, [x2]
-
-    orr x1, x1, x2
-    
-    msr prenr_el2, x1
-    #endif /* MEM_PROT_MPU */
-
-    ldr x0, [x0, #CPU_VCPU_OFF]
-    add x0, x0, #VCPU_REGS_OFF
+    ldr x19, [x0, #CPU_NEXT_VCPU_OFF]
+    cbz x19, 11f
+    ldr x20, [x0, #CPU_VCPU_OFF]
+    cmp x19, x20
+    beq 1f
+    bl  vcpu_context_switch
+1:
+    ldr x0, [x19, #VCPU_BLOCKED_COUNT]
+    cbz x0, 2f
+11:
+    bl cpu_arch_park
+    b  .
+2:
+    add x0, x19, #VCPU_REGS_OFF
     mov sp, x0
 
     ldp x0, x1, [sp, #(8*31)]

@@ -71,6 +71,17 @@ static inline bool range_in_range(unsigned long base1, unsigned long size1, unsi
     return (base1 >= base2) && (limit1 <= limit2);
 }
 
+static inline unsigned long sat_ul_sub(unsigned long a, unsigned long b)
+{
+    unsigned long res = 0;
+
+    if (a > b) {
+        res = a - b;
+    }
+
+    return res;
+}
+
 /* WARNING! does not check for overflow! */
 #define in_range(_addr, _base, _size)    range_in_range(_addr, 0, _base, _size)
 

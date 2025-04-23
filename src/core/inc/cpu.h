@@ -28,28 +28,27 @@ struct cpu {
 
     bool handling_msgs;
 
+    struct vcpu* vcpu;      // current vcpu
+    struct vcpu* next_vcpu; // next scheduled vcpu
+
+    struct cpu_arch arch;
+
     struct addr_space as;
 
-    struct vcpu* vcpu;          // current vcpu
-    struct vcpu* next_vcpu;     // next scheduled vcpu
-
     struct list vcpu_lst;       /* all vcpus on this cpu */
-
     struct list vcpu_sched_lst; /* only for root vcpus */
-
     struct list timer_event_lst;
 
     struct {
         struct timer_event timer_event;
     } sched;
 
-    struct cpu_arch arch;
-
     struct cpuif* interface;
 
     uint8_t stack[STACK_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
 } __attribute__((aligned(PAGE_SIZE)));
+
 struct cpu_msg {
     uint32_t handler;
     uint32_t event;

@@ -314,8 +314,9 @@ static void vplic_emul_enbl_access(struct emul_access* acc)
     }
 }
 
-static bool vplic_global_emul_handler(struct emul_access* acc)
+static bool vplic_global_emul_handler(struct vcpu* vcpu, struct emul_access* acc)
 {
+    UNUSED_ARG(vcpu);
     // only allow aligned word accesses
     if (acc->width != 4 || acc->addr & 0x3) {
         return false;
@@ -336,7 +337,7 @@ static bool vplic_global_emul_handler(struct emul_access* acc)
     return true;
 }
 
-static bool vplic_hart_emul_handler(struct emul_access* acc)
+static bool vplic_hart_emul_handler(struct vcpu* vcpu, struct emul_access* acc)
 {
     // only allow aligned word accesses
     if (acc->width > 4 || acc->addr & 0x3) {

@@ -130,6 +130,31 @@ void cpu_standby_wakeup(void)
     }
 }
 
+void cpu_idle()
+{
+    cpu_arch_idle();
+
+    /**
+     * Should not return here. cpu should "wake up" from idle in cpu_idle_wakeup with a rewinded
+     * stack.
+     */
+    ERROR("Spurious idle wake up");
+}
+
+void cpu_idle_wakeup()
+{
+    if (interrupts_check(IPI_CPU_MSG)) {
+        interrupts_clear(IPI_CPU_MSG);
+        cpu_msg_handler();
+    }
+
+    if (cpu()->vcpu != NULL) {
+        vcpu_run(cpu()->vcpu);
+    } else {
+        cpu_idle();
+    }
+}
+
 void cpu_add_vcpu(struct vcpu* vcpu)
 {
     if (vcpu->list_node != NULL) {

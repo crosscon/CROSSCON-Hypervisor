@@ -1,0 +1,214 @@
+/**
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) Bao Project and Contributors. All rights reserved.
+ */
+
+#include <mem.h>
+#include <cpu.h>
+#include <arch/sysregs.h>
+#include <arch/fences.h>
+#include <arch/mpu.h>
+
+struct mpu_temp {
+    unsigned long rbar;
+    unsigned long rlar;
+    unsigned long rbar_attr;
+    unsigned long rlar_attr;
+} mpu_temp[8];
+
+static void mpu_read_and_save(void)
+{
+    for (uint32_t i = 0; i < 8; i++) {
+        mpu_s->rnr = i;
+        ISB();
+        mpu_temp[i].rbar_attr = mpu_s->rbar & 0x1F;
+        mpu_temp[i].rbar = mpu_s->rbar & MPU_RBAR_BASE_MSK;
+        mpu_temp[i].rlar = mpu_s->rlar | 0x1F;
+        mpu_temp[i].rlar_attr = mpu_s->rlar & 0x1F;
+    }
+}
+
+static inline size_t mpu_num_entries(void)
+{
+    return (size_t)MPU_TYPE_N_RGN(mpu_s->type);
+}
+
+static inline void mpu_lock_entry(mpid_t mpid)
+{
+    bitmap_set(cpu()->arch.mpu_hyp.locked, mpid);
+}
+
+static inline bool mpu_entry_locked(mpid_t mpid)
+{
+    return !!bitmap_get(cpu()->arch.mpu_hyp.locked, mpid);
+}
+
+static void mpu_entry_set(mpid_t mpid, struct mp_region* mpr)
+{
+    unsigned long lim = mpr->base + mpr->size - 1;
+
+    mpu_set_rnr(mpu_s, mpid);
+    ISB();
+    mpu_set_rbar(mpu_s, (mpr->base & MPU_RBAR_BASE_MSK) | mpr->mem_flags.rbar);
+    mpu_set_rlar(mpu_s, (lim & MPU_RLAR_LIMIT_MSK) | mpr->mem_flags.rlar);
+}
+
+static mpid_t mpu_entry_allocate(void)
+{
+    mpid_t reg_num = INVALID_MPID;
+    for (mpid_t i = 0; i < (mpid_t)mpu_num_entries(); i++) {
+        if (bitmap_get(cpu()->arch.mpu_hyp.bitmap, i) == 0) {
+            bitmap_set(cpu()->arch.mpu_hyp.bitmap, i);
+            reg_num = i;
+            break;
+        }
+    }
+    return reg_num;
+}
+
+bool mpu_add_region(struct mp_region* reg, bool locked)
+{
+    bool failed = true;
+
+    if (reg->size > 0) {
+        mpid_t mpid = mpu_entry_allocate();
+
+        if (mpid != INVALID_MPID) {
+            failed = false;
+            mpu_entry_set(mpid, reg);
+            if (locked) {
+                mpu_lock_entry(mpid);
+            }
+        }
+    }
+
+    mpu_read_and_save();
+
+    return !failed;
+}
+
+bool mpu_arch_perms_compatible(mem_flags_t perms1, mem_flags_t perms2)
+{
+    UNUSED_ARG(perms1);
+    UNUSED_ARG(perms2);
+    // TODO:ARMV8M - IMPLEMENT on all archs
+    // uint8_t perms_mask = SPMPCFG_S_BIT | SPMPCFG_R_BIT | SPMPCFG_W_BIT | SPMPCFG_X_BIT;
+    // return (perms1 & perms_mask) == (perms2 & perms_mask);
+
+    return 1;
+}
+
+static void mpu_entry_get_region(mpid_t mpid, struct mp_region* mpe)
+{
+    mpu_set_rnr(mpu_s, mpid);
+    ISB();
+
+    unsigned long rbar = mpu_get_rbar(mpu_s);
+    unsigned long rlar = mpu_get_rlar(mpu_s);
+
+    mpe->mem_flags.rbar = MPU_RBAR_FLAGS(rbar);
+    mpe->mem_flags.rlar = MPU_RLAR_FLAGS(rlar);
+    mpe->base = MPU_RBAR_BASE(rbar);
+    mpe->size = (MPU_RLAR_LIMIT(rlar) + 1) - mpe->base;
+    mpe->as_sec = SEC_UNKNOWN;
+}
+
+static mpid_t mpu_entry_get_region_id(struct mp_region* mpe)
+{
+    mpid_t mpid = INVALID_MPID;
+
+    for (mpid_t i = 0; i < (mpid_t)mpu_num_entries(); i++) {
+        struct mp_region mpe_cmp;
+        mpu_entry_get_region(i, &mpe_cmp);
+
+        if (mpe_cmp.base == mpe->base && mpe_cmp.size == mpe->size) {
+            mpid = i;
+            break;
+        }
+    }
+
+    return mpid;
+}
+
+static void mpu_entry_clear(mpid_t mpid)
+{
+    mpu_set_rnr(mpu_s, mpid);
+    ISB();
+    mpu_set_rlar(mpu_s, 0);
+    mpu_set_rbar(mpu_s, 0);
+}
+
+static inline void mpu_entry_free(mpid_t mpid)
+{
+    mpu_entry_clear(mpid);
+    bitmap_clear(cpu()->arch.mpu_hyp.bitmap, mpid);
+}
+
+bool mpu_remove_region(struct mp_region* reg)
+{
+    bool failed = true;
+
+    if (reg->size > 0) {
+        mpid_t mpid = mpu_entry_get_region_id(reg);
+
+        if (mpid != INVALID_MPID) {
+            failed = false;
+            mpu_entry_free(mpid);
+        }
+    }
+
+    // TODO:ARMV8M - REMOVE
+    mpu_read_and_save();
+
+    return !failed;
+}
+
+bool mpu_update_region(struct mp_region* mpr)
+{
+    bool failed = true;
+
+    for (mpid_t mpid = 0; mpid < (mpid_t)mpu_num_entries(); mpid++) {
+        if (bitmap_get(cpu()->arch.mpu_hyp.bitmap, mpid) == 0) {
+            continue;
+        }
+        struct mp_region mpe_cmp;
+        mpu_entry_get_region(mpid, &mpe_cmp);
+
+        if (mpe_cmp.base == mpr->base) {
+            mpu_entry_set(mpid, mpr);
+            failed = false;
+            break;
+        }
+    }
+    // TODO:ARMV8M - REMOVE
+    mpu_read_and_save();
+
+    return !failed;
+}
+
+static inline bool mpu_entry_valid(mpid_t mpid)
+{
+    mpu_set_rnr(mpu_s, mpid);
+    ISB();
+    return !!(mpu_get_rlar(mpu_s) & MPU_RLAR_EN);
+}
+
+void mpu_arch_init(void)
+{
+    bitmap_clear_consecutive(cpu()->arch.mpu_hyp.bitmap, 0, mpu_num_entries());
+
+    for (mpid_t mpid = 0; mpid < (mpid_t)mpu_num_entries(); mpid++) {
+        if (mpu_entry_valid(mpid)) {
+            bitmap_set(cpu()->arch.mpu_hyp.bitmap, mpid);
+            bitmap_set(cpu()->arch.mpu_hyp.locked, mpid);
+        }
+    }
+}
+
+void mpu_arch_enable(void)
+{
+    mpu_set_ctrl(mpu_s, mpu_get_ctrl(mpu_s) | MPU_CTRL_ENABLE);
+    /* Enable background region */
+    mpu_set_ctrl(mpu_s, mpu_get_ctrl(mpu_s) & ~(uint32_t)MPU_CTRL_PRIVDEFENA);
+    ISB();
+}

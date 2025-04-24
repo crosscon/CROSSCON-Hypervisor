@@ -27,6 +27,7 @@ void interrupts_arch_init()
         if (USE_ACLINT_IPI()) {
             aclint_init();
         }
+        irqc_timer_int_id = TIMR_INT_ID;
     }
 
     /* Wait for master hart to finish irqc initialization */

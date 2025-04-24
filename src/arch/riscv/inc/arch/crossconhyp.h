@@ -6,8 +6,8 @@
 #ifndef __ARCH_BAO_H__
 #define __ARCH_BAO_H__
 
-#define RV64 (RV_XLEN == 64)
-#define RV32 (RV_XLEN == 32)
+#define RV64   (RV_XLEN == 64)
+#define RV32   (RV_XLEN == 32)
 
 #if (RV64)
 #define LOAD   ld
@@ -18,6 +18,8 @@
 #define STORE  sw
 #define REGLEN (4)
 #endif
+
+#if defined(MEM_PROT_MMU)
 
 #if (RV64)
 // This layout assumes Sv39 is available as mandated by the RVA23S64 profile
@@ -31,14 +33,24 @@
 // are assuming, for now that all available physical memory resides in 0x0 - 0xefffffff of virtual
 // memory. Otherwise we need to implement a "highmem"-like mechanism.
 #define BAO_VAS_BASE (0xc0000000)
-#define BAO_CPU_BASE (0xcf400000)
-#define BAO_VM_BASE  (0xcf800000)
-#define BAO_VAS_TOP  (0xcfc00000)
+#define BAO_CPU_BASE (0xc0400000)
+#define BAO_VM_BASE  (0xc0800000)
+#define BAO_VAS_TOP  (0xc0c00000)
 #endif
 
-#define PAGE_SIZE        (0x1000)
-#define STACK_SIZE       (PAGE_SIZE)
-#define VM_SHARED_PT_LVL (0)
+#define PAGE_SIZE  (0x1000)
+#define STACK_SIZE (PAGE_SIZE)
+#define VM_SHARED_PT_LVL    (0)
+
+#else /* defined(MEM_PROT_MMU) */
+
+#define BAO_VAS_BASE CONFIG_HYP_BASE_ADDR
+#define PAGE_SIZE    (64)
+#define STACK_SIZE   (0x1000)
+
+#endif /* defined(MEM_PROT_MMU) */
+
+#define ARCH_STACK_ALIGN    (1)
 
 #ifndef __ASSEMBLER__
 

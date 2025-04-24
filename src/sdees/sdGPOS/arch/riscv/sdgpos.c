@@ -8,7 +8,7 @@
 #include <vmm.h>
 #include <arch/sdgpos.h>
 
-static int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static int64_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     UNUSED_ARG(vcpu);
     UNUSED_ARG(smc_fid);
@@ -26,13 +26,13 @@ static int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
     return 0;
 }
 
-static int64_t sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t fid)
+static long sdgpos_hvc_handler(struct vcpu* vcpu, unsigned long fid)
 {
     if (vcpu->vm->type != 0) {
         return 0;
     }
 
-    int64_t ret;
+    long ret;
 
     /* CROSSCON TODO: sdee */
     switch (fid) {

@@ -12,9 +12,9 @@
 #include <vplic.h>
 #include <arch/sbi.h>
 
-#define IRQC_TIMR_INT_ID            (PLIC_MAX_INTERRUPTS + 1)
-#define IRQC_SOFT_INT_ID            (PLIC_MAX_INTERRUPTS + 2)
-#define IRQC_MAX_INTERRUPT_LINES    (IRQC_SOFT_INT_ID + 1)
+#define IRQC_SOFT_INT_ID            (PLIC_MAX_INTERRUPTS + 1)
+#define IRQC_TIMR_INT_ID            (PLIC_MAX_INTERRUPTS + 2)
+#define IRQC_MAX_INTERRUPT_LINES    (IRQC_TIMR_INT_ID + 1)
 #define IRQC_MAX_INTERRUPT_HANDLERS MAX_INTERRUPT_LINES
 #define IRQC_MAX_GUEST_INTERRUPTS   MAX_INTERRUPT_LINES
 
@@ -34,7 +34,7 @@ static inline irqid_t irqc_reserve(irqid_t pintp_id)
 static inline void irqc_send_ipi(cpuid_t target_cpu, irqid_t ipi_id)
 {
     UNUSED_ARG(ipi_id);
-    sbi_send_ipi(1ULL << target_cpu, 0);
+    sbi_send_ipi(1UL << target_cpu, 0);
 }
 
 static inline void irqc_cpu_init(void)

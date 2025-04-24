@@ -237,7 +237,6 @@ void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, cpumap_t cpus,
     as->colors = 0;
     as->id = id;
     as->cpus = cpus;
-    as_arch_init(as);
 
     for (size_t i = 0; i < VMPU_NUM_ENTRIES; i++) {
         mem_vmpu_free_entry(as, i);

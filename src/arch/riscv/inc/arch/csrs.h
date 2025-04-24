@@ -223,7 +223,7 @@
 
 #define HIE_VSSIE                   (1ULL << 2)
 #define HIE_VSTIE                   (1ULL << 6)
-#define HIE_VSEIE                   (1ULL << 10)
+#define HIE_VSEIE                   (1UL << 10)
 #define HIE_SGEIE                   (1ULL << 12)
 
 #define HIP_VSSIP                   HIE_VSSIE

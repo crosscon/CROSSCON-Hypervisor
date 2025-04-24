@@ -136,7 +136,7 @@ void vcpu_restore_state(struct vcpu* vcpu)
     csrs_hgatp_write(vcpu->vm->arch.hgatp);
 
     timer_event_add(&vcpu->arch.timer_event);
-    vfp_restore_state(&vcpu->regs.vfp);
+    /* vfp_restore_state(&vcpu->regs.vfp); */
 
 #ifdef MEM_PROT_MPU
     spmp_set_active(&vcpu->arch.spmp, true);
@@ -161,7 +161,7 @@ void vcpu_save_state(struct vcpu* vcpu)
     vcpu->regs.hvip = csrs_hvip_read();
 
     timer_event_remove(&vcpu->arch.timer_event);
-    vfp_save_state(&vcpu->regs.vfp);
+    /* vfp_save_state(&vcpu->regs.vfp); */
 }
 
 bool vcpu_arch_is_on(struct vcpu* vcpu)

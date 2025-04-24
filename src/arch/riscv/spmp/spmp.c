@@ -307,7 +307,9 @@ static struct spmp* spmp_get_local(struct addr_space* as)
     if (as == &cpu()->as) {
         spmp = &cpu()->arch.spmp_hyp;
     } else {
-        list_foreach (cpu()->vcpu_lst, struct vcpu, vcpu) {
+        struct vcpu* vcpu = NULL;
+        list_foreach (cpu()->vcpu_lst, node_t, node) {
+            vcpu = CONTAINER_OF(struct vcpu, list_node, node);
             if (as == &vcpu->vm->as) {
                 spmp = &vcpu->arch.spmp;
                 break;
@@ -705,11 +707,22 @@ void spmp_enable(void)
 
 bool spmp_update(struct addr_space* as, struct mp_region* mpr)
 {
-    UNUSED_ARG(as);
-    UNUSED_ARG(mpr);
+    bool failed = true;
 
-    //TODO:CROSSCON - Need to implement this
-    ERROR("spmp_update not implemented");
+    struct spmp* spmp = spmp_get_local(as);
+    for (mpid_t mpid = 0; mpid < (mpid_t)SPMP_NUM_ENTRIES; mpid++) {
+        if (bitmap_get((bitmap_t*)&spmp->alloc_entries, mpid) == 0) {
+            continue;
+        }
+        struct mp_region mpe_cmp;
+        spmp_entry_get_region(spmp, mpid, &mpe_cmp);
 
-    return false;
+        if (mpe_cmp.base == mpr->base) {
+            spmp_set_entry(spmp, mpid, mpr);
+            failed = false;
+            break;
+        }
+    }
+
+    return !failed;
 }

@@ -14,13 +14,13 @@
 #include <console.h>
 #include <util.h>
 
-#define INFO(...)    console_printk("BAO INFO: " __VA_ARGS__);
+#define INFO(...)    console_printk("CROSSCONHYP INFO: " __VA_ARGS__);
 
-#define WARNING(...) console_printk("BAO WARNING: " __VA_ARGS__);
+#define WARNING(...) console_printk("CROSSCONHYP WARNING: " __VA_ARGS__);
 
 #define ERROR(...)                                 \
     do {                                           \
-        console_printk("BAO ERROR: " __VA_ARGS__); \
+        console_printk("CROSSCONHYP ERROR: " __VA_ARGS__); \
         while (true) { };                          \
     } while (false);
 

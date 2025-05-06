@@ -22,7 +22,6 @@ void vm_arch_profile_init(struct vm* vm)
     vcpu->arch.sysregs.vm.ttbr0_el1 = 0;
     vcpu->arch.sysregs.vm.ttbr1_el1 = 0;
     vcpu->arch.sysregs.vm.tcr_el1 = 0;
-
 }
 
 void vcpu_arch_profile_save_state(struct vcpu* vcpu)

@@ -160,7 +160,6 @@ SYSREG_GEN_ACCESSORS(fpcr)
 SYSREG_GEN_ACCESSORS(fpexc32_el2)
 SYSREG_GEN_ACCESSORS(fpsr)
 
-
 static inline void arm_dc_civac(vaddr_t cache_addr)
 {
     __asm volatile("dc civac, %0\n\t" ::"r"(cache_addr));

@@ -99,18 +99,19 @@ static void vmm_assign_child_vcpus(struct vm_config* vm_config)
         vmid_t child_vmid = vmm_config_to_vmid(child_config);
 
         size_t child_cpu_affinity = 0;
-        if(child_config->cpu_affinity == 0){
+        if (child_config->cpu_affinity == 0) {
             child_cpu_affinity = parent_cpus;
         } else {
             child_cpu_affinity = child_config->cpu_affinity;
         }
-        for (size_t j = 0; (j < PLAT_CPU_NUM) && (vm_assign[child_vmid].ncpus < child_num_cpus); j++) {
-            if(child_cpu_affinity & parent_cpus & (1UL << j)){
+        for (size_t j = 0; (j < PLAT_CPU_NUM) && (vm_assign[child_vmid].ncpus < child_num_cpus);
+             j++) {
+            if (child_cpu_affinity & parent_cpus & (1UL << j)) {
                 vm_assign[child_vmid].cpus |= (1UL << j);
                 vm_assign[child_vmid].ncpus += 1;
             }
         }
-        if(vm_assign[child_vmid].ncpus < child_num_cpus){
+        if (vm_assign[child_vmid].ncpus < child_num_cpus) {
             ERROR("could not assign vcpus to vm");
         }
 

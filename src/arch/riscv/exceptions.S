@@ -87,7 +87,7 @@
     LOAD   x29, (x29)
     beqz   x29, 2f
 11:
-    call   cpu_arch_park
+    call   cpu_arch_standby
     j .
 2:
 

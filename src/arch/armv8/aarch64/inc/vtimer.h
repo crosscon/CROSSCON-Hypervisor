@@ -3,7 +3,7 @@
 
 #include <crossconhyp.h>
 
-#define VTIMER_IRQ_ID   (27)
+#define VTIMER_IRQ_ID (27)
 
 struct vtimer {
     unsigned long cntkctl_el1;

@@ -98,8 +98,7 @@ static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_confi
     if (!root_vcpu) {
         list_init(&vcpu->vcpu_stack_lst);
         vcpu->root_vcpu = vcpu;
-    }
-    else {
+    } else {
         vcpu->root_vcpu = root_vcpu;
     }
 

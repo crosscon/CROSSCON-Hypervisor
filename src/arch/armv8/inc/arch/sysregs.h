@@ -524,7 +524,7 @@
 
 /* Generic Timer */
 
-#define CNT_CTL_ENABLE          (1ULL)
+#define CNT_CTL_ENABLE           (1ULL)
 
 #ifndef __ASSEMBLER__
 

@@ -3,7 +3,7 @@
 
 #include <types.h>
 
-#define VFP_NUM_REGS    (31)
+#define VFP_NUM_REGS (31)
 
 struct vfp_reg {
     uint64_t d0;

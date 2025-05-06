@@ -11,6 +11,11 @@
 #include <config.h>
 #include <shmem.h>
 
+enum ipc_cpu_origin {
+    ORIGIN_THIS_CPU,
+    ORIGIN_OTHER_CPU
+};
+
 enum { IPC_NOTIFY };
 
 union ipc_msg_data {
@@ -35,12 +40,12 @@ static struct ipc* ipc_find_by_shmemid(struct vm* vm, size_t shmem_id)
     return ipc_obj;
 }
 
-static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id)
+static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id, enum ipc_cpu_origin origin)
 {
     struct vcpu* vcpu_tmp = NULL;
     list_foreach (cpu()->vcpu_lst, node_t, node) {
         vcpu_tmp = CONTAINER_OF(struct vcpu, list_node, node);
-        if (vcpu_tmp == vcpu) {
+        if (origin == ORIGIN_THIS_CPU && vcpu_tmp == vcpu) {
             continue;
         }
 
@@ -64,7 +69,7 @@ static void ipc_handler(uint32_t event, uint64_t data)
     union ipc_msg_data ipc_data = { .raw = data };
     switch (event) {
         case IPC_NOTIFY:
-            notify_local_vms(cpu()->vcpu, ipc_data.shmem_id, ipc_data.event_id);
+            notify_local_vms(cpu()->vcpu, ipc_data.shmem_id, ipc_data.event_id, ORIGIN_OTHER_CPU);
             break;
         default:
 
@@ -92,9 +97,9 @@ static void notify_remote_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigne
     }
 }
 
-static void notify_ipc(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id)
+static void notify_ipc(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id, enum ipc_cpu_origin origin)
 {
-    notify_local_vms(vcpu, shmem_id, event_id);
+    notify_local_vms(vcpu, shmem_id, event_id, origin);
     notify_remote_vms(vcpu, shmem_id, event_id);
 }
 
@@ -116,7 +121,7 @@ long int ipc_hypercall(struct vcpu* vcpu)
         unsigned long shmem_id = (uint32_t)vcpu->vm->ipcs[ipc_id].shmem_id;
         unsigned long event_id = (uint32_t)ipc_event;
 
-        notify_ipc(vcpu, shmem_id, event_id);
+        notify_ipc(vcpu, shmem_id, event_id, ORIGIN_THIS_CPU);
 
     } else {
         ret = -HC_E_INVAL_ARGS;

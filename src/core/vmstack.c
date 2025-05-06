@@ -50,7 +50,7 @@ struct vcpu* vmstack_pop()
     /* CROSSCON TODO: our nodes do not allow the same vcpu to be in the stack more than
      * once */
     if (cpu()->vcpu->parent == NULL) {
-        ERROR("Cannot pop the root vcpu");
+        return NULL;
     }
     node_t node = list_pop(&cpu()->vcpu->root_vcpu->vcpu_stack_lst);
     struct vcpu* popped_vcpu = CONTAINER_OF(struct vcpu, vmstack_node, node);

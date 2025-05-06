@@ -42,7 +42,7 @@ void vcpu_subarch_reset(struct vcpu* vcpu)
 void vcpu_restore_state(struct vcpu* vcpu)
 {
     sysreg_cptr_el2_write(vcpu->arch.sysregs.hyp.cptr_el2);
-    sysreg_elr_el2_write(vcpu->regs.spsr_el2);
+    sysreg_elr_el2_write(vcpu->regs.elr_el2);
     sysreg_spsr_el2_write(vcpu->regs.spsr_el2);
     sysreg_vttbr_el2_write(vcpu->arch.sysregs.hyp.vttbr_el2);
     sysreg_vmpidr_el2_write(vcpu->arch.sysregs.hyp.vmpidr_el2);

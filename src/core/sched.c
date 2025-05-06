@@ -32,9 +32,10 @@ static void sched_next(void)
 
     struct vcpu* next = CONTAINER_OF(struct vcpu, sched_node, next_node);
 
-    if(next == NULL){
-        while(true)
+    if (next == NULL) {
+        while (true) {
             cpu_powerdown();
+        }
     }
 
     node_t* node = list_peek(&next->vcpu_stack_lst);

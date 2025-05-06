@@ -31,4 +31,3 @@ void vtimer_restore_state(struct vcpu* vcpu)
     sysreg_cntvoff_el2_write(vcpu->arch.vtimer.cntvoff_el2);
     vgic_hw_commit(vcpu, VTIMER_IRQ_ID);
 }
-

@@ -95,4 +95,3 @@ bool vcpu_arch_is_on(struct vcpu* vcpu)
 {
     return vcpu->arch.psci_ctx.state == ON;
 }
-

@@ -1331,7 +1331,6 @@ void vgic_save_state(struct vcpu* vcpu)
     }
 }
 
-
 void vgic_hw_irq_save_state(struct vcpu* vcpu, irqid_t irq_id)
 {
     struct vgic_int* interrupt = vgic_get_int(vcpu, irq_id, vcpu->id);

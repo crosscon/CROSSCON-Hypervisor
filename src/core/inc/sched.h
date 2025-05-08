@@ -3,6 +3,8 @@
 
 #include <crossconhyp.h>
 
+extern const unsigned long long time_slice;
+
 void sched_start(void);
 void sched_yield(void);
 void sched_init(void);

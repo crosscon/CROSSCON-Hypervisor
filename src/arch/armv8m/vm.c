@@ -142,7 +142,7 @@ void vcpu_restore_state(struct vcpu* vcpu)
 
     vmpu_restore_state(&vcpu->arch.vmpu);
     // vfp_restore_state(&vcpu->regs.vfp_regs);
-    vtimer_restore_state(&vcpu->arch.vtimer);
+    vtimer_restore_state(vcpu, &vcpu->arch.vtimer);
     sau_restore(&vcpu->arch.sau_vm);
 }
 

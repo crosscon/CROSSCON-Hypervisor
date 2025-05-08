@@ -7,12 +7,14 @@
 #include <vm.h>
 #include <cpu.h>
 
+const unsigned long long time_slice = TIME_MS(10);
+
 void sched_init() { }
 
 static inline timer_value_t sched_next_event_time(void)
 {
     // hardcoded 10 ms time slice
-    return (timer_value_t)(timer_arch_get_count() + TIME_MS(10));
+    return (timer_value_t)(timer_arch_get_count() + time_slice);
 }
 
 static void sched_timer_event_handler(struct timer_event* timer_event);

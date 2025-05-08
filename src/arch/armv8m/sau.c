@@ -58,12 +58,14 @@ static void sau_entry_set(struct sau_vm* sau_vm, mpid_t mpid, struct mp_region* 
     unsigned long rbar = (mpr->base & SAU_RBAR_BADDR_MSK);
     unsigned long rlar = (lim & SAU_RLAR_LADDR_MSK) | mpr->mem_flags.rlar;
 
+    sau_arch_disable();
     sau->rnr = mpid;
     ISB();
     sau->rbar = rbar;
     sau_vm->entry[mpid].rbar = rbar;
     sau->rlar = rlar;
     sau_vm->entry[mpid].rlar = rlar;
+    sau_arch_enable();
 }
 
 static mpid_t sau_entry_allocate(void)

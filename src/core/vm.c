@@ -320,7 +320,7 @@ static void vm_init_dev(struct vm* vm, const struct vm_config* vm_config)
     for (size_t i = 0; i < vm_config->platform.dev_num; i++) {
         struct vm_dev_region* dev = &vm_config->platform.devs[i];
         INFO("VM %d adding MMIO region, VA: 0x%lx size: 0x%lx mapped at 0x%lx\n", vm->id, dev->va,
-            dev->va, dev->pa);
+            dev->size, dev->pa);
 
         size_t n = ALIGN(dev->size, PAGE_SIZE) / PAGE_SIZE;
 

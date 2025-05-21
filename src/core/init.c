@@ -20,9 +20,6 @@ void init(cpuid_t cpu_id)
     /**
      * These initializations must be executed first and in fixed order.
      */
-    if (cpu_id == CPU_MASTER) {
-        /* for (volatile int x = 1; x;); */
-    }
     cpu_init(cpu_id);
     mem_init();
 

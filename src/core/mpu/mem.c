@@ -163,8 +163,9 @@ static void mem_init_boot_regions(void)
      *  - private cpu region
      */
 
-    extern uint8_t _image_start, _image_load_end, _image_noload_start, _image_end;
+    extern uint8_t _image_start, _ro_end, _image_load_end, _image_noload_start, _image_end;
     vaddr_t image_start = (vaddr_t)&_image_start;
+    vaddr_t ro_end = (vaddr_t)&_ro_end;
     vaddr_t image_load_end = (vaddr_t)&_image_load_end;
     vaddr_t image_noload_start = (vaddr_t)&_image_noload_start;
     vaddr_t image_end = (vaddr_t)&_image_end;
@@ -181,15 +182,23 @@ static void mem_init_boot_regions(void)
 
     mpr = (struct mp_region){
         .base = image_start,
-        .size = (size_t)(first_region_end - image_start),
-#ifdef MEM_NON_UNIFIED
-        .mem_flags = PTE_HYP_FLAGS_CODE,
-#else
-        .mem_flags = PTE_HYP_FLAGS,
-#endif
+        .size = (size_t)(ro_end - image_start),
+        .mem_flags = PTE_HYP_CODE_FLAGS,
         .as_sec = SEC_HYP_IMAGE,
     };
-    mem_map(&cpu()->as, &mpr, false, true);
+    if (!mem_map(&cpu()->as, &mpr, false, true)) {
+        ERROR("failed mapping image");
+    }
+
+    mpr = (struct mp_region){
+        .base = ro_end,
+        .size = (size_t)(first_region_end - ro_end),
+        .mem_flags = PTE_HYP_FLAGS,
+        .as_sec = SEC_HYP_IMAGE,
+    };
+    if (!mem_map(&cpu()->as, &mpr, false, true)) {
+        ERROR("failed mapping image");
+    }
 
     if (separate_noload_region) {
         mpr = (struct mp_region){
@@ -203,7 +212,9 @@ static void mem_init_boot_regions(void)
             .mem_flags = PTE_HYP_FLAGS,
             .as_sec = SEC_HYP_IMAGE,
         };
-        mem_map(&cpu()->as, &mpr, false, true);
+        if (!mem_map(&cpu()->as, &mpr, false, true)) {
+            ERROR("failed mapping image");
+        }
     }
 
     mpr = (struct mp_region){
@@ -212,7 +223,9 @@ static void mem_init_boot_regions(void)
         .mem_flags = PTE_HYP_FLAGS,
         .as_sec = SEC_HYP_PRIVATE,
     };
-    mem_map(&cpu()->as, &mpr, false, true);
+    if (!mem_map(&cpu()->as, &mpr, false, true)) {
+        ERROR("failed mapping image");
+    }
 }
 
 void mem_prot_init()
@@ -235,6 +248,7 @@ void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, cpumap_t cpus,
 
     as->type = type;
     as->colors = 0;
+    as->lock = SPINLOCK_INITVAL;
     as->id = id;
     as->cpus = cpus;
 

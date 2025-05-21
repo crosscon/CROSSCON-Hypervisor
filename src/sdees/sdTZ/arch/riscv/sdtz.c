@@ -51,7 +51,7 @@ void sdtz_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size
 }
 
 /* CROSSCON TODO Not good */
-extern int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid);
+extern long sdtz_handler(struct vcpu* vcpu, unsigned long fid);
 
 // static int64_t sdtz_sbi_handler(struct vcpu* vcpu, uint64_t smc_fid) {
 //     int64_t ret = -HC_E_FAILURE;
@@ -60,9 +60,9 @@ extern int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid);
 //     return ret;
 // }
 
-static int64_t sdtz_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdtz_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
 
     struct vcpu* calling_vcpu = cpu()->vcpu;
 

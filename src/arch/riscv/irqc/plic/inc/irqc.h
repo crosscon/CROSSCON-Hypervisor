@@ -23,7 +23,7 @@
 
 static inline void irqc_init(void)
 {
-    plic_init();
+    // plic_init();
 }
 
 static inline irqid_t irqc_reserve(irqid_t pintp_id)
@@ -39,23 +39,27 @@ static inline void irqc_send_ipi(cpuid_t target_cpu, irqid_t ipi_id)
 
 static inline void irqc_cpu_init(void)
 {
-    plic_cpu_init();
+    // plic_cpu_init();
 }
 
 static inline void irqc_config_irq(irqid_t int_id, bool en)
 {
-    plic_set_enbl(cpu()->arch.plic_cntxt, int_id, en);
-    plic_set_prio(int_id, 0xFE);
+    // plic_set_enbl(cpu()->arch.plic_cntxt, int_id, en);
+    // plic_set_prio(int_id, 0xFE);
+    UNUSED_ARG(int_id);
+    UNUSED_ARG(en);
 }
 
 static inline void irqc_handle(void)
 {
-    plic_handle();
+    // plic_handle();
 }
 
 static inline bool irqc_get_pend(irqid_t int_id)
 {
-    return plic_get_pend(int_id);
+    // return plic_get_pend(int_id);
+    UNUSED_ARG(int_id);
+    return false;
 }
 
 static inline void irqc_clr_pend(irqid_t int_id)
@@ -67,7 +71,9 @@ static inline void irqc_clr_pend(irqid_t int_id)
 
 static inline void virqc_set_hw(struct vm* vm, irqid_t id)
 {
-    vplic_set_hw(vm, id);
+    // vplic_set_hw(vm, id);
+    UNUSED_ARG(vm);
+    UNUSED_ARG(id);
 }
 
 #endif // IRQC_H

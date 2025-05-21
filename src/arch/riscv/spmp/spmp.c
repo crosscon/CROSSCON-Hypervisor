@@ -325,11 +325,6 @@ static void spmp_lock_entry(struct spmp* spmp, mpid_t mpid)
     spmp->locked = bit64_set(spmp->locked, mpid);
 }
 
-static bool spmp_entry_locked(struct spmp* spmp, mpid_t mpid)
-{
-    return !!bit64_get(spmp->locked, mpid);
-}
-
 static void spmp_set_entry(struct spmp* spmp, mpid_t i, struct mp_region* mem)
 {
     spmp_cfg_t cfg = mem->mem_flags;
@@ -364,9 +359,19 @@ static void spmp_set_entry(struct spmp* spmp, mpid_t i, struct mp_region* mem)
 
 static void spmp_clear_entry(struct spmp* spmp, mpid_t i)
 {
+    if ((spmp->entry[i].cfg.a == SPMPCFG_A_TOR) && (i > 0)) {
+        spmp->entry[i-1].cfg = (spmp_cfg_t){ .a = SPMPCFG_A_OFF };
+        spmp->entry[i-1].addr = 0;
+        if (spmp->active) {
+            spmp_set_icfg(i-1, spmp->entry[i-1].cfg);
+            spmp_set_addr(i-1, spmp->entry[i-1].addr);
+        }
+    }
     spmp->entry[i].cfg = (spmp_cfg_t){ .a = SPMPCFG_A_OFF };
+    spmp->entry[i].addr = 0;
     if (spmp->active) {
         spmp_set_icfg(i, spmp->entry[i].cfg);
+        spmp_set_addr(i, spmp->entry[i].addr);
     }
 }
 
@@ -401,26 +406,33 @@ static void spmp_free_entry(struct spmp* spmp, mpid_t mpid)
 static void spmp_entry_get_region(struct spmp* spmp, mpid_t mpid, struct mp_region* reg)
 {
     unsigned long addr = spmp->entry[mpid].addr;
-    reg->mem_flags = spmp->entry[mpid].cfg;
-    if (spmp_reg_is_napot(reg)) {
-        if (reg->mem_flags.a == SPMPCFG_A_NA4) {
-            reg->size = 4;
-        } else {
-            reg->size = (1UL << (bit_ffs(~addr) + 3));
-        }
-        reg->base = (addr << 2) & (reg->size - 1);
-    } else {
-        reg->base = spmp->entry[mpid - 1].addr << 2;
+
+    if (spmp->entry[mpid].cfg.a == SPMPCFG_A_NA4) {
+        reg->size = 4;
+        reg->base = (addr << 2) & ~(reg->size - 1);
+    }
+    else if (spmp->entry[mpid].cfg.a == SPMPCFG_A_NAPOT) {
+        reg->size = (1UL << (bit_ffs(~addr) + 3));
+        reg->base = (addr << 2) & ~(reg->size - 1);
+    }
+    else if (spmp->entry[mpid].cfg.a == SPMPCFG_A_TOR) {
+        reg->base = (mpid == 0) ? (0) : (spmp->entry[mpid - 1].addr << 2);
         reg->size = (addr << 2) - reg->base;
     }
+    else {
+        reg->base = 0;
+        reg->size = 0;
+    }
+    
+    reg->mem_flags = spmp->entry[mpid].cfg;
     reg->as_sec = SEC_UNKNOWN;
 }
 
 static int spmp_node_cmp(void* cookie, node_t* _n1, node_t* _n2)
 {
     struct spmp* spmp = (struct spmp*)cookie;
-    struct spmpe_node* n1 = (struct spmpe_node*)_n1;
-    struct spmpe_node* n2 = (struct spmpe_node*)_n2;
+    struct spmp_node* n1 = (struct spmp_node*)_n1;
+    struct spmp_node* n2 = (struct spmp_node*)_n2;
     struct mp_region r1;
     struct mp_region r2;
     spmp_entry_get_region(spmp, n1->mpid, &r1);
@@ -466,8 +478,8 @@ static bool spmp_add_region(struct spmp* spmp, struct mp_region* reg)
 static void spmp_remove_entry(struct spmp* spmp, mpid_t mpid)
 {
     if (bit64_set(spmp->alloc_entries, mpid)) {
-        spmp_clear_entry(spmp, mpid);
         spmp_free_entry(spmp, mpid);
+        spmp_clear_entry(spmp, mpid);
 
         spmp->switchmsk &= ~(1ULL << mpid);
         if (spmp->priv == PRIV_HYP) {
@@ -482,53 +494,6 @@ bool spmp_perms_compatible(mem_flags_t perms1, mem_flags_t perms2)
 {
     uint8_t perms_mask = SPMPCFG_S_BIT | SPMPCFG_R_BIT | SPMPCFG_W_BIT | SPMPCFG_X_BIT;
     return (perms1.raw & perms_mask) == (perms2.raw & perms_mask);
-}
-
-static void spmp_coalesce_contiguous(struct spmp* spmp)
-{
-    while (true) {
-        bool merge = false;
-        mpid_t cur_mpid = INVALID_MPID;
-        mpid_t prev_mpid = INVALID_MPID;
-        struct mp_region prev_reg;
-        struct mp_region cur_reg;
-        list_foreach_tail(spmp->order.list, struct spmpe_node, cur, prev)
-        {
-            if (prev == NULL) {
-                continue;
-            }
-
-            if (spmp_entry_locked(spmp, cur->mpid) || spmp_entry_locked(spmp, prev->mpid)) {
-                continue;
-            }
-
-            spmp_entry_get_region(spmp, cur->mpid, &cur_reg);
-            spmp_entry_get_region(spmp, prev->mpid, &prev_reg);
-
-            bool contigous = mp_region_top(&prev_reg) == cur_reg.base;
-            bool perms_compatible =
-                spmp_perms_compatible(prev_reg.mem_flags, cur_reg.mem_flags);
-            if (contigous && perms_compatible) {
-                cur_mpid = cur->mpid;
-                prev_mpid = prev->mpid;
-                merge = true;
-                break;
-            }
-        }
-
-        if (merge) {
-            spmp_remove_entry(spmp, cur_mpid);
-            spmp_remove_entry(spmp, prev_mpid);
-            struct mp_region merged_reg = {
-                .base = prev_reg.base,
-                .size = prev_reg.size + cur_reg.size,
-                .mem_flags = cur_reg.mem_flags,
-            };
-            spmp_add_region(spmp, &merged_reg);
-        } else {
-            break;
-        }
-    }
 }
 
 static bool spmp_perms_valid(spmp_cfg_t* cfg)
@@ -571,7 +536,6 @@ bool mpu_map(struct addr_space* as, struct mp_region* mem, bool locked)
             if (locked) {
                 spmp_lock_entry(spmp, mpid);
             }
-            spmp_coalesce_contiguous(spmp);
         }
     }
 
@@ -580,87 +544,45 @@ bool mpu_map(struct addr_space* as, struct mp_region* mem, bool locked)
 
 bool mpu_unmap(struct addr_space* as, struct mp_region* mem)
 {
-    struct mp_region target_reg = *mem;
-    struct mp_region overlapped_reg;
-    mpid_t overlapped_mpid;
-    bool failed = false;
+    bool failed = true;
 
+    struct mp_region* target_reg = mem;
     struct spmp* spmp = spmp_get_local(as);
 
-    while (target_reg.size > 0 && !failed) {
-        overlapped_mpid = INVALID_MPID;
-        list_foreach (spmp->order.list, struct spmpe_node, entry) {
-            if (!bit64_get(spmp->alloc_entries, entry->mpid)) {
-                continue;
-            }
-
-            spmp_entry_get_region(spmp, entry->mpid, &overlapped_reg);
-
-            if (mp_region_top(&target_reg) < overlapped_reg.base) {
-                continue;
-            }
-
-            if (mem_regions_overlap(&target_reg, &overlapped_reg)) {
-                overlapped_mpid = entry->mpid;
-                break;
-            }
+    for (mpid_t mpid = 0; mpid < (mpid_t)SPMP_NUM_ENTRIES; mpid++) {
+        if (bitmap_get((bitmap_t*)&spmp->alloc_entries, mpid) == 0) {
+            continue;
         }
+        struct mp_region mpe_cmp;
+        spmp_entry_get_region(spmp, mpid, &mpe_cmp);
 
-        if (overlapped_mpid == INVALID_MPID) {
+        if (mpe_cmp.base == target_reg->base) {
+            spmp_remove_entry(spmp, mpid);
+            failed = false;
             break;
         }
-
-        if (spmp_entry_locked(spmp, overlapped_mpid)) {
-            failed = true;
-            break;
-        }
-
-        vaddr_t target_top = mp_region_top(&target_reg);
-        vaddr_t overlapped_top = mp_region_top(&overlapped_reg);
-        size_t top_size = target_top <= overlapped_top ? overlapped_top - target_top : 0;
-        size_t bottom_size = target_reg.base >= overlapped_top ? overlapped_top - target_top : 0;
-
-        spmp_remove_entry(spmp, overlapped_mpid);
-        struct mp_region tmp_reg;
-        if (top_size > 0) {
-            tmp_reg.base = mp_region_top(&target_reg);
-            tmp_reg.size = top_size;
-            tmp_reg.mem_flags.raw = overlapped_reg.mem_flags.raw;
-            spmp_add_region(spmp, &tmp_reg);
-        }
-
-        if (bottom_size > 0) {
-            tmp_reg.base = overlapped_reg.base;
-            tmp_reg.size = bottom_size;
-            tmp_reg.mem_flags.raw = overlapped_reg.mem_flags.raw;
-            spmp_add_region(spmp, &tmp_reg);
-        }
-
-        target_reg.size = sat_ul_sub(target_top, overlapped_top);
-        target_reg.base = overlapped_top;
     }
 
-    if (!failed) {
-        spmp_coalesce_contiguous(spmp);
-    }
-
-    return !failed && target_reg.size == 0;
+    return !failed;
 }
 
 void mpu_init()
 {
+    for (mpid_t i = 0; i < SPMP_MAX_NUM_ENTRIES; i+= 1) {
+        spmp_set_icfg(i, (spmp_cfg_t){ .a = SPMPCFG_A_OFF });
+    }
+
+    csrs_spmpswitch_write((uint64_t)(-1));
     ssize_t nentries = bit64_ffs(~csrs_spmpswitch_read());
     if (nentries < 0) {
         nentries = 64;
     }
 
+    csrs_spmpswitch_write(0);
+
     // We count one less entry as we reserve the last entry as a "block anything" entry for
     // the hypervisor, so that other entries can be seen as whitelist
     SPMP_NUM_ENTRIES = (size_t)nentries - 1;
-
-    for (mpid_t i = 0; i < (mpid_t)nentries; i += 1) {
-        spmp_set_icfg(i, (spmp_cfg_t){ .a = SPMPCFG_A_OFF });
-    }
 
     // TODO: check for granularity and expand it to the mapping functions
 }
@@ -679,6 +601,8 @@ void spmp_init(struct spmp* spmp, priv_t priv)
 {
     spmp->alloc_entries = 0;
     spmp->priv = priv;
+    spmp->switchmsk = 0;
+    spmp->locked = 0;
 
     list_init(&spmp->order.list);
 
@@ -689,7 +613,7 @@ void spmp_init(struct spmp* spmp, priv_t priv)
 
 void spmp_restore(struct spmp* spmp)
 {
-    list_foreach (spmp->order.list, struct spmpe_node, entry) {
+    list_foreach (spmp->order.list, struct spmp_node, entry) {
         mpid_t i = entry->mpid;
         spmp_set_addr(i, spmp->entry[i].addr);
         spmp_set_icfg(i, spmp->entry[i].cfg);
@@ -702,7 +626,7 @@ void spmp_restore(struct spmp* spmp)
 
 void spmp_enable(void)
 {
-
+    spmp_enable_hyp_whitelist_mode();
 }
 
 bool spmp_update(struct addr_space* as, struct mp_region* mpr)

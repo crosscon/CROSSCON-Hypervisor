@@ -11,9 +11,9 @@
 static int optee_crash = 0;
 static int optee2_crash = 0;
 
-static int64_t optee_handle_nw(struct vcpu* ree_vcpu)
+static long optee_handle_nw(struct vcpu* ree_vcpu)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     if (vmstack_pop() != NULL) {
         tee_arch_interrupt_disable();
         sdtz_copy_args(cpu()->vcpu, ree_vcpu, 7);
@@ -25,9 +25,9 @@ static int64_t optee_handle_nw(struct vcpu* ree_vcpu)
     return ret;
 }
 
-static int64_t optee2_handle_nw(struct vcpu* ree_vcpu)
+static long optee2_handle_nw(struct vcpu* ree_vcpu)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     struct vcpu* optee_vcpu = vcpu_get_child(ree_vcpu, 0);
     if (optee_vcpu == NULL) {
         ret = HC_E_SUCCESS;
@@ -47,9 +47,9 @@ static int64_t optee2_handle_nw(struct vcpu* ree_vcpu)
     return ret;
 }
 
-static int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
+static long optee_handle_sw(struct vcpu* optee_vcpu, unsigned long fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     struct vcpu* ree_vcpu = vcpu_get_child(optee_vcpu, 0);
     if (ree_vcpu != NULL) {
         /* There is bulshit when copying regsiters */
@@ -88,9 +88,9 @@ static int64_t optee_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
     return ret;
 }
 
-static int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
+static long optee2_handle_sw(struct vcpu* optee_vcpu, unsigned long fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     struct vcpu* guest_vcpu = vmstack_pop();
     (void)guest_vcpu;
     struct vcpu* ree_vcpu = cpu()->vcpu;
@@ -129,9 +129,9 @@ static int64_t optee2_handle_sw(struct vcpu* optee_vcpu, uint64_t fid)
 #define IS_OPTEE(x)           (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
 #define IS_OPTEE2(x)          (GET_OWNER(x) >= (0x12) && GET_OWNER(x) <= (0x1f))
 
-int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid)
+long sdtz_handler(struct vcpu* vcpu, unsigned long fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
 
     if (vcpu->vm->type == 0) {
         /* normal world */
@@ -182,10 +182,10 @@ static void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     }
 }
 
-static int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
+static long sdtz_handle_abort(struct vcpu* vcpu, unsigned long addr)
 {
     UNUSED_ARG(addr);
-    int64_t res = HC_E_SUCCESS;
+    long res = HC_E_SUCCESS;
 
     if (vcpu->vm->type == 1) {
         struct vcpu* ree_vcpu = vcpu_get_child(vcpu, 0);

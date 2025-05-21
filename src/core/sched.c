@@ -9,7 +9,11 @@
 
 unsigned long long time_slice;
 
-void sched_init() { }
+void sched_init()
+{
+    cpu()->vcpu = NULL;
+    cpu()->next_vcpu = NULL;
+}
 
 static inline timer_value_t sched_next_event_time(void)
 {

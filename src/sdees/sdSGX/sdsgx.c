@@ -211,9 +211,9 @@ static void sdsgx_exit(void)
 
 extern uint64_t irqs;
 extern uint64_t enclv_aborts;
-static int64_t sdsgx_handle_hypercall(struct vcpu* vcpu, uint64_t fid)
+static long sdsgx_handle_hypercall(struct vcpu* vcpu, unsigned long fid)
 {
-    int64_t res = HC_E_SUCCESS;
+    long res = HC_E_SUCCESS;
     static unsigned int n_calls = 0;
     static unsigned int o_calls = 0;
     static unsigned int n_resumes = 0;
@@ -284,9 +284,9 @@ static int64_t sdsgx_handle_hypercall(struct vcpu* vcpu, uint64_t fid)
 }
 
 uint64_t enclv_aborts = 0;
-static int64_t sdsgx_handle_abort(struct vcpu* vcpu, uint64_t addr)
+static long sdsgx_handle_abort(struct vcpu* vcpu, unsigned long addr)
 {
-    int64_t res = HC_E_SUCCESS;
+    long res = HC_E_SUCCESS;
     struct vcpu* enclave = NULL;
 
     if (vcpu->vm->type != 3) {

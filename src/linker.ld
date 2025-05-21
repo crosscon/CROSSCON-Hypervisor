@@ -36,6 +36,8 @@ SECTIONS
 	}
 
 	. = ALIGN(PAGE_SIZE); /* start RW sections in separate page */
+	_ro_end = .;
+
 	_data_lma_start = .;
 
 #ifdef MEM_NON_UNIFIED

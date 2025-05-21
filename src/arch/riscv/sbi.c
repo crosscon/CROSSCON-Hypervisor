@@ -256,7 +256,8 @@ static struct sbiret sbi_time_handler(unsigned long fid)
         struct timer_event* timer_event = &cpu()->vcpu->arch.timer_event;
         timer_event_remove(timer_event);
         timer_event_set(timer_event, stime_value, (timer_event_handler_t)sbi_timer_irq_handler);
-        csrs_hvip_write(HIP_VSTIP);
+        timer_event_add(timer_event);
+        csrs_hvip_clear(HIP_VSTIP);
     }
 
     return (struct sbiret){ SBI_SUCCESS, 0 };

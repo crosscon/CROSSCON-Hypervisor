@@ -17,12 +17,12 @@ struct addr_space_arch {
 
 
 
-#define PTE_INVALID       ((mem_flags_t){ .a = SPMPCFG_A_OFF })
-#define PTE_HYP_FLAGS     ((mem_flags_t){ .s = 1, .r = 1, .w = 1 })
-#define PTE_HYP_RX_FLAGS  ((mem_flags_t){ .s = 1, .r = 1, .x = 1 })
-#define PTE_HYP_DEV_FLAGS ((mem_flags_t){ .s = 1, .r = 1, .w = 1 })
-#define PTE_VM_FLAGS      ((mem_flags_t){ .r = 1, .w = 1, .x = 1 })
-#define PTE_VM_DEV_FLAGS  ((mem_flags_t){ .r = 1, .w = 1 })
+#define PTE_INVALID         ((mem_flags_t){ .a = SPMPCFG_A_OFF })
+#define PTE_HYP_FLAGS       ((mem_flags_t){ .s = 1, .r = 1, .w = 1 })
+#define PTE_HYP_CODE_FLAGS  ((mem_flags_t){ .s = 1, .r = 1, .x = 1 })
+#define PTE_HYP_DEV_FLAGS   ((mem_flags_t){ .s = 1, .r = 1, .w = 1 })
+#define PTE_VM_FLAGS        ((mem_flags_t){ .r = 1, .w = 1, .x = 1 })
+#define PTE_VM_DEV_FLAGS    ((mem_flags_t){ .r = 1, .w = 1 })
 
 static inline size_t mpu_granularity(void)
 {

@@ -8,7 +8,7 @@
 #include <vmm.h>
 #include <arch/sdgpos.h>
 
-static int64_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
+static long sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     UNUSED_ARG(vcpu);
     UNUSED_ARG(smc_fid);

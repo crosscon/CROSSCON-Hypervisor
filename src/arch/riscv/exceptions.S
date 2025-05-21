@@ -64,6 +64,7 @@
     add     sp, x30, t0
 
 #ifdef MEM_PROT_MPU
+    csrr   t0, sscratch
     li    t0, CPU_AS_ARCH_SPMP_SWITCHMSK_OFF
     add   t0, t0, x30 
     LOAD  t1, (t0)

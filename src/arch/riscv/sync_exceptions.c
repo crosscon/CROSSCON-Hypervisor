@@ -9,6 +9,7 @@
 #include <arch/encoding.h>
 #include <arch/csrs.h>
 #include <arch/instructions.h>
+#include <arch/fences.h>
 
 static void internal_exception_handler(unsigned long gprs[])
 {
@@ -38,6 +39,7 @@ static uint32_t read_ins(uintptr_t ins_addr)
      * compressed, read the following 16-bits.
      */
     ins = (uint32_t)hlvxhu(ins_addr);
+    fence_i();
     if ((ins & 0x3) == 3) {
         ins |= ((uint32_t)hlvxhu(ins_addr + 2)) << 16;
     }
@@ -186,6 +188,7 @@ void sync_exception_handler(void)
     size_t pc_step = 0;
     unsigned long _scause = csrs_scause_read();
     struct vcpu* calling_vcpu = cpu()->vcpu;
+    vaddr_t addr = csrs_htval_read() << 2;
 
     if (!(csrs_hstatus_read() & HSTATUS_SPV)) {
         internal_exception_handler(&calling_vcpu->regs.x[0]);
@@ -196,7 +199,7 @@ void sync_exception_handler(void)
     if (_scause < sync_handler_table_size && sync_handler_table[_scause]) {
         pc_step = sync_handler_table[_scause]();
     } else {
-        ERROR("unkown synchronous exception (%d)", _scause);
+        ERROR("unknown synchronous exception (%d) at %x", _scause, addr);
     }
 
     /* CROSSCON TODO */

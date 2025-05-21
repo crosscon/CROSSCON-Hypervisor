@@ -7,6 +7,8 @@
 #include <list.h>
 #include <arch/spmp.h>
 
+#define SPMP_MAX_NUM_ENTRIES 64
+
 typedef union {
     struct {
         uint8_t r : 1;
@@ -39,7 +41,7 @@ struct spmp {
 
     struct {
         struct list list;
-        struct spmpe_node {
+        struct spmp_node {
             node_t node;
             mpid_t mpid;
         } node[SPMP_MAX_ENTRIES];

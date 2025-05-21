@@ -157,7 +157,7 @@ struct hndl_irq_node {
     struct hndl_irq hndl_irq;
 };
 
-typedef int64_t (*smc_handler_t)(struct vcpu* vcpu, unsigned long smc);
+typedef long (*smc_handler_t)(struct vcpu* vcpu, unsigned long smc);
 struct hndl_smc {
     size_t start;
     size_t end;
@@ -180,7 +180,7 @@ struct hndl_hvc_node {
     struct hndl_hvc hndl_hvc;
 };
 
-typedef int64_t (*mem_abort_handler_t)(struct vcpu* vcpu, unsigned long addr);
+typedef long (*mem_abort_handler_t)(struct vcpu* vcpu, unsigned long addr);
 struct hndl_mem_abort {
     mem_abort_handler_t handler;
 };

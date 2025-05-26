@@ -11,7 +11,7 @@ const unsigned long long time_slice = TIME_MS(10);
 
 void sched_init() { }
 
-static inline timer_value_t sched_next_event_time(vo    id)
+static inline timer_value_t sched_next_event_time(void)
 {
     // hardcoded 10 ms time slice
     return (timer_value_t)(timer_arch_get_count() + time_slice);

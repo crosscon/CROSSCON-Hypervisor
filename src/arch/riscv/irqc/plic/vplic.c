@@ -344,8 +344,6 @@ static bool vplic_hart_emul_handler(struct vcpu* vcpu, struct emul_access* acc)
         return false;
     }
 
-    struct vcpu* vcpu = cpu()->vcpu;
-
     size_t vcntxt = ((acc->addr - PLIC_THRESHOLD_OFF) >> 12) & 0x3ff;
     if (!vplic_vcntxt_valid(vcpu, vcntxt)) {
         if (!acc->write) {

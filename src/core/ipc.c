@@ -11,10 +11,7 @@
 #include <config.h>
 #include <shmem.h>
 
-enum ipc_cpu_origin {
-    ORIGIN_THIS_CPU,
-    ORIGIN_OTHER_CPU
-};
+enum ipc_cpu_origin { ORIGIN_THIS_CPU, ORIGIN_OTHER_CPU };
 
 enum { IPC_NOTIFY };
 
@@ -40,7 +37,8 @@ static struct ipc* ipc_find_by_shmemid(struct vm* vm, size_t shmem_id)
     return ipc_obj;
 }
 
-static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id, enum ipc_cpu_origin origin)
+static void notify_local_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id,
+    enum ipc_cpu_origin origin)
 {
     struct vcpu* vcpu_tmp = NULL;
     list_foreach (cpu()->vcpu_lst, node_t, node) {
@@ -97,7 +95,8 @@ static void notify_remote_vms(struct vcpu* vcpu, unsigned long shmem_id, unsigne
     }
 }
 
-static void notify_ipc(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id, enum ipc_cpu_origin origin)
+static void notify_ipc(struct vcpu* vcpu, unsigned long shmem_id, unsigned long event_id,
+    enum ipc_cpu_origin origin)
 {
     notify_local_vms(vcpu, shmem_id, event_id, origin);
     notify_remote_vms(vcpu, shmem_id, event_id);

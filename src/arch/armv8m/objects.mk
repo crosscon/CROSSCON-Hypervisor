@@ -18,3 +18,4 @@ cpu-objs-y+=cache.o
 cpu-objs-y+=vnvic.o
 cpu-objs-y+=fault_exceptions.o
 cpu-objs-y+=exceptions.o
+cpu-objs-y+=hypercall.o

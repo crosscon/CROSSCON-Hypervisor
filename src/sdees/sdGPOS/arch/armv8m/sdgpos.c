@@ -12,14 +12,14 @@
 // #define SMCC64_FID_VND_HYP_SRVC (SMCC32_FID_VND_HYP_SRVC  | SMCC64_BIT)
 // #define SMCC_FID_FN_NUM_MSK (0xFFFF)
 
-static int64_t sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
     UNUSED_ARG(smc_fid);
     UNUSED_ARG(vcpu);
     return -1;
 }
 
-static int64_t sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
     UNUSED_ARG(smc_fid);
     UNUSED_ARG(vcpu);

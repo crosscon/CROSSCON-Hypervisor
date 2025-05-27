@@ -3,15 +3,15 @@
 #include <string.h>
 #include <arch/csrs.h>
 
-#if (__riscv_flen == 64)
-#define LOADFP  fld
-#define STOREFP fsd
-#define FREGLEN (8)
-#elif (__riscv_flen == 32)
-#define LOADFP  flw
-#define STOREFP fsw
-#define FREGLEN (4)
-#endif
+// #if (__riscv_flen == 64)
+// #define LOADFP  fld
+// #define STOREFP fsd
+// #define FREGLEN (8)
+// #elif (__riscv_flen == 32)
+// #define LOADFP  flw
+// #define STOREFP fsw
+// #define FREGLEN (4)
+// #endif
 
 void vfp_reset(struct vfp* vfp)
 {

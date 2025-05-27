@@ -7,7 +7,7 @@
 #include <vm.h>
 #include <cpu.h>
 
-const unsigned long long time_slice = TIME_MS(10);
+unsigned long long time_slice;
 
 void sched_init() { }
 
@@ -60,6 +60,7 @@ void sched_yield(void)
 
 void sched_start(void)
 {
+    time_slice = TIME_MS(10);
     sched_next();
     if (list_size(&cpu()->vcpu_sched_lst) > 1) {
         sched_set_next_timer_event();

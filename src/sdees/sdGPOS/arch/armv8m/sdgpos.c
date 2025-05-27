@@ -21,9 +21,17 @@ static long sdgpos_smc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 
 static long sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
-    UNUSED_ARG(smc_fid);
-    UNUSED_ARG(vcpu);
-    return -1;
+    long int ret = -HC_E_INVAL_ID;
+
+    switch (id) {
+        case HC_IPC:
+            ret = ipc_hypercall(vcpu);
+            break;
+        default:
+            WARNING("Unknown hypercall id %d\n", id);
+    }
+
+    return ret;
 }
 
 static struct hndl_smc smc = {

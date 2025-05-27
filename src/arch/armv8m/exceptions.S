@@ -210,7 +210,7 @@ hypercall_handler:
     VM_EXIT_ESF
     VM_EXIT
     pop {r0}
-    bl hypercall
+    bl arch_hypercall
     VM_ENTRY
     VM_ENTRY_ESF
     cpsie i

@@ -4,9 +4,8 @@ build/*
 *.elf
 *.bin
 *.d
-.vscode/*
 configs/*
 !configs/configs.mk
-!configs/linker.ld 
+!configs/linker.ld
 !configs/example/
 !configs/null/

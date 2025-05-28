@@ -50,13 +50,18 @@ static void aborts_data_lower(unsigned long iss, unsigned long far, unsigned lon
         }
     } else {
         struct vcpu* vcpu = cpu()->vcpu;
+        bool handled = false;
         list_foreach (vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node) {
             mem_abort_handler_t abort_handler = node->hndl_mem_abort.handler;
             if (abort_handler != NULL) {
-                if (abort_handler(vcpu, addr)) {
-                    ERROR("handler abort failed (0x%x)", far);
+                int64_t res = abort_handler(vcpu, addr);
+                if (!handled) {
+                    handled = (res == HC_E_SUCCESS);
                 }
             }
+        }
+        if(!handled){
+            ERROR("Un-handled vm %d memory access: 0x%x pc: 0x%x", vcpu->vm->id, far, vcpu_readpc(vcpu));
         }
     }
 }

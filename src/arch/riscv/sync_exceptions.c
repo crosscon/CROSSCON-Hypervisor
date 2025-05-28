@@ -9,6 +9,7 @@
 #include <arch/encoding.h>
 #include <arch/csrs.h>
 #include <arch/instructions.h>
+#include <hypercall.h>
 
 static void internal_exception_handler(unsigned long gprs[])
 {
@@ -131,15 +132,18 @@ static size_t guest_page_fault_handler(void)
         }
     } else {
         struct vcpu* vcpu = cpu()->vcpu;
-        WARNING("no emulation handler for abort(0x%x at 0x%x)\n", addr, csrs_sepc_read());
+        bool handled = false;
         list_foreach (vcpu->vm->mem_abort_list, struct hndl_mem_abort_node, node) {
-            mem_abort_handler_t sdeehandler = node->hndl_mem_abort.handler;
-            if (sdeehandler != NULL) {
-                if (sdeehandler(vcpu, addr)) {
-                    ERROR("handler abort failed (0x%x)", addr);
+            mem_abort_handler_t abort_handler = node->hndl_mem_abort.handler;
+            if (abort_handler != NULL) {
+                int64_t res = abort_handler(vcpu, addr);
+                if (!handled) {
+                    handled = (res == HC_E_SUCCESS);
                 }
             }
         }
+
+        ERROR("Un-handled vm %d memory access: 0x%x pc: 0x%x", vcpu->vm->id, addr, csrs_sepc_read());
     }
     return 0;
 }

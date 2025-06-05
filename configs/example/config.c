@@ -1,166 +1,92 @@
-/**
- * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Bao Project and Contributors. All rights reserved.
- */
-
-
 #include <config.h>
 
-/**
- * Declare VM images using the VM_IMAGE macro, passing an identifier and the
- * path for the image.
- */
-VM_IMAGE(vm1, "/path/to/vm1/binary.bin")
-VM_IMAGE(vm2, "/path/to/vm2/binary.bin")
+struct vm_config freertos = {
+    .image = VM_IMAGE_LOADED(0x20000, 0x20000, 0xd00),
+    .entry = 0x00020000,
 
-/**
- * The configuration itself is a struct config that MUST be named config.
- */
+    .type = 0,
+
+    .platform = {
+        .cpu_num = 1,
+        .region_num = 4,
+        .regions =  (struct vm_mem_region[]) {
+                {
+                    .base = 0x20010000, //SRAM1
+                    .size = 0x7000
+                },
+                {
+                    .base = 0x00020000,
+                    .size = 0x18000
+                },
+                {
+                    .base = 0x40013000,
+                    .size = 0x00040000
+                },
+                {
+                    /**< 192MHz Free Running OScillator (FRO) Control register, offset: 0x10 */
+                    .base = 0x9FC00u,
+                    .size = 0x400
+                }
+                // {
+                //     /* Power management */
+                //     .base = 0x40020000,
+                //     .size = 0x1000
+                // },
+                // {
+                //     /**< 192MHz Free Running OScillator (FRO) Control register, offset: 0x10 */
+                //     .base = 0x40013000,
+                //     .size = 0x100
+                // },
+                // {
+                //     /**< 192MHz Free Running OScillator (FRO) Control register, offset: 0x10 */
+                //     .base = 0x9FC00u,
+                //     .size = 0x400
+                // },
+                // {
+                //     /**< 192MHz Free Running OScillator (FRO) Control register, offset: 0x10 */
+                //     .base = 40034000,
+                //     .size = 0x1000
+                // }
+                },
+        .ipc_num = 1,
+        .ipcs = (struct ipc[]) {
+            {
+                .base = 0x20017000,
+                .size = 0x1000,
+                .shmem_id = 0,
+                .interrupt_num = 1,
+                .interrupts = (irqid_t[]) {78}
+            },
+        },
+        .dev_num = 2,
+        .devs =  (struct vm_dev_region[]) {
+            {
+                /* Flexcomm Interface 2 (USART2) */
+                .pa = 0x40088000,
+                .va = 0x40088000,
+                .size = 0x1000,
+                .interrupt_num = 1,
+                .interrupts = (irqid_t[]) {16+16}
+            },
+            {
+                /* SYSCON + IOCON */
+                .pa = 0x40000000,
+                .va = 0x40000000,
+                .size = 0x2000,
+            }
+        }
+    }
+};
+
 struct config config = {
-    
-    /**
-     * This macro must be always placed in the config struct, to initialize,
-     * configuration independent fields.
-     */
-    CONFIG_HEADER
 
-    /**
-     * This defines an array of shared memory objects that may be associated
-     * with inter-partition communication objects in the VM platform definition
-     * below using the shared memory object ID, ie, its index in the list.
-     */
+    CONFIG_HEADER
     .shmemlist_size = 1,
     .shmemlist = (struct shmem[]) {
-        [0] = {.size = 0x1000,}
+        [0] = { .base = 0x20017000, .size = 0x1000,},
     },
-
-    /**
-     * This configuration has 2 VMs.
-     */
-    .vmlist_size = 2,
-    .vmlist = (struct vm_config[]) {
-        { 
-            .image = {
-                .base_addr = 0x80000000,
-                /** 
-                 * Use the  VM_IMAGE_OFFSET and VM_IMAGE_SIZE to initialize
-                 * the image fields passing the identifier of the image.
-                 */
-                .load_addr = VM_IMAGE_OFFSET(vm1),
-                .size = VM_IMAGE_SIZE(vm1)
-            },
-
-            .entry = 0x80000000,
-            .cpu_affinity = 0x3,
-            .colors = 0x0F0F0F0F,
-
-            .platform = {
-
-                .cpu_num = 2,
-                
-                .region_num = 1,
-                .regions =  (struct vm_mem_region[]) {
-                    {
-                        .base = 0x80000000,
-                        .size = 0x100000 
-                    }
-                },
-
-                .dev_num = 1,
-                .devs =  (struct vm_dev_region[]) {
-                    {   
-                        /* UART0 */
-                        .pa = 0x1c090000,
-                        .va = 0x1c090000,
-                        .size = 0x10000,
-                        .interrupt_num = 1,
-                        .interrupts = (irqid_t[]) {38}
-                    }
-                },
-
-                .ipc_num = 1,
-                .ipcs = (struct ipc[]) {
-                    {
-                        .base = 0x80100000,
-                        .size = 0x1000,
-                        .shmem_id = 0,
-                        .interrupt_num = 1,
-                        .interrupts = (irqid_t[]) {42}
-                    }
-                },
-
-                .arch = {
-                    .gic = {
-                        .gicc_addr = 0x2C000000,
-                        .gicd_addr = 0x2F000000
-                    }
-                }
-            },
-
-        },
-
-        {
-            .image = {
-                .base_addr = 0x00000000,
-                .load_addr = VM_IMAGE_OFFSET(vm2),
-                .size = VM_IMAGE_SIZE(vm2)
-            },
-
-            .entry = 0x0000000,
-            .cpu_affinity = 0xC,
-            .colors = 0xF0F0F0F0,
-
-            .platform = {
-                .cpu_num = 2,
-                
-                .region_num = 2,
-                .regions =  (struct vm_mem_region[]) {
-                    {
-                        .base = 0x00000000,
-                        .size = 0x80000000 
-                    }
-                    ,
-                    {
-                        .base = 0x100000000,
-                        .size = 0x40000000
-                    }
-                },
-
-                .dev_num = 1,
-                .devs =  (struct vm_dev_region[]) {
-                    {   
-                        /* UART1 */
-                        .pa = 0x1C0B0000,
-                        .va = 0x1c090000,
-                        .size = 0x10000,
-                        .interrupt_num = 1,
-                        .interrupts = (irqid_t[]) {39}
-                    },
-                    {
-                        /* Timer interrupt */
-                        .interrupt_num = 1,
-                        .interrupts = (irqid_t[]) {27}
-                    }
-                },
-
-                .ipc_num = 1,
-                .ipcs = (struct ipc[]) {
-                    {
-                        .base = 0x90000000,
-                        .size = 0x1000,
-                        .shmem_id = 0,
-                        .interrupt_num = 1,
-                        .interrupts = (irqid_t[]) {112}
-                    }
-                },
-
-                .arch = {
-                    .gic = {
-                        .gicc_addr = 0x2C000000,
-                        .gicd_addr = 0x2F000000
-                    }
-                }
-            },
-        },
-    },
+    .vmlist_size = 1,
+    .vmlist = (struct vm_config*[]) {
+        &freertos
+    }
 };

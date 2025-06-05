@@ -169,7 +169,7 @@ struct hndl_smc_node {
     struct hndl_smc hndl_smc;
 };
 
-typedef long (*hvc_handler_t)(struct vcpu* vcpu, unsigned long hvc);
+typedef long (*hvc_handler_t)(struct vcpu* vcpu, uint64_t hvc);
 struct hndl_hvc {
     size_t start;
     size_t end;

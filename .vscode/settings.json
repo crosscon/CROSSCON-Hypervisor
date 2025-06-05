@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "hypercall.h": "c",
+        "crossconhyp.h": "c",
+        "sdees.h": "c",
+        "sdtz.h": "c",
+        "fault_exceptions.h": "c"
+    }
+}

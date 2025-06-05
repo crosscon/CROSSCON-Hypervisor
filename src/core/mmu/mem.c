@@ -710,6 +710,7 @@ vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas,
     return base_vad;
 }
 
+
 static void* copy_space(void* base, const size_t size, struct ppages* pages)
 {
     *pages = mem_alloc_ppages(cpu()->as.colors, NUM_PAGES(size), false);

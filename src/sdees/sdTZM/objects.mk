@@ -13,5 +13,5 @@
  #
 ##
 
-sdee-objs-y+=sdTZ/sdtz.o
+sdee-objs-y+=sdTZM/sdtzm.o
 

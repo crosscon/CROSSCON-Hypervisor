@@ -1,15 +1,15 @@
-#include <sdtz.h>
+#include <sdtzm.h>
 #include <hypercall.h>
 #include <vmstack.h>
 #include <config.h>
 #include "types.h"
 #include "vm.h"
 #include "vmm.h"
-#include <arch/sdtz.h>
+#include <arch/sdtzm.h>
 
 #define is_psci_fid(_fid) 0
 
-void sdtz_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args)
+void sdtzm_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args)
 {
     for (size_t i = 0; i < num_args; i++) {
         size_t regid = i;
@@ -17,7 +17,7 @@ void sdtz_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_arg
     }
 }
 
-void sdtz_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args)
+void sdtzm_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args)
 {
     for (size_t i = 0; i < num_args; i++) {
         size_t regid = i;
@@ -26,11 +26,11 @@ void sdtz_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size
 }
 
 /* CROSSCON TODO Not good */
-extern int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid);
+extern long sdtzm_handler(struct vcpu* vcpu, uint64_t fid);
 
-static int64_t sdtz_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdtzm_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
 
     struct vcpu* calling_vcpu = cpu()->vcpu;
 
@@ -41,10 +41,10 @@ static int64_t sdtz_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
             return HC_E_SUCCESS;
         } else {
             /* CROSSCON TODO: If HVC call is for trusted OS */
-            ret = sdtz_handler(vcpu, smc_fid);
+            ret = sdtzm_handler(vcpu, smc_fid);
         }
     } else {
-        ret = sdtz_handler(vcpu, smc_fid);
+        ret = sdtzm_handler(vcpu, smc_fid);
     }
 
     return ret;
@@ -54,10 +54,10 @@ static struct hndl_hvc hvc = {
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
     .end = 0xffff0000,
     .start = 0x00000000,
-    .handler = sdtz_hvc_handler,
+    .handler = sdtzm_hvc_handler,
 };
 
-int64_t sdtz_arch_handler_setup(struct vm* vm)
+int64_t sdtzm_arch_handler_setup(struct vm* vm)
 {
     int64_t ret = 0;
 

@@ -9,5 +9,6 @@
 #include <crossconhyp.h>
 
 void fault_exception_handler(void);
+// void hard_fault_handler_c(uint32_t *stacked_regs);
 
 #endif /* FAULT_EXCEPTIONS_H__ */

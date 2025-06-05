@@ -729,6 +729,53 @@ vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas,
 
     return va_res;
 }
+// vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas, vaddr_t vad,
+//     size_t num_pages)
+// {
+//     UNUSED_ARG(num_pages);
+
+//     struct mpe* mpe;
+//     struct mp_region mpr;
+//     vaddr_t va_res = INVALID_VA;
+
+//     if ((ass != asd) && (vad == INVALID_VA || vad == vas)) {
+//         // In mpu-based systems, we can only copy mappings between address spaces, as copying a
+//         // mapping in a single address space would overlap the orignal mapping. Also because only
+//         // identify mappings are supported, the source va must equal the destination va, or be an
+//         // invalid va. This still covers the most useful uses cases.
+
+//         spin_lock(&ass->lock);
+//         mpid_t reg_num_src = mem_vmpu_get_entry_by_addr(ass, vas);
+//         mpe = mem_vmpu_get_entry(ass, reg_num_src);
+//         mpr = mpe->region;
+//         spin_unlock(&ass->lock);
+
+        
+//         if(num_pages*PAGE_SIZE > mpr.size){
+//             va_res = INVALID_VA;
+//         } else {
+//             mpr.size = num_pages * PAGE_SIZE;
+//             bool broadcast = mem_region_broadcast(asd, &mpr, 0, true);
+//             if (mem_map(asd, &mpr, broadcast, false)) {
+//                 va_res = vas;
+//             } else {
+//                 INFO("failed mem map on mem map cpy");
+//             }
+//         }
+        
+
+//        /* if (mem_map(asd, &mpr, true, false)) {
+//             va_res = vas;
+//         } else {
+//             INFO("failed mem map on mem map cpy");
+//         }*/
+//     } else {
+//         INFO("failed mem map cpy");
+//     }
+
+//     return va_res;
+// }
+
 
 bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
 {

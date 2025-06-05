@@ -29,13 +29,13 @@
 #define TEEHC_FUNCID_CLIENT_FLAG              (0x80000000)
 #define TEE_NUM_ARGS                          (6)
 
-int64_t sdtz_arch_handler_setup(struct vm* vm);
+int64_t sdtzm_arch_handler_setup(struct vm* vm);
 
 void tee_arch_interrupt_disable(void);
 void tee_arch_interrupt_enable(void);
 void tee_step(struct vcpu* vcpu);
 
-void sdtz_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args);
-void sdtz_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args);
+void sdtzm_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args);
+void sdtzm_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args);
 
 #endif

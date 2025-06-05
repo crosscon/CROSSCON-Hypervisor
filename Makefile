@@ -281,13 +281,16 @@ ifeq ($(CC_IS_GCC),y)
 else ifeq ($(CC_IS_CLANG),y)
 	build_macros+=-DCC_IS_CLANG
 endif
-ifneq ($(findstring sdGPOS, $(_SDEES)),)
+ifneq ($(filter sdGPOS, $(_SDEES)),)
     build_macros += -DSDGPOS
 endif
-ifneq ($(findstring sdTZ, $(_SDEES)),)
+ifneq ($(filter sdTZM, $(_SDEES)),)
+    build_macros += -DSDTZM
+endif
+ifneq ($(filter sdTZ, $(_SDEES)),)
     build_macros += -DSDTZ
 endif
-ifneq ($(findstring sdSGX, $(_SDEES)),)
+ifneq ($(filter sdSGX, $(_SDEES)),)
     build_macros += -DSDSGX
 endif
 

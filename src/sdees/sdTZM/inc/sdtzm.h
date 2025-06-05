@@ -4,9 +4,9 @@
 #include <crossconhyp.h>
 #include <vm.h>
 
-int64_t sdtz_handler_setup(struct vm* vm);
+int64_t sdtzm_handler_setup(struct vm* vm);
 
 /* PRIVATE */
-int64_t sdtz_handler(struct vcpu* vcpu, uint64_t fid);
+long sdtzm_handler(struct vcpu* vcpu, uint64_t fid);
 
 #endif /* TEE_H_ */

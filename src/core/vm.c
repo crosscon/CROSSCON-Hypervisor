@@ -725,7 +725,12 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
                 break;
             case 1:
             case 2:
-                INFO("VM %d is sdTZ (OP-TEE)\n", vm->id);
+                #if defined(SDTZ)
+                     INFO("VM %d is sdTZ (OP-TEE)\n", vm->id);
+                #endif
+                #if defined(SDTZM)
+                     INFO("VM %d is sdTZ (mTower)\n", vm->id);
+                #endif
                 break;
             default:
                 ERROR("VM %d type invalid");
@@ -735,6 +740,9 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
 #if defined(SDTZ)
         sdtz_handler_setup(vm);
 #endif
+#if defined(SDTZM)
+        sdtzm_handler_setup(vm);
+#endif
         sdgpos_handler_setup(vm);
 #if defined(SDSGX)
         sdsgx_handler_setup(vm);
@@ -742,6 +750,8 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
     }
 
     cpu_sync_and_clear_msgs(&vm->sync);
+
+     cpu()->vcpu = NULL;
 
     return vcpu;
 }
@@ -888,6 +898,10 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 
 void vcpu_context_switch(void)
 {
+    int b;
+    b = 1;
+    while(b==1);
+
     if (cpu()->vcpu != NULL) {
         vcpu_save_state(cpu()->vcpu);
     }

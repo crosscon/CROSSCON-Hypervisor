@@ -5,7 +5,7 @@
 
 #include <hypercall.h>
 
-long void arch_hypercall(unsigned long id)
+void arch_hypercall(unsigned long id)
 {
     struct vcpu* vcpu = cpu()->vcpu;
 

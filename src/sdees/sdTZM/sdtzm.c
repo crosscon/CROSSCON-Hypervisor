@@ -1,4 +1,4 @@
-#include <sdtz.h>
+#include <sdtzm.h>
 #include <hypercall.h>
 #include <vmstack.h>
 #include <config.h>
@@ -6,17 +6,16 @@
 #include <types.h>
 #include <vm.h>
 #include <vmm.h>
-#include <arch/sdtz.h>
+#include <arch/sdtzm.h>
 
 static int optee_crash = 0;
-static int optee2_crash = 0;
 
-static int64_t mtower_handle_nw(struct vcpu* ree_vcpu)
+static long mtower_handle_nw(struct vcpu* ree_vcpu)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     if (vmstack_pop() != NULL) {
         tee_arch_interrupt_disable();
-        sdtz_copy_args(cpu()->vcpu, ree_vcpu, 7);
+        sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 7);
         /* CROSSCON TODO: more generic stepping */
         /* in arm steeping is done here, but in RISC-V it is done outside */
         tee_step(cpu()->vcpu);
@@ -25,16 +24,16 @@ static int64_t mtower_handle_nw(struct vcpu* ree_vcpu)
     return ret;
 }
 
-static int64_t mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
+static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
     struct vcpu* ree_vcpu = vcpu_get_child(mtower_vcpu, 0);
     if (ree_vcpu != NULL) {
         /* There is bulshit when copying regsiters */
         switch (ID_TO_FUNCID(fid)) {
             case TEEHC_FUNCID_RETURN_SUSPEND_DONE:
             case TEEHC_FUNCID_RETURN_ON_DONE:
-                sdtz_copy_args(ree_vcpu, cpu()->vcpu, 1);
+                sdtzm_copy_args(ree_vcpu, cpu()->vcpu, 1);
                 vmstack_push(ree_vcpu);
                 tee_arch_interrupt_enable();
                 break;
@@ -43,9 +42,9 @@ static int64_t mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
             /*     if (vcpu_readreg(cpu()->vcpu, 1) == 0xffff0004) { */
             /*         /1* interrupted *1/ */
             /*         /1* CROSSCON TODO Not sure if needed *1/ */
-            /*         sdtz_copy_args_call_done(ree_vcpu, cpu()->vcpu, 4); */
+            /*         sdtzm_copy_args_call_done(ree_vcpu, cpu()->vcpu, 4); */
             /*     } else { */
-            /*         sdtz_copy_args_call_done(ree_vcpu, cpu()->vcpu, 6); */
+            /*         sdtzm_copy_args_call_done(ree_vcpu, cpu()->vcpu, 6); */
             /*     } */
             /*     vmstack_push(ree_vcpu); */
             /*     tee_arch_interrupt_enable(); */
@@ -68,11 +67,10 @@ static int64_t mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
 
 #define GET_OWNER(x)          (((x) >> ARM_SMCCC_OWNER_SHIFT) & ARM_SMCCC_OWNER_MASK)
 #define IS_OPTEE(x)           (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
-#define IS_OPTEE2(x)          (GET_OWNER(x) >= (0x12) && GET_OWNER(x) <= (0x1f))
 
-int64_t sdtzm_handler(struct vcpu* vcpu, uint64_t fid)
+long sdtzm_handler(struct vcpu* vcpu, uint64_t fid)
 {
-    int64_t ret = -HC_E_FAILURE;
+    long ret = -HC_E_FAILURE;
 
     if (vcpu->vm->type == 0) {
         /* normal world */
@@ -101,7 +99,7 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
     return interrupt_owner[int_id];
 }
 
-static void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
+static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
     UNUSED_ARG(int_id);
     /* CROSSCON TODO: check current active handler */
@@ -114,7 +112,7 @@ static void sdtz_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     }
 }
 
-static int64_t sdtz_handle_abort(struct vcpu* vcpu, uint64_t addr)
+static int64_t sdtzm_handle_abort(struct vcpu* vcpu, long unsigned addr)
 {
     UNUSED_ARG(addr);
     int64_t res = HC_E_SUCCESS;
@@ -139,14 +137,14 @@ static struct hndl_irq irq = {
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
     .num = 10,
     .irqs = { 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
-    .handler = sdtz_handle_interrupt,
+    .handler = sdtzm_handle_interrupt,
 };
 
 static struct hndl_mem_abort mem_abort = {
-    .handler = sdtz_handle_abort,
+    .handler = sdtzm_handle_abort,
 };
 
-int64_t sdtz_handler_setup(struct vm* vm)
+int64_t sdtzm_handler_setup(struct vm* vm)
 {
     int64_t ret = 0;
 
@@ -154,7 +152,7 @@ int64_t sdtz_handler_setup(struct vm* vm)
         return -1;
     }
 
-    sdtz_arch_handler_setup(vm);
+    sdtzm_arch_handler_setup(vm);
 
     /* CROSSCON TODO: check config structure or something to check if this VMs wants tz
      * to handle its events */

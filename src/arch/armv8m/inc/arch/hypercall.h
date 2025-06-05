@@ -9,4 +9,6 @@
 #define HYPCALL_IN_ARG_REG(ARG)  ((ARG) + 1)
 #define HYPCALL_OUT_ARG_REG(ARG) (HYPCALL_IN_ARG_REG(ARG))
 
+void arch_hypercall(unsigned long id);
+
 #endif /* ARCH_HYPERCALL_H */

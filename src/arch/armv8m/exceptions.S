@@ -139,7 +139,7 @@ _hyp_vector_table:
      * reset vector. The reset vector is the address of the reset handler.
      */
     .word 0                     //TODO:ARMV8M should this be initialized with the real MSP value?
-    .word _reset_handler
+    .word _start
     .rept 13
     .word _exception_handler
     .endr

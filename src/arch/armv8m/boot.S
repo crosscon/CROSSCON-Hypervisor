@@ -17,11 +17,14 @@
  * PAGE_SIZE.
  */
 .section ".boot", "ax"
-.thumb
-.thumb_func
-.globl _reset_handler
-_reset_handler:
-    b _start
+
+.global _rst_vector_table
+_rst_vector_table:
+    .word 0x30000000
+    .word _start
+    .rept 13
+    .word _exception_handler
+    .endr
 
 .balign PAGE_SIZE
 .global _hypercall_start
@@ -30,6 +33,8 @@ _hypercall_start:
     b _hypercall_handler
 
 .balign PAGE_SIZE
+.thumb
+.thumb_func
 .global _start
 _start:
     /**

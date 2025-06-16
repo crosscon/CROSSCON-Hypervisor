@@ -32,7 +32,8 @@ static long sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
             ret = ipc_hypercall(vcpu);
             break;
         default:
-            WARNING("Unknown hypercall id %d\n", id);
+            //WARNING("Unknown hypercall id %d\n", id);
+            break;
     }
 
     return ret;

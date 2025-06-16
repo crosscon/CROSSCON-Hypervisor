@@ -4,6 +4,12 @@
         "crossconhyp.h": "c",
         "sdees.h": "c",
         "sdtz.h": "c",
-        "fault_exceptions.h": "c"
+        "fault_exceptions.h": "c",
+        "array": "cpp",
+        "compare": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }

@@ -1,8 +1,8 @@
 #include <config.h>
 
 struct vm_config freertos = {
-    .image = VM_IMAGE_LOADED(0x20000, 0x20000, 0xd00),
-    .entry = 0x00020000,
+    .image = VM_IMAGE_LOADED(0x40000, 0x40000, 0xd00),
+    .entry = 0x00040000,
 
     .type = 0,
 
@@ -11,12 +11,12 @@ struct vm_config freertos = {
         .region_num = 4,
         .regions =  (struct vm_mem_region[]) {
                 {
-                    .base = 0x20010000, //SRAM1
-                    .size = 0x7000
+                    .base = 0x20030000, //SRAM1
+                    .size = 0x10000
                 },
                 {
-                    .base = 0x00020000,
-                    .size = 0x18000
+                    .base = 0x00040000,
+                    .size = 0x25000
                 },
                 {
                     .base = 0x40013000,
@@ -62,11 +62,11 @@ struct vm_config freertos = {
         .devs =  (struct vm_dev_region[]) {
             {
                 /* Flexcomm Interface 2 (USART2) */
-                .pa = 0x40088000,
-                .va = 0x40088000,
+                .pa = 0x40089000,
+                .va = 0x40089000,
                 .size = 0x1000,
                 .interrupt_num = 1,
-                .interrupts = (irqid_t[]) {16+16}
+                .interrupts = (irqid_t[]) {16+17}
             },
             {
                 /* SYSCON + IOCON */

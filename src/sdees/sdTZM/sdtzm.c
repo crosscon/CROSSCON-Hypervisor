@@ -15,7 +15,7 @@ static long mtower_handle_nw(struct vcpu* ree_vcpu)
     long ret = -HC_E_FAILURE;
     if (vmstack_pop() != NULL) {
         tee_arch_interrupt_disable();
-        sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 7);
+        sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
         /* CROSSCON TODO: more generic stepping */
         /* in arm steeping is done here, but in RISC-V it is done outside */
         tee_step(cpu()->vcpu);
@@ -62,26 +62,13 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
     return ret;
 }
 
-#define ARM_SMCCC_OWNER_MASK  0x3F
-#define ARM_SMCCC_OWNER_SHIFT 24
-
-#define GET_OWNER(x)          (((x) >> ARM_SMCCC_OWNER_SHIFT) & ARM_SMCCC_OWNER_MASK)
-#define IS_OPTEE(x)           (GET_OWNER(x) >= (0x32) && GET_OWNER(x) <= (0x3f))
-
 long sdtzm_handler(struct vcpu* vcpu, uint64_t fid)
 {
     long ret = -HC_E_FAILURE;
 
     if (vcpu->vm->type == 0) {
         /* normal world */
-        if (IS_OPTEE(fid)) {
-            if (!optee_crash) {
-                ret = mtower_handle_nw(vcpu);
-            } else {
-                /* CROSSCON TODO: arch specific */
-                vcpu_writereg(cpu()->vcpu, 10, 0x7);
-            }
-        }
+        ret = mtower_handle_nw(vcpu);
     } else {
         /* secure world */
         /* CROSSCON TODO: get parent */

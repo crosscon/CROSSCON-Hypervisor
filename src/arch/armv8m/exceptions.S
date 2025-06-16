@@ -212,6 +212,33 @@ hypercall_handler:
     pop {r0}
     bl arch_hypercall
     VM_ENTRY
+    mrs r0, psp
+    ldr r1, [r0, #(CPU_NEXT_VCPU_OFF)]
+    add r2, r1, #VCPU_FIRST_RUN_OFF
+    ldr r3, [r2]
+    cmp r3, #0x0
+    beq first_entry_childvm
+excep_return2:
     VM_ENTRY_ESF
     cpsie i
-    bxns lr
+    bxns lr 
+    bx lr
+first_entry_childvm:
+    mov r3, #0xF
+    str r3, [r2]
+    ldr r0, [r1, #(VCPU_REGS_OFF+VCPU_REGS_PC_OFF)]
+    /* Clear systick active bit */
+    ldr r1, =SCB_BASE
+    ldr r2, [r1, #SCB_SHCSR_OFF]
+    bic r2, r2, #SCB_SHCSR_SYSTICKACT
+    str r2, [r1, #SCB_SHCSR_OFF]
+    /* Sanitize callee-saved registers */
+    mov r12, #0
+    mov r4, #0
+    mov r3, #0
+    mov r2, #0
+    mov r1, #0
+    cpsie i 
+    bxns r0
+
+

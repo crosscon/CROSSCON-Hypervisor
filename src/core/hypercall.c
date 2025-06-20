@@ -16,6 +16,9 @@ long int hypercall(unsigned long id)
         case HC_REMIO:
             ret = remio_hypercall(cpu()->vcpu);
             break;
+        case HC_SCHEDLOCK:
+            ret = sched_lock_hypercall(cpu()->vcpu);
+            break;
         default:
             WARNING("Unknown hypercall id %d\n", id);
     }

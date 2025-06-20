@@ -6,8 +6,14 @@
 #include <config.h>
 #include <vm.h>
 #include <cpu.h>
+#include <hypercall.h>
 
 unsigned long long time_slice;
+
+enum SCHEDLOCK {
+    SCHED_UNLOCK= 0,
+    SCHED_LOCK = 1,
+};
 
 void sched_init() { }
 
@@ -65,4 +71,23 @@ void sched_start(void)
     if (list_size(&cpu()->vcpu_sched_lst) > 1) {
         sched_set_next_timer_event();
     }
+}
+
+long int sched_lock_hypercall(struct vcpu* vcpu)
+{
+    unsigned long lock = hypercall_get_arg(vcpu, 0);
+    long int ret = -HC_E_SUCCESS;
+
+    switch (lock) {
+        case SCHED_LOCK:
+            timer_arch_disable();
+            break;
+        case SCHED_UNLOCK:
+            timer_arch_enable();
+            break;
+        default:
+            ret = -HC_E_INVAL_ARGS;
+    }
+
+    return ret;
 }

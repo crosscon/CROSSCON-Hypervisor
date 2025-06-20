@@ -18,6 +18,7 @@
 #include <io.h>
 #include <ipc.h>
 #include <remio.h>
+#include <sched.h>
 
 struct vm_mem_region {
     paddr_t base;

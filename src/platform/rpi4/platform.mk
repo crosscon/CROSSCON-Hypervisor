@@ -10,6 +10,7 @@ GIC_VERSION:=GICV2
 RPI4_MEM_GB:=4
 
 drivers = 8250_uart
+CFLAGS += -DRPI4_UART1_WORKAROUND
 
 platform_description:=rpi4_desc.c
 

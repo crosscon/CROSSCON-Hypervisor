@@ -201,7 +201,7 @@ void vgic_send_sgi_msg(struct vcpu* vcpu, cpumap_t pcpu_mask, irqid_t int_id)
 
 static void vgic_route(struct vcpu* vcpu, struct vgic_int* interrupt)
 {
-    if ((interrupt->state == INV) || !interrupt->enabled) {
+    if ((interrupt->state == INV) || ((!interrupt->enabled) && interrupt->state != ACT)) {
         return;
     }
 
@@ -243,6 +243,11 @@ static inline void vgic_write_lr(struct vcpu* vcpu, struct vgic_int* interrupt, 
     }
 
     unsigned state = vgic_get_state(interrupt);
+#ifdef RPI4_UART1_WORKAROUND
+    if(interrupt->id == 125){
+        state = PEND;
+    }
+#endif
 
     gic_lr_t lr = ((interrupt->id << GICH_LR_VID_OFF) & GICH_LR_VID_MSK);
 
@@ -371,7 +376,7 @@ bool vgic_add_lr(struct vcpu* vcpu, struct vgic_int* interrupt)
 {
     bool ret = false;
 
-    if (!interrupt->enabled || interrupt->in_lr) {
+    if (interrupt->state == INV || interrupt->in_lr) {
         return ret;
     }
 

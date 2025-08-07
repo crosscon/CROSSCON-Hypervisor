@@ -252,12 +252,12 @@ void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, cpumap_t cpus,
     as->id = id;
     as->cpus = cpus;
 
+    list_init(&(as->vmpu.ordered_list));
+    // TODO:ARMV8M - makes sense to init all nodes on list here?
+
     for (size_t i = 0; i < VMPU_NUM_ENTRIES; i++) {
         mem_vmpu_free_entry(as, i);
     }
-
-    list_init(&(as->vmpu.ordered_list));
-    // TODO:ARMV8M - makes sense to init all nodes on list here?
 
     as_arch_init(as);
 }

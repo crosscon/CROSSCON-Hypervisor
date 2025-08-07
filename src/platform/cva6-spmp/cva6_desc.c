@@ -1,6 +1,7 @@
 #include <platform.h>
+#include <interrupts.h>
 
-struct platform_desc platform = {
+struct platform platform = {
 
     .cpu_num = 1,
 
@@ -17,7 +18,6 @@ struct platform_desc platform = {
     },
 
     .arch = {
-        .plic_base = 0xc000000,
+        .irqc.plic.base = 0xc000000,
     }
-
 };

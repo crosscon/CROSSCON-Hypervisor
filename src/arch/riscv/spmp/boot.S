@@ -15,8 +15,8 @@ boot_arch:
     /* Set sscratch to point to cpu struct and clear it*/
     la  t0, _image_end
     li  t1, CPU_SIZE
-    mul t1, t1, a0
-    add a3, t0, t1
+    mul t2, t1, a0
+    add a3, t0, t2
     csrw sscratch, a3
     add a4, a3, t1
 	call boot_clear

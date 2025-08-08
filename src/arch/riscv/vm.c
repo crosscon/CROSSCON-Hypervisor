@@ -11,6 +11,8 @@
 #include <string.h>
 #include <config.h>
 
+#include <crosscon_soc.h>
+
 void vm_arch_init(struct vm* vm, const struct vm_config* vm_config)
 {
 #ifdef MEM_PROT_MMU
@@ -133,6 +135,12 @@ void vcpu_restore_state(struct vcpu* vcpu)
     spmp_set_active(&vcpu->arch.spmp, true);
     spmp_restore(&vcpu->arch.spmp);
 #endif
+
+    // CROSSCON SoC specific
+    // TODO: This is specific for the platform. Find a better place for this.
+
+    uint32_t *pg_add_sig_drv = (uint32_t*) PG_ADD_SIG_DRV_ADR;
+    pg_add_sig_drv[0] = vcpu->vm->id;
 }
 
 void vcpu_save_state(struct vcpu* vcpu)

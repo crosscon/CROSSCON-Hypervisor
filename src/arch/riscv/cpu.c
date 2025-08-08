@@ -8,6 +8,8 @@
 #include <arch/sbi.h>
 #include <platform.h>
 
+#include <crosscon_soc.h>
+
 cpuid_t CPU_MASTER __attribute__((section(".data")));
 
 /* Perform architecture dependent cpu cores initializations */
@@ -30,6 +32,20 @@ void cpu_arch_init(cpuid_t cpuid, paddr_t load_addr)
     spmp_init(&cpu()->arch.spmp_hyp, PRIV_HYP);
     spmp_set_active(&cpu()->arch.spmp_hyp, true);
 #endif
+
+    // CROSSCON SoC specific
+    // TODO: This is specific for the platform. Find a better place for this.
+
+    // Allow both VM1 (domain 0) to access UART 0 and VM2 (domain 1) to access UART 1.
+    set_pg_rspace_entry((unsigned int *) APB_SUB_PG_CSR_ADR, 0, 0, UART_0_BASE_ADR, UART_0_BASE_ADR + 0xfffff, true, true);
+    //set_pg_rspace_entry((unsigned int *) APB_SUB_PG_CSR_ADR, 2, 0, UART_1_BASE_ADR, UART_1_BASE_ADR + 0xfffff, true, true);
+    //set_pg_rspace_entry((unsigned int *) APB_SUB_PG_CSR_ADR, 4, 1, UART_0_BASE_ADR, UART_0_BASE_ADR + 0xfffff, true, true);
+    set_pg_rspace_entry((unsigned int *) APB_SUB_PG_CSR_ADR, 2, 1, UART_1_BASE_ADR, UART_1_BASE_ADR + 0xfffff, true, true);
+
+    // TODO: Needs to be dynamically set.
+    // PG's QMEM PG so that AES-GCM can access VM1's and VM2's memory over AHB bus.
+    set_pg_rspace_entry((unsigned int *) QMEM_PG_CSR_ADR, 0, 0, 0x60000, 0x70000, true, true);
+    set_pg_rspace_entry((unsigned int *) QMEM_PG_CSR_ADR, 2, 1, 0x70000, 0x80000, true, true);
 }
 
 void cpu_arch_standby(void)

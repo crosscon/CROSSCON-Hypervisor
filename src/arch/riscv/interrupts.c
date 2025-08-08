@@ -16,6 +16,8 @@
 #include <fences.h>
 #include <arch/aclint.h>
 
+#include <crosscon_soc.h>
+
 #define USE_ACLINT_IPI() (ACLINT_PRESENT() && (IRQC != AIA))
 
 irqid_t irqc_timer_int_id;
@@ -82,6 +84,11 @@ void interrupts_arch_enable(irqid_t int_id, bool en)
 
 void interrupts_arch_handle(void)
 {
+    // CROSSCON SoC specific: Set DID to 0.
+    uint32_t *pg_add_sig_drv = (uint32_t*) PG_ADD_SIG_DRV_ADR;
+    uint32_t prev_did = pg_add_sig_drv[0];
+    pg_add_sig_drv[0] = 0;
+
 #if (IRQC == AIA)
     unsigned long stopi = csrs_stopi_read();
 
@@ -127,6 +134,8 @@ void interrupts_arch_handle(void)
             break;
     }
 #endif
+
+    pg_add_sig_drv[0] = prev_did;
 }
 
 bool interrupts_arch_check(irqid_t int_id)

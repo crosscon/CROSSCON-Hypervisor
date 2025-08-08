@@ -11,6 +11,8 @@
 #include <arch/instructions.h>
 #include <arch/fences.h>
 
+#include <crosscon_soc.h>
+
 static void internal_exception_handler(unsigned long gprs[])
 {
     for (int i = 0; i < 31; i++) {
@@ -185,6 +187,11 @@ static const size_t sync_handler_table_size = sizeof(sync_handler_table) / sizeo
 void sync_exception_handler(void);
 void sync_exception_handler(void)
 {
+    // CROSSCON SoC specific: Set the DID to 0.
+    uint32_t *pg_add_sig_drv = (uint32_t*) PG_ADD_SIG_DRV_ADR;
+    uint32_t prev_did = pg_add_sig_drv[0];
+    pg_add_sig_drv[0] = 0;
+
     size_t pc_step = 0;
     unsigned long _scause = csrs_scause_read();
     struct vcpu* calling_vcpu = cpu()->vcpu;
@@ -207,4 +214,6 @@ void sync_exception_handler(void)
     if (vcpu_arch_is_on(cpu()->vcpu) && !cpu()->vcpu->active) {
         cpu_standby();
     }
+
+    pg_add_sig_drv[0] = prev_did;
 }

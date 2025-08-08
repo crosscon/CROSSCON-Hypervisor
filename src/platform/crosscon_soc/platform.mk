@@ -17,6 +17,7 @@ platform_description:=crosscon-soc_desc.c
 arch_mem_prot:=mpu
 
 platform-cppflags =-DIPIC=$(IPIC)
+platform-cppflags +=-std=c11
 platform-cflags =
 platform-asflags =
 platform-ldflags =

@@ -97,25 +97,28 @@ bool mpu_update(struct addr_space* as, struct mp_region* mpr)
     return !failed;
 }
 
-bool mpu_perms_compatible(struct addr_space* as, mem_flags_t perms1, mem_flags_t perms2)
+bool mpu_perms_compatible(unsigned long perms1, unsigned long perms2)
 {
-    bool failed = true;
+    // bool failed = true;
 
-    if (as->type == AS_HYP) {
-        if (!mpu_arch_perms_compatible(perms1, perms2)) {
-        } else {
-            failed = false;
-        }
-    } else {
-        if (as->type == AS_VM) {
-            if (!sau_perms_compatible(perms1, perms2)) {
-            } else {
-                failed = false;
-            }
-        }
-    }
+    // if (as->type == AS_HYP) {
+    //     if (!mpu_arch_perms_compatible(perms1, perms2)) {
+    //     } else {
+    //         failed = false;
+    //     }
+    // } else {
+    //     if (as->type == AS_VM) {
+    //         if (!sau_perms_compatible(perms1, perms2)) {
+    //         } else {
+    //             failed = false;
+    //         }
+    //     }
+    // }
 
-    return !failed;
+    // return !failed;
+
+
+    return perms1 == perms2;
 }
 
 void mem_guest_ipa_translate(struct addr_space* as, vaddr_t ipa, paddr_t* pa)

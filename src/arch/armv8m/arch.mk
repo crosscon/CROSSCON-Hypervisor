@@ -10,5 +10,5 @@ arch-cflags+=-mthumb
 arch-ldflags=
 
 arch_mem_prot:=mpu
-arch_mem:=non_unified
+plat_mem:=non_unified
 PAGE_SIZE:=64

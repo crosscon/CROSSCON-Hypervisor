@@ -9,13 +9,13 @@ static inline struct list* timer_cpu_list(void)
     return &cpu()->timer_event_lst;
 }
 
-static int timer_event_compare(void* cookie, node_t* n1, node_t* n2)
-{
-    UNUSED_ARG(cookie);
-    struct timer_event* te1 = CONTAINER_OF(struct timer_event, node, n1);
-    struct timer_event* te2 = CONTAINER_OF(struct timer_event, node, n2);
-    return (te1->timer == te2->timer) ? 0 : (te1->timer > te2->timer) ? 1 : -1;
-}
+// static int timer_event_compare(void* cookie, node_t* n1, node_t* n2)
+// {
+//     UNUSED_ARG(cookie);
+//     struct timer_event* te1 = CONTAINER_OF(struct timer_event, node, n1);
+//     struct timer_event* te2 = CONTAINER_OF(struct timer_event, node, n2);
+//     return (te1->timer == te2->timer) ? 0 : (te1->timer > te2->timer) ? 1 : -1;
+// }
 
 static void timer_set_next_event(void)
 {
@@ -45,10 +45,23 @@ static void timer_irq_handler(irqid_t int_id)
     timer_set_next_event();
 }
 
+static int timer_list_node_cmp(node_t *a, node_t *b)
+{
+    struct timer_event *ea =
+        (struct timer_event *)((char *)a - offsetof(struct timer_event, node));
+    struct timer_event *eb =
+        (struct timer_event *)((char *)b - offsetof(struct timer_event, node));
+
+    if (ea->timer < eb->timer) return -1;
+    if (ea->timer > eb->timer) return 1;
+    return 0;
+}
+
+
 void timer_event_add(struct timer_event* event)
 {
-    static const struct node_cmp timer_list_node_cmp = { .cmp = timer_event_compare };
-    list_insert_ordered(timer_cpu_list(), &event->node, &timer_list_node_cmp);
+    //static const struct node_cmp timer_list_node_cmp;
+    list_insert_ordered(timer_cpu_list(), &event->node, timer_list_node_cmp);
     timer_set_next_event();
 }
 

@@ -16,6 +16,10 @@
 
 extern irq_handler_t interrupt_handlers[MAX_INTERRUPT_HANDLERS];
 
+void interrupts_arch_ipi_init(void){
+    //Joao Add this here to replace the weak implementation of this function. 
+}
+
 void interrupts_arch_init()
 {
     nvic_init();
@@ -84,8 +88,7 @@ void interrupts_arch_vm_assign(struct vm* vm, irqid_t int_id)
     UNUSED_ARG(int_id);
 }
 
-void interrupts_arch_ipi_send(cpuid_t cpu_target, irqid_t ipi_id)
+void interrupts_arch_ipi_send(cpuid_t cpu_target)
 {
     UNUSED_ARG(cpu_target);
-    UNUSED_ARG(ipi_id);
 }

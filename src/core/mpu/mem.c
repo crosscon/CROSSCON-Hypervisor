@@ -294,8 +294,7 @@ static void mem_msg_handler(uint32_t event, uint64_t data)
 }
 CPU_MSG_HANDLER(mem_msg_handler, MEM_PROT_SYNC)
 
-static void mem_region_broadcast(struct addr_space* as, struct mp_region* mpr, uint32_t op,
-    bool locked)
+static cpumap_t mem_section_shared_cpus(struct addr_space* as, as_sec_t section)
 {
     cpumap_t cpus = 0;
     if (as->type == AS_HYP) {

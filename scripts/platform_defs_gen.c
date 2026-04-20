@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <platform.h>
-#include <bao.h>
+#include <crossconhyp.h>
 
 __attribute__((weak)) void arch_platform_defs(void){
     return;

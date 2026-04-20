@@ -405,7 +405,7 @@ static void mem_reserve_physical_memory(struct page_pool* pool)
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
         size_t n_pg = NUM_PAGES(vm_cfg->image.size);
         struct ppages ppages = mem_ppages_get(vm_cfg->image.load_addr, n_pg);
 
@@ -473,9 +473,9 @@ static struct mem_region* mem_find_root_region(void)
         bool is_in_rgn;
         vaddr_t root_base_addr;
         if (DEFINED(MEM_NON_UNIFIED)) {
-            root_base_addr = data_addr;
+            root_base_addr = (vaddr_t)&data_addr;
         } else {
-            root_base_addr = img_addr;
+            root_base_addr = (vaddr_t)&img_addr;
         }
         is_in_rgn = range_in_range(root_base_addr, root_mem_size, region->base, region->size);
 
@@ -558,11 +558,6 @@ void mem_init(void)
         if (!mem_setup_root_pool(&root_mem_region)) {
             ERROR("couldn't not initialize root pool");
         }
-#else
-        if (!mem_setup_root_pool(_data_addr, &root_mem_region)) {
-            ERROR("couldn't not initialize root pool");
-        }
-#endif
 
         /* Insert root pool in pool list */
         list_init(&page_pool_list);
@@ -594,3 +589,4 @@ void mem_init(void)
     /* Wait for master core to initialize memory management */
     cpu_sync_and_clear_msgs(&cpu_glb_sync);
 }
+

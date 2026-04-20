@@ -749,9 +749,10 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
 
     cpu_sync_and_clear_msgs(&vm->sync);
 
-     cpu()->vcpu = NULL;
+    // cpu()->vcpu = NULL;
 
-    return vcpu;
+    // return vcpu;
+    return vm;
 }
 
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu)

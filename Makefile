@@ -221,13 +221,10 @@ inc_dirs+=$(platform_build_dir)
 # Setup list of objects for compilation
 -include $(addsuffix /objects.mk, $(src_dirs))
 
-<<<<<<< HEAD
 ## Force adding config source file to to config objects (later we remove duplicate if it is already there)
 config-objs-y+=$(patsubst $(config_dir)/%.c, %.o, $(config_src))
 
-=======
 ifeq ($(dyn_config_src),)
->>>>>>> b0b2808 (Rebase with up-to-date Bao)
 objs-y:=
 objs-y+=$(addprefix $(sdees_base_dir)/, $(sdee-objs-y))
 objs-y+=$(addprefix $(cpu_arch_dir)/, $(cpu-objs-y))
@@ -248,18 +245,6 @@ objs-y:=$(patsubst $(cur_dir)%, $(build_dir)%, $(objs-y))
 # we need to account for that also for the config defined objs
 objs-y:=$(patsubst $(config_dir)%, $(build_dir)%, $(objs-y))
 
-<<<<<<< HEAD
-# Now we add all object files directories to the directories list so they can be
-# created later
-directories+=$(abspath $(dir $(objs-y)))
-
-
-# Make sure that are no duplicates in directories, deps and objs-y.
-# These variables should not be modified beyong this point.
-directories:=$(abspath $(sort $(directories)))
-deps:=$(abspath $(sort $(deps)))
-objs-y:=$(abspath $(sort $(objs-y)))
-=======
 deps+=$(config_dep)
 objs-y+=$(config_obj)
 else
@@ -277,7 +262,17 @@ dyn_config_elf+=$(DYN_CONFIG_BIN:%.bin=%.elf)
 targets-y+=$(DYN_CONFIG_BIN)
 
 endif
->>>>>>> b0b2808 (Rebase with up-to-date Bao)
+
+# Now we add all object files directories to the directories list so they can be
+# created later
+directories+=$(abspath $(dir $(objs-y)))
+
+
+# Make sure that are no duplicates in directories, deps and objs-y.
+# These variables should not be modified beyong this point.
+directories:=$(abspath $(sort $(directories)))
+deps:=$(abspath $(sort $(deps)))
+objs-y:=$(abspath $(sort $(objs-y)))
 
 # Toolchain flags
 

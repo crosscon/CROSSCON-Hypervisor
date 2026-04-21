@@ -17,6 +17,8 @@
 #include <mem.h>
 #include <config_defs.h>
 #include <vmstack.h>
+#include <arch/sysregs.h>
+
 
 /* CROSSCON TODO this over-allocates */
 struct partition partition[CONFIG_PARTITION_NUM];
@@ -205,6 +207,10 @@ static bool vmm_assign_vcpu(bool* master, vmid_t* vm_id)
                 *master = true;
                 assigned = true;
                 *vm_id = i;
+                //TODO: não testei esta funcionalidade com o afinility 
+                for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
+                    vmm_assign_child_vcpus(config.vmlist[j]);
+                }
             } else if (vm_assign[i].ncpus < config.vmlist[i]->platform.cpu_num) {
                 assigned = true;
                 vm_assign[i].ncpus++;
@@ -229,6 +235,9 @@ static bool vmm_assign_vcpu(bool* master, vmid_t* vm_id)
                     assigned = true;
                     vm_assign[i].cpus |= (1UL << cpu()->id);
                     *vm_id = i;
+                    for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
+                        vmm_assign_child_vcpus(config.vmlist[j]);
+                    }
                 } else {
                     assigned = true;
                     vm_assign[i].ncpus++;
@@ -238,10 +247,6 @@ static bool vmm_assign_vcpu(bool* master, vmid_t* vm_id)
             }
             spin_unlock(&vm_assign[i].lock);
         }
-    }
-
-    for (size_t i = 0; i < config.vmlist_size; i++) {
-        vmm_assign_child_vcpus(config.vmlist[i]);
     }
 
     return assigned;
@@ -311,29 +316,30 @@ static struct vm_allocation* vmm_alloc_install_vm(struct vm_config* vm_config, v
 
     return vm_alloc;
 }
-void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,
-    /*struct vcpu* root_vcpu,*/ struct cpu_synctoken* vm_init_sync);
-void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,
-    /*struct vcpu* root_vcpu,*/ struct cpu_synctoken* vm_init_sync)
+void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,  struct cpu_synctoken* vm_init_sync, struct vcpu* root_vcpu);
+void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,  struct cpu_synctoken* vm_init_sync, struct vcpu* root_vcpu)
 {
     struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vm_config, vm_id, master);
-    //struct vcpu* tmp_root = NULL;
+    struct vcpu* tmp_root = NULL;
 
-    // vm_alloc->root_vcpu = root_vcpu;
+    vm_alloc->root_vcpu = root_vcpu;
     
-    //struct vcpu* vcpu = vm_init(vm_alloc, vm_init_sync, vm_config, master, vm_id);
-    struct vm* vm = vm_init(vm_alloc, vm_init_sync, vm_config, master, vm_id);
-    cpu_sync_barrier(&vm->sync);
+    //struct vm* vm = vm_init(vm_alloc, vm_init_sync, vm_config, master, vm_id);
+    //cpu_sync_barrier(&vm->sync); //ao inves de vm->sync coloquei uma vm_alloc->vm->sync para poder retornar o valor de vcpu da função vm_init
+    struct vcpu* vcpu = vm_init(vm_alloc, vm_init_sync, vm_config, master, vm_id);
+    cpu_sync_barrier(&vm_alloc->vm->sync);
+
+
     for (size_t i = 0; i < vm_config->children_num; i++) {
         vmid_t child_vmid = vmm_config_to_vmid(vm_config->children[i]);
         if (vm_assign[child_vmid].cpus & (1ULL << cpu()->id)) {
-            // if (!root_vcpu) {
-            //     tmp_root = vcpu;
-            // } else {
-            //     tmp_root = root_vcpu;
-            // }
+            if (!root_vcpu) {
+                tmp_root = vcpu; 
+            } else {
+                tmp_root = root_vcpu;
+            }
 
-            vmm_create_vm(vm_config->children[i], child_vmid, master, /*tmp_root,*/ vm_init_sync);
+            vmm_create_vm(vm_config->children[i], child_vmid, master, vm_init_sync, tmp_root);
 
             INFO("VM %u is parent of VM %u\n", vm_id, child_vmid);
             struct vcpu* child_vcpu = cpu_get_vcpu_by_vmid(child_vmid);
@@ -342,7 +348,7 @@ void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,
         }
     }
 
-    // return vcpu;
+    //return vcpu;
 }
 
 // static bool vmm_get_next_assigned_root_vm(vmid_t* vm_id, bool* master)
@@ -409,6 +415,32 @@ void vmm_destroy_dynamic(struct vm* vm)
     vmm_free_vm(vm);
 }
 
+void dump_sau_regions(void);
+void dump_sau_regions(void) {
+    uint32_t num_regions = sau->type & 0xFF;
+
+    INFO("SAU Regions: %x\n", num_regions);
+
+    for (uint32_t i = 0; i < num_regions; i++) {
+        sau->rnr = i;
+
+        uint32_t rbar = sau->rbar;
+        uint32_t rlar = sau->rlar;
+
+        uint32_t base  = rbar & 0xFFFFFFE0UL;
+        uint32_t limit = rlar & 0xFFFFFFE0UL;
+
+        uint32_t enabled = (rlar & 1U);
+        uint32_t nsc     = (rlar & 2U) >> 1;
+
+        INFO("Region %x:\n", i);
+        INFO("  Base   : 0x%x\n", base);
+        INFO("  Limit  : 0x%x\n", limit);
+        INFO("  Enable : %x\n", enabled);
+        INFO("  NSC    : %x\n", nsc);
+    }
+}
+
 void vmm_init()
 {
     vmm_arch_init();
@@ -430,13 +462,24 @@ void vmm_init()
     bool master = false;
     vmid_t vm_id = INVALID_VMID;
     if (vmm_assign_vcpu(&master, &vm_id)) {
+        
+        //isto tem de ficar comentado e dentro de vmm_create_vm para que os childs tenham uma função recursiva de criação de vms
         // struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vm_id, master);
         // struct vm_config* vm_config = &config.vmlist[vm_id];
         // struct vm* vm = vm_init(vm_alloc, &vm_assign[vm_id].root_sync, vm_config, master, vm_id);
-        vmm_create_vm(vm_config_by_id_table[vm_id], vm_id, master, /*NULL,*/ &vm_assign[vm_id].root_sync);
+
+        vmm_create_vm(vm_config_by_id_table[vm_id], vm_id, master, &vm_assign[vm_id].root_sync, NULL);
         //cpu_sync_barrier(&vm->sync);
-        vmstack_push(cpu()->vcpu);
-        vcpu_run(cpu()->vcpu);
+        
+        cpu()->next_vcpu = cpu_get_vcpu_by_vmid(vm_id);
+        vmstack_push(cpu()->next_vcpu);
+        list_push(&cpu()->vcpu_sched_lst, &cpu()->next_vcpu->sched_node);
+
+        //apenas para debug
+        dump_sau_regions();
+        
+        //isto teve de se comentar para que consiga integrar o stacking
+        //vcpu_run(cpu()->vcpu);
     } else {
         cpu_powerdown();
     }

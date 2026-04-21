@@ -42,7 +42,7 @@ static void vm_master_init(struct vm* vm, const struct vm_config* vm_config, vmi
 
     cpu_sync_init(&vm->sync, vm->cpu_num);
 
-    vm_mem_prot_init(vm, vm_config); 
+    //vm_mem_prot_init(vm, vm_config); //comentei porque já está a ser implementado 
 
     /* CROSSCON TODO remove as_init(&vm->as, AS_VM, vm->id, NULL, vm_config->colors); */
 
@@ -655,7 +655,7 @@ struct vm* vm_init_dynamic(struct vm_allocation* vm_alloc, struct vm_config* vm_
     return dyn_vm;
 }
 
-struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
+struct vcpu* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
     const struct vm_config* vm_config, bool master, vmid_t vm_id)
 {
     struct vm* vm = vm_allocation_init(vm_alloc);
@@ -665,7 +665,7 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
      */
     if (master) {
         INFO("Initializing VM %d\n", vm_id);
-        vm_master_init(vm, vm_config, vm_id);
+        vm_master_init(vm, vm_config, vm_id); //iniciaçlização da vm master, ou seja, a vm que tem o cpu mestre.
     }
 
     cpu_sync_barrier(vm_init_sync);
@@ -749,10 +749,10 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
 
     cpu_sync_and_clear_msgs(&vm->sync);
 
-    // cpu()->vcpu = NULL;
+    cpu()->vcpu = NULL;
 
-    // return vcpu;
-    return vm;
+    return vcpu;
+    //return vm;
 }
 
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu)

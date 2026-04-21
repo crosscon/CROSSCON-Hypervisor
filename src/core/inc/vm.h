@@ -190,7 +190,7 @@ struct hndl_mem_abort_node {
 };
 
 #ifndef GENERATING_DEFS
-struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
+struct vcpu* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
     const struct vm_config* config, bool master, vmid_t vm_id);
 struct vm* vm_init_dynamic(struct vm_allocation*, struct vm_config*, uint64_t, vmid_t vmid, struct dynconfig* dyn_config);
 void vm_destroy_dynamic(struct vm* vm);

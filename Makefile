@@ -352,6 +352,7 @@ all: $(targets-y)
 $(bin_dir)/$(PROJECT_NAME).elf: $(gens) $(objs-y) $(ld_script_temp)
 	@echo "Linking			$(patsubst $(cur_dir)/%, %, $@)"
 	@$(ld) $(LDFLAGS) -T$(ld_script_temp) $(objs-y) -o $@
+	@echo "SDTZM is enabled: $(if $(filter sdTZM, $(_SDEES)), yes, no)"
 	@$(objdump) -S --wide $@ > $(basename $@).asm
 	@$(readelf) -a --wide $@ > $@.txt
 

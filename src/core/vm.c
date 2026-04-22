@@ -899,10 +899,6 @@ struct vcpu* vcpu_get_child(struct vcpu* vcpu, int index)
 
 void vcpu_context_switch(void)
 {
-    int b;
-    b = 1;
-    while(b==1);
-
     if (cpu()->vcpu != NULL) {
         vcpu_save_state(cpu()->vcpu);
     }

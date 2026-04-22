@@ -66,25 +66,25 @@ static vmid_t vmm_config_to_vmid(struct vm_config* vm_config)
     return vm_id;
 }
 
-// static size_t max_vcpu_per_cpu(void)
-// {
-//     size_t vcpu_num = 0;
-//     size_t exlusive_cpu_num = 0;
+static size_t max_vcpu_per_cpu(void)
+{
+    size_t vcpu_num = 0;
+    size_t exlusive_cpu_num = 0;
 
-//     for (size_t i = 0; i < config.vmlist_size; i++) {
-//         vcpu_num += config.vmlist[i]->platform.cpu_num;
-//         if (config.vmlist[i]->cpu_exclusivity) {
-//             exlusive_cpu_num += config.vmlist[i]->platform.cpu_num;
-//         }
-//     }
+    for (size_t i = 0; i < config.vmlist_size; i++) {
+        vcpu_num += config.vmlist[i]->platform.cpu_num;
+        if (config.vmlist[i]->cpu_exclusivity) {
+            exlusive_cpu_num += config.vmlist[i]->platform.cpu_num;
+        }
+    }
 
-//     size_t shared_cpu_num = platform.cpu_num - exlusive_cpu_num;
-//     size_t non_exclusive_vcpu_num = vcpu_num - exlusive_cpu_num;
-//     size_t max_vcpu = (non_exclusive_vcpu_num / shared_cpu_num) +
-//         ((non_exclusive_vcpu_num % shared_cpu_num) > 0 ? 1 : 0);
+    size_t shared_cpu_num = platform.cpu_num - exlusive_cpu_num;
+    size_t non_exclusive_vcpu_num = vcpu_num - exlusive_cpu_num;
+    size_t max_vcpu = (non_exclusive_vcpu_num / shared_cpu_num) +
+        ((non_exclusive_vcpu_num % shared_cpu_num) > 0 ? 1 : 0);
 
-//     return max_vcpu;
-// }
+    return max_vcpu;
+}
 
 static void vmm_assign_child_vcpus(struct vm_config* vm_config)
 {
@@ -123,134 +123,134 @@ static void vmm_assign_child_vcpus(struct vm_config* vm_config)
     }
 }
 
+static bool vmm_assign_vcpus(void)
+{
+    size_t max_vcpus = max_vcpu_per_cpu();
+    cpumap_t exclusive_cpus = 0;
+    size_t cpu_vcpu_count[PLAT_CPU_NUM] = { 0 };
+
+    static const struct {
+        bool find_exclusive;
+        bool assign_affinity;
+    } cpu_search_params[4] = {
+        { true, true },
+        { true, false },
+        { false, true },
+        { false, false },
+    };
+
+    for (size_t k = 0; k < 4; k++) {
+        for (size_t i = 0; i < config.vmlist_size; i++) {
+            struct vm_config* vm_config = config.vmlist[i];
+            vmid_t vm_id = vmm_config_to_vmid(vm_config);
+            struct vm_assignment* vm_assignment = &vm_assign[vm_id];
+            size_t vm_cpu_num = vm_config->platform.cpu_num;
+
+            if (cpu_search_params[k].find_exclusive && !vm_config->cpu_exclusivity) {
+                continue;
+            }
+
+            // For each physical cpu try to assign it one of this VM's vcpu
+            for (size_t j = 0; (j < PLAT_CPU_NUM) && (vm_assignment->ncpus < vm_cpu_num); j++) {
+                // If this cpu was already assigned a vCPU in the same VM, skip it
+                if (bit_get(vm_assignment->cpus, j)) {
+                    continue;
+                }
+
+                // If we are looking for exlucsive cpus and this was already assigned, skip it
+                if (cpu_search_params[k].find_exclusive && (cpu_vcpu_count[j] > 0)) {
+                    continue;
+                }
+
+                // If this cpu was already exclusively assigned, skip it
+                if (bit_get(exclusive_cpus, j)) {
+                    continue;
+                }
+
+                // If this cpu has no affinity to the VM and was already assigned the maximum
+                // number of vcpus allowed, skip it
+                if (!cpu_search_params[k].assign_affinity && cpu_vcpu_count[j] >= max_vcpus) {
+                    continue;
+                }
+
+                if (!cpu_search_params[k].assign_affinity || bit_get(vm_config->cpu_affinity, j)) {
+                    vm_assignment->cpus |= 1UL << j;
+                    vm_assignment->ncpus += 1;
+                    cpu_vcpu_count[j] += 1;
+                    if (cpu_search_params[k].find_exclusive) {
+                        exclusive_cpus |= 1UL << j;
+                    }
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < config.vmlist_size; i++) {
+        vmm_assign_child_vcpus(config.vmlist[i]);
+    }
+
+    return true;
+}
+
 // static bool vmm_assign_vcpu(bool* master, vmid_t* vm_id)
 // {
-//     size_t max_vcpus = max_vcpu_per_cpu();
-//     cpumap_t exclusive_cpus = 0;
-//     size_t cpu_vcpu_count[PLAT_CPU_NUM] = { 0 };
-
-//     static const struct {
-//         bool find_exclusive;
-//         bool assign_affinity;
-//     } cpu_search_params[4] = {
-//         { true, true },
-//         { true, false },
-//         { false, true },
-//         { false, false },
-//     };
-
-//     for (size_t k = 0; k < 4; k++) {
-//         for (size_t i = 0; i < config.vmlist_size; i++) {
-//             struct vm_config* vm_config = config.vmlist[i];
-//             vmid_t vm_id = vmm_config_to_vmid(vm_config);
-//             struct vm_assignment* vm_assignment = &vm_assign[vm_id];
-//             size_t vm_cpu_num = vm_config->platform.cpu_num;
-
-//             if (cpu_search_params[k].find_exclusive && !vm_config->cpu_exclusivity) {
-//                 continue;
+//     bool assigned = false;
+//     *master = false;
+//     /* Assign cpus according to vm affinity. */
+//     for (size_t i = 0; i < config.vmlist_size && !assigned; i++) {
+//         if (config.vmlist[i]->cpu_affinity & (1UL << cpu()->id)) {
+//             spin_lock(&vm_assign[i].lock);
+//             if (!vm_assign[i].master) {
+//                 vm_assign[i].master = true;
+//                 vm_assign[i].ncpus++;
+//                 vm_assign[i].cpus |= (1UL << cpu()->id);
+//                 *master = true;
+//                 assigned = true;
+//                 *vm_id = i;
+//                 //TODO: não testei esta funcionalidade com o afinility 
+//                 for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
+//                     vmm_assign_child_vcpus(config.vmlist[j]);
+//                 }
+//             } else if (vm_assign[i].ncpus < config.vmlist[i]->platform.cpu_num) {
+//                 assigned = true;
+//                 vm_assign[i].ncpus++;
+//                 vm_assign[i].cpus |= (1UL << cpu()->id);
+//                 *vm_id = i;
 //             }
-
-//             // For each physical cpu try to assign it one of this VM's vcpu
-//             for (size_t j = 0; (j < PLAT_CPU_NUM) && (vm_assignment->ncpus < vm_cpu_num); j++) {
-//                 // If this cpu was already assigned a vCPU in the same VM, skip it
-//                 if (bit_get(vm_assignment->cpus, j)) {
-//                     continue;
-//                 }
-
-//                 // If we are looking for exlucsive cpus and this was already assigned, skip it
-//                 if (cpu_search_params[k].find_exclusive && (cpu_vcpu_count[j] > 0)) {
-//                     continue;
-//                 }
-
-//                 // If this cpu was already exclusively assigned, skip it
-//                 if (bit_get(exclusive_cpus, j)) {
-//                     continue;
-//                 }
-
-//                 // If this cpu has no affinity to the VM and was already assigned the maximum
-//                 // number of vcpus allowed, skip it
-//                 if (!cpu_search_params[k].assign_affinity && cpu_vcpu_count[j] >= max_vcpus) {
-//                     continue;
-//                 }
-
-//                 if (!cpu_search_params[k].assign_affinity || bit_get(vm_config->cpu_affinity, j)) {
-//                     vm_assignment->cpus |= 1UL << j;
-//                     vm_assignment->ncpus += 1;
-//                     cpu_vcpu_count[j] += 1;
-//                     if (cpu_search_params[k].find_exclusive) {
-//                         exclusive_cpus |= 1UL << j;
-//                     }
-//                 }
-//             }
+//             spin_unlock(&vm_assign[i].lock);
 //         }
 //     }
 
-//     for (size_t i = 0; i < config.vmlist_size; i++) {
-//         vmm_assign_child_vcpus(config.vmlist[i]);
+//     cpu_sync_barrier(&cpu_glb_sync);
+
+//     /* Assign remaining cpus not assigned by affinity. */
+//     if (assigned == false) {
+//         for (size_t i = 0; i < config.vmlist_size && !assigned; i++) {
+//             spin_lock(&vm_assign[i].lock);
+//             if (vm_assign[i].ncpus < config.vmlist[i]->platform.cpu_num) {
+//                 if (!vm_assign[i].master) {
+//                     vm_assign[i].master = true;
+//                     vm_assign[i].ncpus++;
+//                     *master = true;
+//                     assigned = true;
+//                     vm_assign[i].cpus |= (1UL << cpu()->id);
+//                     *vm_id = i;
+//                     for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
+//                         vmm_assign_child_vcpus(config.vmlist[j]);
+//                     }
+//                 } else {
+//                     assigned = true;
+//                     vm_assign[i].ncpus++;
+//                     vm_assign[i].cpus |= (1UL << cpu()->id);
+//                     *vm_id = i;
+//                 }
+//             }
+//             spin_unlock(&vm_assign[i].lock);
+//         }
 //     }
 
-//     return true;
+//     return assigned;
 // }
-
-static bool vmm_assign_vcpu(bool* master, vmid_t* vm_id)
-{
-    bool assigned = false;
-    *master = false;
-    /* Assign cpus according to vm affinity. */
-    for (size_t i = 0; i < config.vmlist_size && !assigned; i++) {
-        if (config.vmlist[i]->cpu_affinity & (1UL << cpu()->id)) {
-            spin_lock(&vm_assign[i].lock);
-            if (!vm_assign[i].master) {
-                vm_assign[i].master = true;
-                vm_assign[i].ncpus++;
-                vm_assign[i].cpus |= (1UL << cpu()->id);
-                *master = true;
-                assigned = true;
-                *vm_id = i;
-                //TODO: não testei esta funcionalidade com o afinility 
-                for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
-                    vmm_assign_child_vcpus(config.vmlist[j]);
-                }
-            } else if (vm_assign[i].ncpus < config.vmlist[i]->platform.cpu_num) {
-                assigned = true;
-                vm_assign[i].ncpus++;
-                vm_assign[i].cpus |= (1UL << cpu()->id);
-                *vm_id = i;
-            }
-            spin_unlock(&vm_assign[i].lock);
-        }
-    }
-
-    cpu_sync_barrier(&cpu_glb_sync);
-
-    /* Assign remaining cpus not assigned by affinity. */
-    if (assigned == false) {
-        for (size_t i = 0; i < config.vmlist_size && !assigned; i++) {
-            spin_lock(&vm_assign[i].lock);
-            if (vm_assign[i].ncpus < config.vmlist[i]->platform.cpu_num) {
-                if (!vm_assign[i].master) {
-                    vm_assign[i].master = true;
-                    vm_assign[i].ncpus++;
-                    *master = true;
-                    assigned = true;
-                    vm_assign[i].cpus |= (1UL << cpu()->id);
-                    *vm_id = i;
-                    for (size_t j = 0; j < config.vmlist_size; j++) { //acrescentei aqui para apenas 1 cpus fazer esta atribuição
-                        vmm_assign_child_vcpus(config.vmlist[j]);
-                    }
-                } else {
-                    assigned = true;
-                    vm_assign[i].ncpus++;
-                    vm_assign[i].cpus |= (1UL << cpu()->id);
-                    *vm_id = i;
-                }
-            }
-            spin_unlock(&vm_assign[i].lock);
-        }
-    }
-
-    return assigned;
-}
 
 static void vmm_allocate_vmid_rec(struct vm_config* vm_config)
 {
@@ -339,7 +339,7 @@ void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,  stru
                 tmp_root = root_vcpu;
             }
 
-            vmm_create_vm(vm_config->children[i], child_vmid, master, vm_init_sync, tmp_root);
+            vmm_create_vm(vm_config->children[i], child_vmid, master, &vm_assign[child_vmid].root_sync, tmp_root);
 
             INFO("VM %u is parent of VM %u\n", vm_id, child_vmid);
             struct vcpu* child_vcpu = cpu_get_vcpu_by_vmid(child_vmid);
@@ -351,31 +351,31 @@ void vmm_create_vm(struct vm_config* vm_config, vmid_t vm_id, bool master,  stru
     //return vcpu;
 }
 
-// static bool vmm_get_next_assigned_root_vm(vmid_t* vm_id, bool* master)
-// {
-//     bool assigned = false;
-//     *master = false;
+static bool vmm_get_next_assigned_root_vm(vmid_t* vm_id, bool* master)
+{
+    bool assigned = false;
+    *master = false;
 
-//     for (size_t i = 0; i < config.vmlist_size; i++) {
-//         vmid_t vmid = vmm_config_to_vmid(config.vmlist[i]);
+    for (size_t i = 0; i < config.vmlist_size; i++) {
+        vmid_t vmid = vmm_config_to_vmid(config.vmlist[i]);
 
-//         if (vm_assign[vmid].cpus & (1ULL << cpu()->id)) {
-//             spin_lock(&vm_assign[vmid].lock);
-//             vm_assign[vmid].cpus &= ~(cpumap_t)(1ULL << cpu()->id);
-//             if (!vm_assign[vmid].master) {
-//                 vm_assign[vmid].master = true;
-//                 *master = true;
-//             }
-//             spin_unlock(&vm_assign[vmid].lock);
+        if (vm_assign[vmid].cpus & (1ULL << cpu()->id)) {
+            spin_lock(&vm_assign[vmid].lock);
+            vm_assign[vmid].cpus &= ~(cpumap_t)(1ULL << cpu()->id);
+            if (!vm_assign[vmid].master) {
+                vm_assign[vmid].master = true;
+                *master = true;
+            }
+            spin_unlock(&vm_assign[vmid].lock);
 
-//             *vm_id = vmid;
-//             assigned = true;
-//             break;
-//         }
-//     }
+            *vm_id = vmid;
+            assigned = true;
+            break;
+        }
+    }
 
-//     return assigned;
-// }
+    return assigned;
+}
 
 struct vm* vmm_init_dynamic(struct dynconfig* dyn_config, uint64_t vm_addr)
 {
@@ -452,16 +452,21 @@ void vmm_init()
             for (size_t j = 0; j < config.vmlist_size; j++) {
                 vm_assign[j].lock = SPINLOCK_INITVAL;
                 cpu_sync_init(&vm_assign[j].root_sync, config.vmlist[j]->platform.cpu_num);
+                for (size_t i = 0; i < config.vmlist[j]->children_num; i++) {
+                    cpu_sync_init(&vm_assign[j+i+1].root_sync, config.vmlist[j]->children[i]->platform.cpu_num);
+                    
+                }
             }
             objpool_init(&nodes_pool);
             vmm_allocate_vmids();
+            vmm_assign_vcpus();
     }
 
     cpu_sync_barrier(&cpu_glb_sync);
 
     bool master = false;
     vmid_t vm_id = INVALID_VMID;
-    if (vmm_assign_vcpu(&master, &vm_id)) {
+    while (vmm_get_next_assigned_root_vm(&vm_id, &master)) {
         
         //isto tem de ficar comentado e dentro de vmm_create_vm para que os childs tenham uma função recursiva de criação de vms
         // struct vm_allocation* vm_alloc = vmm_alloc_install_vm(vm_id, master);
@@ -480,7 +485,5 @@ void vmm_init()
         
         //isto teve de se comentar para que consiga integrar o stacking
         //vcpu_run(cpu()->vcpu);
-    } else {
-        cpu_powerdown();
     }
 }

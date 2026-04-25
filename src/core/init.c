@@ -47,6 +47,7 @@ void init(cpuid_t cpu_id)
         console_printk(" |_|  |_|\\__, | .__/ \\___|_|    \\_/ |_|___/\\___/|_|    \n");
         console_printk("          __/ | |                                      \n");
         console_printk("         |___/|_| %s\n", __TIME__);
+        console_printk("Bao version: 2.0.0\n");
         console_printk("\n");
     }
 

@@ -13,7 +13,7 @@ struct platform platform = {
     .cpu_master_fixed = true,
     .cpu_master = 0,
 
-    .region_num = 4,
+    .region_num = 7,
     .regions =  (struct mem_region[]) {
         {
             .base = 0x10000000, //Flash

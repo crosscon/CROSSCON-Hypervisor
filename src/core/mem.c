@@ -159,7 +159,10 @@ static bool mem_reserve_ppool_ppages(struct page_pool* pool, struct ppages* ppag
 {
     bool reserved = false;
     bool is_in_rgn = mem_ppages_in_pool(pool, ppages);
-    if (is_in_rgn && !mem_are_ppages_reserved_in_pool(pool, ppages)) {
+    if(!is_in_rgn){ //isto é o que está na solução antiga, mas não faz muiot sentido
+        return true;
+    }
+    if (is_in_rgn && !mem_are_ppages_reserved_in_pool(pool, ppages)) { //na versão antiga averificação do is_in_rgn chegava para retornar true
         size_t pageoff = NUM_PAGES(ppages->base - pool->base);
         bitmap_set_consecutive(pool->bitmap, pageoff, ppages->num_pages);
         pool->free -= ppages->num_pages;
@@ -190,7 +193,7 @@ static bool pp_root_reserve_hyp_image_load(struct page_pool* root_pool)
 {
     size_t image_load_size = (size_t)(&_image_load_end - &_image_start);
 
-    struct ppages images_load_ppages = mem_ppages_get(img_addr, NUM_PAGES(image_load_size));
+    struct ppages images_load_ppages = mem_ppages_get((vaddr_t)&img_addr, NUM_PAGES(image_load_size));
 
     return mem_reserve_ppool_ppages(root_pool, &images_load_ppages);
 }
@@ -324,7 +327,7 @@ static void mem_init_reserved(void)
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
 
         // If the vm image is part of a statically allocated region of the same
         // vm, we defer the reservation of this memory to when we reserve the
@@ -340,7 +343,7 @@ static void mem_init_reserved(void)
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
         for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
             struct vm_mem_region* reg = &vm_cfg->platform.regions[j];
             if (reg->place_phys) {
@@ -366,14 +369,14 @@ static bool mem_check_reserved(void)
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
         if (!vm_cfg->image.reserved) {
             return false;
         }
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
         for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
             struct vm_mem_region* reg = &vm_cfg->platform.regions[j];
             if (reg->place_phys) {
@@ -416,7 +419,7 @@ static void mem_reserve_physical_memory(struct page_pool* pool)
 
     /* for every vm config */
     for (size_t i = 0; i < config.vmlist_size; i++) {
-        struct vm_config* vm_cfg = &config.vmlist[i];
+        struct vm_config* vm_cfg = config.vmlist[i];
         /* for every mem region */
         for (size_t j = 0; j < vm_cfg->platform.region_num; j++) {
             struct vm_mem_region* reg = &vm_cfg->platform.regions[j];

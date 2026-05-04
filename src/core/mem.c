@@ -17,7 +17,7 @@
 #include <shmem.h>
 
 extern uint8_t _image_start, _image_load_end, _image_end, _vm_image_start, _vm_image_end,
-    _data_vma_start;
+    _data_vma_start, _vma_before_vm_images;
 
 struct list page_pool_list;
 
@@ -129,25 +129,26 @@ bool pp_alloc(struct page_pool* pool, size_t num_pages, bool aligned, struct ppa
     return ok;
 }
 
+
 static bool mem_ppages_in_pool(struct page_pool* ppool, struct ppages* ppages)
 {
     return range_in_range(ppages->base, ppages->num_pages * PAGE_SIZE, ppool->base,
         ppool->num_pages * PAGE_SIZE);
 }
 
-static bool mem_are_ppages_reserved_in_pool(struct page_pool* ppool, struct ppages* ppages)
+static bool mem_are_ppages_reserved_in_pool(struct page_pool* ppool, struct ppages* ppages) //ver se as páginas estão reservadas na pool, ou seja, se estão marcadas como alocadas no bitmap
 {
     bool reserved = false;
-    bool rgn_found = mem_ppages_in_pool(ppool, ppages);
+    bool rgn_found = mem_ppages_in_pool(ppool, ppages); //a região de ppages está dentro da pool?
     if (rgn_found) {
         size_t pageoff = NUM_PAGES(ppages->base - ppool->base);
 
         // verify these pages arent allocated yet
-        bool is_alloced = bitmap_get(ppool->bitmap, pageoff);
+        bool is_alloced = bitmap_get(ppool->bitmap, pageoff); //ver se bitmap tem a bit da página inicial de ppages marcado como alocado (1 significa alocado, 0 significa livre)
         size_t avlbl_contig_pp =
-            bitmap_count_consecutive(ppool->bitmap, ppool->num_pages, pageoff, ppages->num_pages);
+            bitmap_count_consecutive(ppool->bitmap, ppool->num_pages, pageoff, ppages->num_pages); //contar quantas páginas contíguas estão disponíveis a partir do pageoff, até o número de páginas que queremos alocar (ppages->num_pages)
 
-        if (is_alloced || avlbl_contig_pp < ppages->num_pages) {
+        if (is_alloced || avlbl_contig_pp < ppages->num_pages) { //se a página inicial já está alocada ou se o número de páginas contíguas disponíveis é menor do que o número de páginas que queremos alocar, então não podemos reservar essas páginas
             reserved = true;
         }
     }
@@ -159,14 +160,34 @@ static bool mem_reserve_ppool_ppages(struct page_pool* pool, struct ppages* ppag
 {
     bool reserved = false;
     bool is_in_rgn = mem_ppages_in_pool(pool, ppages);
-    if(!is_in_rgn){ //isto é o que está na solução antiga, mas não faz muiot sentido
-        return true;
-    }
-    if (is_in_rgn && !mem_are_ppages_reserved_in_pool(pool, ppages)) { //na versão antiga averificação do is_in_rgn chegava para retornar true
+    if (is_in_rgn && !mem_are_ppages_reserved_in_pool(pool, ppages)) {
         size_t pageoff = NUM_PAGES(ppages->base - pool->base);
         bitmap_set_consecutive(pool->bitmap, pageoff, ppages->num_pages);
         pool->free -= ppages->num_pages;
         reserved = true;
+    }else{
+        //!! Shared memory regions AND FLASH is never in range of the root pool in MEM_NON_UNIFIED cases !!!
+        for (size_t i = 0; i < config.shmemlist_size; i++) {
+            struct shmem* shmem = &config.shmemlist[i];
+            if (shmem->base == ppages->base && shmem->size == (ppages->num_pages * PAGE_SIZE)) {
+                // size_t pageoff = NUM_PAGES(ppages->base - pool->base);
+                // bitmap_set_consecutive(pool->bitmap, pageoff, ppages->num_pages);
+                // pool->free -= ppages->num_pages;
+                reserved = true;
+                break;
+            }
+        }
+        
+        for (size_t i = 0; i < platform.region_num; i++) {
+            struct mem_region* reg = &platform.regions[i];
+            if (reg->base == ppages->base && reg->size >= (ppages->num_pages * PAGE_SIZE)) {
+                // size_t pageoff = NUM_PAGES(ppages->base - pool->base);
+                // bitmap_set_consecutive(pool->bitmap, pageoff, ppages->num_pages);
+                // pool->free -= ppages->num_pages;
+                reserved = true;
+                break;
+            }
+        }
     }
 
     return reserved;
@@ -191,9 +212,15 @@ static bool root_pool_set_up_bitmap(struct page_pool* root_pool)
 
 static bool pp_root_reserve_hyp_image_load(struct page_pool* root_pool)
 {
-    size_t image_load_size = (size_t)(&_image_load_end - &_image_start);
 
-    struct ppages images_load_ppages = mem_ppages_get((vaddr_t)&img_addr, NUM_PAGES(image_load_size));
+// #ifdef MEM_NON_UNIFIED
+//     size_t image_load_size = (size_t)(&_image_load_end - &_image_start);  
+//     struct ppages images_load_ppages = mem_ppages_get(_image_start, NUM_PAGES(image_load_size));
+//     //return true; //this returns true because the process of reserving the hypervisor image in the root pool was already done during mem_setup_root_pool->pp_root_init->pp_root_reserve_hyp_mem
+// #else
+    size_t image_load_size = (size_t)(&_image_load_end - &_image_start);  
+    struct ppages images_load_ppages = mem_ppages_get(img_addr, NUM_PAGES(image_load_size));
+// #endif
 
     return mem_reserve_ppool_ppages(root_pool, &images_load_ppages);
 }
@@ -402,9 +429,11 @@ static bool mem_check_reserved(void)
 static void mem_reserve_physical_memory(struct page_pool* pool)
 {
     if (DEFINED(MEM_NON_UNIFIED)) {
-        if (pp_root_reserve_hyp_image_load(pool)) {
+        //if (pp_root_reserve_hyp_image_load(pool)) {
+        //this returns always true because the process of reserving the hypervisor image in the root pool when MEM_NON_UNIFIED was already done during mem_setup_root_pool->pp_root_init->pp_root_reserve_hyp_mem
+        //besides, hyp_image_load is in FLASH, there is no need to monitorize FLASH
             mem_hyp_image_no_load_reserved = true;
-        }
+        //}
     }
 
     for (size_t i = 0; i < config.vmlist_size; i++) {
@@ -476,9 +505,9 @@ static struct mem_region* mem_find_root_region(void)
         bool is_in_rgn;
         vaddr_t root_base_addr;
         if (DEFINED(MEM_NON_UNIFIED)) {
-            root_base_addr = (vaddr_t)&data_addr;
+            root_base_addr = data_addr;
         } else {
-            root_base_addr = (vaddr_t)&img_addr;
+            root_base_addr = img_addr;
         }
         is_in_rgn = range_in_range(root_base_addr, root_mem_size, region->base, region->size);
 

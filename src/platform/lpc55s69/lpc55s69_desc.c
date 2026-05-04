@@ -27,7 +27,7 @@ struct platform platform = {
         },
         {
             .base = 0x20000, //Flash
-            .size = 0x10000,    //630 KiB
+            .size = 0x35000,    //630 KiB
             .perms = MEM_RX,
         },
         {
@@ -47,6 +47,11 @@ struct platform platform = {
         },
         {
             .base = 0x20020000, //SRAM1 (64 + 64 KiB)
+            .size = 0x10000, //64 KiB
+            .perms = MEM_RWX,
+        },
+        {
+            .base = 0x20000000, //SRAM0 (64 + 64 KiB)
             .size = 0x10000, //64 KiB
             .perms = MEM_RWX,
         }

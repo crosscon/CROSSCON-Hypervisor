@@ -256,7 +256,6 @@ void as_init(struct addr_space* as, enum AS_TYPE type, colormap_t colors)
     as->id = as_id_alloc(as);
     as->lock = SPINLOCK_INITVAL;
     as_arch_init(as);
-
     list_init(&(as->vmpu.ordered_list));
 
     for (size_t i = 0; i < VMPU_NUM_ENTRIES; i++) {

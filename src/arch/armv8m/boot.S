@@ -174,6 +174,9 @@ _start:
      */
     //ldr r1, =data_addr   //TODO:ARMV8M - This can be removed since we have two global variables for load and data base addr
     //ldr r1, [r1]
+    ldr r1, =_data_vma_start
+    ldr r3, =data_addr
+    str r1, [r3] // store image load address in img_addr
 
     b init
 

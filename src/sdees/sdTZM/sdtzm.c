@@ -13,6 +13,7 @@ static int optee_crash = 0;
 static long mtower_handle_nw(struct vcpu* ree_vcpu)
 {
     long ret = -HC_E_FAILURE;
+    //CROSSCON TODO: ADD switch case for different calls:  CROSSCON_HC_SG_ID
     if (vmstack_pop() != NULL) {
         tee_arch_interrupt_disable();
         sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
@@ -94,6 +95,13 @@ static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     if (vcpu != cpu()->vcpu && vcpu->state == VCPU_INACTIVE) {
         if (cpu()->vcpu->vm->type == 1) {
             /* CROSSCON TODO */
+            //interrupt occurred during secure world execution
+            //who belongs the interrupt?
+            /* interrupts_vm_inject(cpu()->vcpu, 40); */
+        }else if (cpu()->vcpu->vm->type == 0) {
+            /* CROSSCON TODO */
+            //interrupt occurred during normal world execution
+            //who belongs the interrupt?
             /* interrupts_vm_inject(cpu()->vcpu, 40); */
         }
     }
@@ -122,8 +130,8 @@ static int64_t sdtzm_handle_abort(struct vcpu* vcpu, long unsigned addr)
 static struct hndl_irq irq = {
     /* CROSSCON TODO: obtain this from config file */
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
-    .num = 10,
-    .irqs = { 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
+    .num = 4,
+    .irqs = { 32, 33, 78, 79 },
     .handler = sdtzm_handle_interrupt,
 };
 

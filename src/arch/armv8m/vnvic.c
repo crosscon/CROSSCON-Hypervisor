@@ -22,7 +22,8 @@ static void vnvic_save_interrupt(irqid_t int_id, struct vnvic* vnvic)
         // TODO:ARMV8M - We need to test if by disabling the interrupt, the irq still gets pended if
         //  triggered
         //  Deactivate int to prevent triggering of int inside bao
-        nvic_enable(nvic_ns, int_id, false);
+        nvic_enable(nvic_ns, int_id, false); // this forces to disable the interrupt in the hardware, but we want to keep this int enabled for the secure VM to interrupt non-secure VM or vice-versa
+        nvic_enable(nvic_s, int_id, true); //the interrupt is handled in secure for being re-directed to the VM it belongs
     } else {
         bitmap_clear(vnvic->irq_enab, int_id);
     }
@@ -56,7 +57,7 @@ void vnvic_save_state(struct vnvic* vnvic, bitmap_t* vm_irqs)
 {
     // TODO-ARMV8M - This can be optimized
     for (irqid_t int_id = 0; int_id < MAX_INTERRUPTS; int_id++) {
-        if (bitmap_get(vm_irqs, int_id)) {
+        if (bitmap_get(vm_irqs, int_id)) { //percorre todas as interrupções da vm e salva o estado de cada uma (colocando-a como segura)
             vnvic_save_interrupt(int_id, vnvic);
         }
     }
@@ -66,7 +67,7 @@ void vnvic_restore_state(struct vnvic* vnvic, bitmap_t* vm_irqs)
 {
     // TODO-ARMV8M - This can be optimized
     for (irqid_t int_id = 0; int_id < MAX_INTERRUPTS; int_id++) {
-        if (bitmap_get(vm_irqs, int_id)) {
+        if (bitmap_get(vm_irqs, int_id)) { //percorre todas as interrupções da vm e salva o estado de cada uma (colocando-a como non-segura)
             vnvic_restore_interrupt(int_id, bitmap_get(vnvic->irq_enab, int_id),
                 bitmap_get(vnvic->irq_pend, int_id));
         }

@@ -7,7 +7,7 @@
 #include "vmm.h"
 #include <arch/sdtzm.h>
 
-#define is_psci_fid(_fid) 0
+//#define is_psci_fid(_fid) 0
 
 void sdtzm_copy_args(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, size_t num_args)
 {
@@ -32,20 +32,22 @@ static long sdtzm_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
 {
     long ret = -HC_E_FAILURE;
 
-    struct vcpu* calling_vcpu = cpu()->vcpu;
+    //struct vcpu* calling_vcpu = cpu()->vcpu;
 
-    if (calling_vcpu->vm->type == 0) { /* normal world */
-        if (is_psci_fid(smc_fid)) {
-            /* CROSSCON TODO: signal trusted OS a PSCI event is comming up */
-            /* potentially handle core going to sleep */
-            return HC_E_SUCCESS;
-        } else {
-            /* CROSSCON TODO: If HVC call is for trusted OS */
-            ret = sdtzm_handler(vcpu, smc_fid);
-        }
-    } else {
-        ret = sdtzm_handler(vcpu, smc_fid);
-    }
+    ret = sdtzm_handler(vcpu, smc_fid);
+
+    // if (calling_vcpu->vm->type == 0) { /* normal world */ //not needed for v8-m case
+    //     if (is_psci_fid(smc_fid)) {
+    //         /* CROSSCON TODO: signal trusted OS a PSCI event is comming up */
+    //         /* potentially handle core going to sleep */
+    //         return HC_E_SUCCESS;
+    //     } else {
+    //         /* CROSSCON TODO: If HVC call is for trusted OS */
+    //         ret = sdtzm_handler(vcpu, smc_fid);
+    //     }
+    // } else {
+    //     ret = sdtzm_handler(vcpu, smc_fid);
+    // }
 
     return ret;
 }

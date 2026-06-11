@@ -63,23 +63,10 @@
     li      t0, CPU_STACK_OFF + CPU_STACK_SIZE
     add     sp, x30, t0
 
-#ifdef MEM_PROT_MPU
-    li    t0, CPU_AS_ARCH_SPMP_SWITCHMSK_OFF
-    add   t0, t0, x30 
-    LOAD  t1, (t0)
-    csrw   CSR_SPMPSWITCH0, t1
-
-#if RV32
-    LOAD  t1, 4(t0)
-    csrw  CSR_SPMPSWITCH1, t1
-#endif /* RV32 */
-
-#endif /* MEM_PROT_MPU */
-
     .option push
     .option norelax
     la  gp, __global_pointer$
-    .option pop
+    .option pop   
 
 .endm
 
@@ -88,76 +75,58 @@
 .macro VM_ENTRY
 
     csrr   t0, sscratch
-    LOAD   x31, CPU_NEXT_VCPU_OFF(t0)
-    beqz   x31, 11f
+    LOAD   x8, CPU_NEXT_VCPU_OFF(t0)
+    beqz   x8, 11f
     LOAD   x30, CPU_VCPU_OFF(t0)
-    beq    x30, x31, 1f
+    beq    x30, x8, 1f
     call vcpu_context_switch
 1:
-    li     x29, VCPU_BLOCKED_COUNT
-    add    x29, x29, x31
-    LOAD   x29, (x29)
+    LOAD   x29, VCPU_BLOCKED_COUNT(x8)
     beqz   x29, 2f
 11:
-    call   cpu_arch_standby
+    call   cpu_arch_park
     j .
 2:
-#ifdef MEM_PROT_MPU
-    li     x1, VCPU_ARCH_SPMP_SWITCHMSK_OFF
-    add    x1, x31, x1
 
-#if RV32
-    LOAD   x2, 4(x1)
-    LOAD   x3, CPU_ARCH_SPMP_LOCKED_OFF+4(t0)
-    or     x2, x2, x3
-    csrw   CSR_SPMPSWITCH1, x2
-#endif /* RV32 */
 
-    LOAD   x2, (x1)
-    LOAD   x3, CPU_ARCH_SPMP_LOCKED_OFF(t0)
-    or     x2, x2, x3
-    csrw   CSR_SPMPSWITCH0, x2
+    LOAD   t0, VCPU_REGS_HSTATUS_OFF(x8)
+    csrw   CSR_HSTATUS, t0
+    LOAD   t0, VCPU_REGS_SSTATUS_OFF(x8)
+    csrw   sstatus, t0
+    LOAD   t0, VCPU_REGS_SEPC_OFF(x8)
+    csrw   sepc, t0
 
-#endif /* MEM_PROT_MPU */
-
-    LOAD   x1, VCPU_REGS_HSTATUS_OFF(x31)
-    csrw   CSR_HSTATUS, x1
-    LOAD   x1, VCPU_REGS_SSTATUS_OFF(x31)
-    csrw   sstatus, x1
-    LOAD   x1, VCPU_REGS_SEPC_OFF(x31)
-    csrw   sepc, x1
-
-    LOAD   x1,   VCPU_XREG_OFFSET(1)(x31)
-    LOAD   x2,   VCPU_XREG_OFFSET(2)(x31)
-    LOAD   x3,   VCPU_XREG_OFFSET(3)(x31)
-    LOAD   x4,   VCPU_XREG_OFFSET(4)(x31)
-    LOAD   x5,   VCPU_XREG_OFFSET(5)(x31)
-    LOAD   x6,   VCPU_XREG_OFFSET(6)(x31)
-    LOAD   x7,   VCPU_XREG_OFFSET(7)(x31)
-    LOAD   x8,   VCPU_XREG_OFFSET(8)(x31)
-    LOAD   x9,   VCPU_XREG_OFFSET(9)(x31)
-    LOAD   x10, VCPU_XREG_OFFSET(10)(x31)
-    LOAD   x11, VCPU_XREG_OFFSET(11)(x31)
-    LOAD   x12, VCPU_XREG_OFFSET(12)(x31)
-    LOAD   x13, VCPU_XREG_OFFSET(13)(x31)
-    LOAD   x14, VCPU_XREG_OFFSET(14)(x31)
-    LOAD   x15, VCPU_XREG_OFFSET(15)(x31)
-    LOAD   x16, VCPU_XREG_OFFSET(16)(x31)
-    LOAD   x17, VCPU_XREG_OFFSET(17)(x31)
-    LOAD   x18, VCPU_XREG_OFFSET(18)(x31)
-    LOAD   x19, VCPU_XREG_OFFSET(19)(x31)
-    LOAD   x20, VCPU_XREG_OFFSET(20)(x31)
-    LOAD   x21, VCPU_XREG_OFFSET(21)(x31)
-    LOAD   x22, VCPU_XREG_OFFSET(22)(x31)
-    LOAD   x23, VCPU_XREG_OFFSET(23)(x31)
-    LOAD   x24, VCPU_XREG_OFFSET(24)(x31)
-    LOAD   x25, VCPU_XREG_OFFSET(25)(x31)
-    LOAD   x26, VCPU_XREG_OFFSET(26)(x31)
-    LOAD   x27, VCPU_XREG_OFFSET(27)(x31)
-    LOAD   x28, VCPU_XREG_OFFSET(28)(x31)
-    LOAD   x29, VCPU_XREG_OFFSET(29)(x31)
-    LOAD   x30, VCPU_XREG_OFFSET(30)(x31) 
-    LOAD   x31, VCPU_XREG_OFFSET(31)(x31)  
+    LOAD   x1,   VCPU_XREG_OFFSET(1)(x8)
+    LOAD   x2,   VCPU_XREG_OFFSET(2)(x8)
+    LOAD   x3,   VCPU_XREG_OFFSET(3)(x8)
+    LOAD   x4,   VCPU_XREG_OFFSET(4)(x8)
+    LOAD   x5,   VCPU_XREG_OFFSET(5)(x8)
+    LOAD   x6,   VCPU_XREG_OFFSET(6)(x8)
+    LOAD   x7,   VCPU_XREG_OFFSET(7)(x8)
+    LOAD   x9,   VCPU_XREG_OFFSET(9)(x8)
+    LOAD   x10, VCPU_XREG_OFFSET(10)(x8)
+    LOAD   x11, VCPU_XREG_OFFSET(11)(x8)
+    LOAD   x12, VCPU_XREG_OFFSET(12)(x8)
+    LOAD   x13, VCPU_XREG_OFFSET(13)(x8)
+    LOAD   x14, VCPU_XREG_OFFSET(14)(x8)
+    LOAD   x15, VCPU_XREG_OFFSET(15)(x8)
+    LOAD   x16, VCPU_XREG_OFFSET(16)(x8)
+    LOAD   x17, VCPU_XREG_OFFSET(17)(x8)
+    LOAD   x18, VCPU_XREG_OFFSET(18)(x8)
+    LOAD   x19, VCPU_XREG_OFFSET(19)(x8)
+    LOAD   x20, VCPU_XREG_OFFSET(20)(x8)
+    LOAD   x21, VCPU_XREG_OFFSET(21)(x8)
+    LOAD   x22, VCPU_XREG_OFFSET(22)(x8)
+    LOAD   x23, VCPU_XREG_OFFSET(23)(x8)
+    LOAD   x24, VCPU_XREG_OFFSET(24)(x8)
+    LOAD   x25, VCPU_XREG_OFFSET(25)(x8)
+    LOAD   x26, VCPU_XREG_OFFSET(26)(x8)
+    LOAD   x27, VCPU_XREG_OFFSET(27)(x8)
+    LOAD   x28, VCPU_XREG_OFFSET(28)(x8)
+    LOAD   x29, VCPU_XREG_OFFSET(29)(x8)
+    LOAD   x30, VCPU_XREG_OFFSET(30)(x8) 
+    LOAD   x31, VCPU_XREG_OFFSET(31)(x8)
+    LOAD   x8,   VCPU_XREG_OFFSET(8)(x8)
 
     sret
     j   .

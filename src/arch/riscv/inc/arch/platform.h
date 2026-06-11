@@ -8,9 +8,6 @@
 
 #include <crossconhyp.h>
 
-#define PLIC  (1)
-#define APLIC (2)
-#define AIA   (3)
 
 // Arch-specific platform data
 struct arch_platform {

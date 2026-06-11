@@ -12,10 +12,13 @@
 #include <vmstack.h>
 
 BITMAP_ALLOC(global_interrupt_bitmap, MAX_INTERRUPT_LINES);
-spinlock_t irq_reserve_lock = SPINLOCK_INITVAL;
-
-uint64_t interrupt_owner[MAX_INTERRUPT_LINES];
 BITMAP_ALLOC(interrupt_shared, MAX_INTERRUPT_LINES);
+#ifdef FLAG_CVA6_SPMP
+vmid_t interrupt_owner[MAX_INTERRUPT_LINES];
+#else
+uint64_t interrupt_owner[MAX_INTERRUPT_LINES];
+#endif
+spinlock_t irq_reserve_lock = SPINLOCK_INITVAL;
 
 irq_handler_t interrupt_handlers[MAX_INTERRUPT_HANDLERS];
 
@@ -144,10 +147,18 @@ bool interrupts_vm_assign(struct vm* vm, irqid_t id)
 
     spin_lock(&irq_reserve_lock);
     if (!interrupts_arch_conflict(global_interrupt_bitmap, id)) {
+
+        #ifdef FLAG_CVA6_SPMP
+        if ((!interrupts_is_shared(id) && interrupt_owner[id] != 0)) {
+            ERROR("Trying to assign cpu interrupt multiple times\n", id);
+        }
+        #else
         if (interrupt_assigned_to_hyp(id) ||
             (!interrupts_is_shared(id) && interrupt_owner[id] != 0)) {
             ERROR("Trying to assign cpu interrupt multiple times\n", id);
         }
+        #endif
+
         ret = true;
         interrupts_arch_vm_assign(vm, id);
         interrupt_owner[id] = vm->id; /* TODO */

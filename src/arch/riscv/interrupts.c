@@ -15,6 +15,7 @@
 #include <arch/csrs.h>
 #include <fences.h>
 #include <arch/aclint.h>
+#include <timer.h>
 
 #define USE_ACLINT_IPI() (ACLINT_PRESENT() && (IRQC != AIA))
 
@@ -27,7 +28,7 @@ void interrupts_arch_init()
         if (USE_ACLINT_IPI()) {
             aclint_init();
         }
-        irqc_timer_int_id = TIMR_INT_ID;
+        //irqc_timer_int_id = TIMR_INT_ID;
     }
 
     /* Wait for master hart to finish irqc initialization */
@@ -67,7 +68,7 @@ void interrupts_arch_enable(irqid_t int_id, bool en)
         } else {
             irqc_config_irq(int_id, en);
         }
-    } else if (int_id == irqc_timer_int_id) {
+    } else if (int_id == timer_irq_id) {
         if (en) {
             csrs_sie_set(SIE_STIE);
         } else {
@@ -82,18 +83,21 @@ static inline unsigned long interrupts_arch_get_pend_irq_id(void)
 {
     unsigned long irq_id;
 
-    if (IRQC == AIA) {
-        unsigned long stopi = csrs_stopi_read();
+    unsigned long stopi = csrs_stopi_read();
         irq_id = stopi >> TOPI_IID_SHIFT;
-    } else {
-        irq_id = csrs_scause_read() & ~SCAUSE_INT_BIT;
-    }
+    // if (IRQC == AIA) {
+    //     unsigned long stopi = csrs_stopi_read();
+    //     irq_id = stopi >> TOPI_IID_SHIFT;
+    // } else {
+    //     irq_id = csrs_scause_read() & ~SCAUSE_INT_BIT;
+    // }
 
     return irq_id;
 }
 
 void interrupts_arch_handle(void)
 {
+#if (IRQC == AIA)
     unsigned long irq_id = interrupts_arch_get_pend_irq_id();
 
     switch (irq_id) {
@@ -107,7 +111,14 @@ void interrupts_arch_handle(void)
             csrs_sip_clear(SIP_SSIP);
             break;
         case IRQ_S_TIMER:
-            interrupts_handle(irqc_timer_int_id);
+            interrupts_handle(timer_irq_id);
+            /**
+             * Clearing the timer pending bit actually has no effect. We could re-program the timer
+             * to "infinity" but we don't know if the handler itself re-programed the timer with a
+             * new event. Therefore, at this point, we must trust the handler either correctly
+             * re-programms the timer or disables the interrupt so the cpu is not starved by
+             * continously triggering the timer interrupt (spoiler alert, it does!)
+             */
             break;
         case IRQ_S_EXT:
             irqc_handle();
@@ -125,7 +136,7 @@ void interrupts_arch_handle(void)
             interrupts_handle(interrupts_ipi_id);
             break;
         case SCAUSE_CODE_STI:
-            interrupts_handle(irqc_timer_int_id);
+            interrupts_handle(timer_irq_id);
             /**
              * Clearing the timer pending bit actually has no effect. We could re-program the timer
              * to "infinity" but we don't know if the handler itself re-programed the timer with a
@@ -141,6 +152,7 @@ void interrupts_arch_handle(void)
             WARNING("unknown interrupt");
             break;
     }
+#endif
 }
 
 bool interrupts_arch_check(irqid_t int_id)
@@ -153,7 +165,7 @@ bool interrupts_arch_check(irqid_t int_id)
         } else {
             irq_pend = irqc_get_pend(int_id);
         }
-    } else if (int_id == irqc_timer_int_id) {
+    } else if (int_id == timer_irq_id) {
         irq_pend = csrs_sip_read() & SIP_STIP;
     } else {
         irq_pend = irqc_get_pend(int_id);
@@ -170,7 +182,7 @@ void interrupts_arch_clear(irqid_t int_id)
         } else {
             irqc_clr_pend(int_id);
         }
-    } else if (int_id == irqc_timer_int_id) {
+    } else if (int_id == timer_irq_id) {
         /**
          * It is not actually possible to clear timer by software.
          */

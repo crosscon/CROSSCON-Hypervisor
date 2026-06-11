@@ -121,6 +121,15 @@ enum { UPDATE_HART_LINE };
 static void vplic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vplic_ipi_handler, VPLIC_IPI_ID)
 
+union vplic_msg_data {
+    struct {
+        uint16_t vm_id;
+        uint16_t vcntxt;
+    };
+
+    uint64_t raw;
+};
+
 static void vplic_update_hart_line(struct vcpu* vcpu, size_t vcntxt)
 {
     ssize_t pcntxt_id = vplic_vcntxt_to_pcntxt(vcpu, vcntxt);
@@ -141,16 +150,35 @@ static void vplic_update_hart_line(struct vcpu* vcpu, size_t vcntxt)
             }
         }
     } else {
-        struct cpu_msg msg = { (uint32_t)VPLIC_IPI_ID, UPDATE_HART_LINE, vcntxt };
+        union vplic_msg_data data;
+        data.vm_id = (uint16_t)vcpu->vm->id;
+        data.vcntxt = (uint16_t)vcntxt;
+        struct cpu_msg msg = { (uint32_t)VPLIC_IPI_ID, UPDATE_HART_LINE, data.raw };
         cpu_send_msg(pcntxt.hart_id, &msg);
     }
 }
 
 static void vplic_ipi_handler(uint32_t event, uint64_t data)
 {
+    union vplic_msg_data msg_data = { .raw = data };
+    vmid_t vmid = (vmid_t)msg_data.vm_id;
+    size_t vcntxt_id = (size_t)msg_data.vcntxt;
+
+    struct vcpu* vcpu = cpu_get_vcpu_by_vmid(vmid);
+    if (vcpu == NULL) {
+        WARNING("Received vPLIC IPI for wrong vm\n");
+        return;
+    }
+
+    struct plic_cntxt vcntxt = plic_plat_id_to_cntxt(vcntxt_id);
+    if (vcntxt.hart_id != vcpu->id) {
+        WARNING("Received vPLIC IPI for wrong vplic context\n");
+        return;
+    }
+
     switch (event) {
         case UPDATE_HART_LINE:
-            vplic_update_hart_line(cpu()->vcpu, (size_t)data);
+            vplic_update_hart_line(vcpu, (size_t)vcntxt_id);
             break;
         default:
             WARNING("Unknown VPLIC IPI event\n");
@@ -264,17 +292,17 @@ void vplic_inject(struct vcpu* vcpu, irqid_t id)
     spin_unlock(&vplic->lock);
 }
 
-static void vplic_emul_prio_access(struct emul_access* acc)
+static void vplic_emul_prio_access(struct vcpu* vcpu, struct emul_access* acc)
 {
     irqid_t int_id = (irqid_t)((acc->addr & 0xfff) / 4);
     if (acc->write) {
-        vplic_set_prio(cpu()->vcpu, int_id, (uint32_t)vcpu_readreg(cpu()->vcpu, acc->reg));
+        vplic_set_prio(vcpu, int_id, (uint32_t)vcpu_readreg(vcpu, acc->reg));
     } else {
-        vcpu_writereg(cpu()->vcpu, acc->reg, vplic_get_prio(cpu()->vcpu, int_id));
+        vcpu_writereg(vcpu, acc->reg, vplic_get_prio(vcpu, int_id));
     }
 }
 
-static void vplic_emul_pend_access(struct emul_access* acc)
+static void vplic_emul_pend_access(struct vcpu* vcpu, struct emul_access* acc)
 {
     // pend registers are read only
     if (acc->write) {
@@ -285,36 +313,36 @@ static void vplic_emul_pend_access(struct emul_access* acc)
 
     uint32_t val = 0;
     for (irqid_t i = 0; i < 32; i++) {
-        if (vplic_get_pend(cpu()->vcpu, first_int + i)) {
+        if (vplic_get_pend(vcpu, first_int + i)) {
             val |= (1U << i);
         }
     }
 
-    vcpu_writereg(cpu()->vcpu, acc->reg, val);
+    vcpu_writereg(vcpu, acc->reg, val);
 }
 
-static void vplic_emul_enbl_access(struct emul_access* acc)
+static void vplic_emul_enbl_access(struct vcpu* vcpu, struct emul_access* acc)
 {
     size_t vcntxt_id = (((acc->addr - 0x2000) & 0x1fffff) / 4) / PLIC_NUM_ENBL_REGS;
 
     irqid_t first_int = (irqid_t)(((acc->addr & 0x7f) / 4) * 32);
-    unsigned long val = acc->write ? vcpu_readreg(cpu()->vcpu, acc->reg) : 0;
-    if (vplic_vcntxt_valid(cpu()->vcpu, vcntxt_id)) {
+    unsigned long val = acc->write ? vcpu_readreg(vcpu, acc->reg) : 0;
+    if (vplic_vcntxt_valid(vcpu, vcntxt_id)) {
         for (irqid_t i = 0; i < 32; i++) {
             if (acc->write) {
-                vplic_set_enbl(cpu()->vcpu, vcntxt_id, first_int + i, val & (1U << i));
+                vplic_set_enbl(vcpu, vcntxt_id, first_int + i, val & (1U << i));
             } else {
-                val |= (vplic_get_enbl(cpu()->vcpu, vcntxt_id, first_int + i) ? (1U << i) : 0);
+                val |= (vplic_get_enbl(vcpu, vcntxt_id, first_int + i) ? (1U << i) : 0);
             }
         }
     }
 
     if (!acc->write) {
-        vcpu_writereg(cpu()->vcpu, acc->reg, val);
+        vcpu_writereg(vcpu, acc->reg, val);
     }
 }
 
-static bool vplic_global_emul_handler(struct emul_access* acc)
+static bool vplic_global_emul_handler(struct vcpu* vcpu, struct emul_access* acc)
 {
     // only allow aligned word accesses
     if (acc->width != 4 || acc->addr & 0x3) {
@@ -323,27 +351,25 @@ static bool vplic_global_emul_handler(struct emul_access* acc)
 
     switch ((acc->addr >> 12) & 0x3) {
         case 0:
-            vplic_emul_prio_access(acc);
+            vplic_emul_prio_access(vcpu, acc);
             break;
         case 1:
-            vplic_emul_pend_access(acc);
+            vplic_emul_pend_access(vcpu, acc);
             break;
         default:
-            vplic_emul_enbl_access(acc);
+            vplic_emul_enbl_access(vcpu, acc);
             break;
     }
 
     return true;
 }
 
-static bool vplic_hart_emul_handler(struct emul_access* acc)
+static bool vplic_hart_emul_handler(struct vcpu* vcpu, struct emul_access* acc)
 {
     // only allow aligned word accesses
     if (acc->width > 4 || acc->addr & 0x3) {
         return false;
     }
-
-    struct vcpu* vcpu = cpu()->vcpu;
 
     size_t vcntxt = ((acc->addr - PLIC_THRESHOLD_OFF) >> 12) & 0x3ff;
     if (!vplic_vcntxt_valid(vcpu, vcntxt)) {

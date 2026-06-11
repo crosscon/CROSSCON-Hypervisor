@@ -160,7 +160,11 @@ struct hndl_irq_node {
     struct hndl_irq hndl_irq;
 };
 
+#ifndef MEM_PROT_MPU
 typedef int64_t (*smc_handler_t)(struct vcpu* vcpu, unsigned long smc);
+#else
+typedef int32_t (*smc_handler_t)(struct vcpu* vcpu, unsigned long smc);
+#endif
 struct hndl_smc {
     size_t start;
     size_t end;
@@ -172,7 +176,11 @@ struct hndl_smc_node {
     struct hndl_smc hndl_smc;
 };
 
+#ifndef MEM_PROT_MPU
 typedef long (*hvc_handler_t)(struct vcpu* vcpu, uint64_t hvc);
+#else
+typedef long (*hvc_handler_t)(struct vcpu* vcpu, uint32_t hvc);
+#endif
 struct hndl_hvc {
     size_t start;
     size_t end;
@@ -183,7 +191,11 @@ struct hndl_hvc_node {
     struct hndl_hvc hndl_hvc;
 };
 
+#ifndef MEM_PROT_MPU
 typedef int64_t (*mem_abort_handler_t)(struct vcpu* vcpu, unsigned long addr);
+#else
+typedef int32_t (*mem_abort_handler_t)(struct vcpu* vcpu, unsigned long addr);
+#endif
 struct hndl_mem_abort {
     mem_abort_handler_t handler;
 };

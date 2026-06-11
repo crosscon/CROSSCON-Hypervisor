@@ -4,6 +4,8 @@
 #include <cpu.h>
 #include <interrupts.h>
 
+irqid_t timer_irq_id;
+
 static inline struct list* timer_cpu_list(void)
 {
     return &cpu()->timer_event_lst;
@@ -75,6 +77,11 @@ void timer_init()
 {
     list_init(timer_cpu_list());
     timer_arch_init();
+#if (IRQC==AIA)
+    timer_irq_id = interrupts_reserve(timer_arch_irq_id(), timer_irq_handler);
+    interrupts_cpu_enable(timer_irq_id, true);
+#else
     interrupts_reserve(timer_arch_irq_id(), timer_irq_handler);
     interrupts_cpu_enable(timer_arch_irq_id(), true);
+#endif
 }

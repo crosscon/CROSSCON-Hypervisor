@@ -1,0 +1,1 @@
+boards-objs-y+=cva6_spmp_desc.o

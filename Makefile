@@ -105,7 +105,7 @@ ifneq ($(MAKECMDGOALS), clean)
  core_mem_prot_dir:=$(core_dir)/$(arch_mem_prot)
 endif
 
-sdees_arch_dir:=$(addsuffix /arch/$(ARCH), $(sdees_dir))
+sdees_arch_dir:=$(addsuffix /arch/$(ARCH_SUB), $(sdees_dir))
 
 # MAYBE NOT NEED
 -include $(sdees_base_dir)/sdees.mk
@@ -311,9 +311,18 @@ endif
 ifneq ($(filter sdTZ, $(_SDEES)),)
     build_macros += -DSDTZ
 endif
+ifneq ($(filter virtTEE_V, $(_SDEES)),)
+    build_macros += -DVTEEV
+endif
 ifneq ($(filter sdSGX, $(_SDEES)),)
     build_macros += -DSDSGX
 endif
+
+#Platform specific Defines
+ifneq ($(filter virtTEE_V, $(_SDEES)),)
+	build_macros += -DFLAG_CVA6_SPMP
+endif
+
 
 override CPPFLAGS+=$(addprefix -I, $(inc_dirs)) $(arch-cppflags) \
 	$(platform-cppflags) $(build_macros)

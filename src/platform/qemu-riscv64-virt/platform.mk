@@ -3,6 +3,7 @@
 
 # Architecture definition
 ARCH:=riscv
+ARCH_SUB:=riscv
 # CPU definition
 CPU:=
 # Interrupt controller definition

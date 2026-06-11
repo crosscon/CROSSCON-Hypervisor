@@ -10,7 +10,7 @@
 #include <irqc.h>
 #include <arch/sbi.h>
 #include <arch/interrupts.h>
-#include <arch/vfp.h>
+#include <arch/vfpu.h>
 #include <timer.h>
 
 #ifdef MEM_PROT_MPU
@@ -80,6 +80,9 @@ struct vcpu_arch {
     vcpuid_t hart_id;
     struct sbi_hsm sbi_ctx;
     struct timer_event timer_event;
+#if (IRQC == AIA)
+    size_t imsic_guest_file_index;
+#endif
 #ifdef MEM_PROT_MPU
     struct spmp spmp;
 #endif
@@ -127,16 +130,6 @@ struct arch_regs {
     unsigned long sstatus;
     unsigned long sepc;
 
-    // unsigned long vsstatus;
-    // unsigned long vsie;
-    // unsigned long vstvec;
-    // unsigned long vsscratch;
-    // unsigned long vsepc;
-    // unsigned long vscause;
-    // unsigned long vstval;
-    // unsigned long vsip;
-    // unsigned long vsatp;
-
     unsigned long vsstatus;
     unsigned long vstvec;
     unsigned long vsscratch;
@@ -147,8 +140,14 @@ struct arch_regs {
     unsigned long hvip;
     unsigned long hie;
     uint64_t vstimecmp;
+    unsigned long vsiselect;
 
-    struct vfp vfp;
+    struct vfpu vfpu;
+
+#ifdef MEM_PROT_MPU
+    struct spmp_entry vspmp_entry[SPMP_MAX_NUM_ENTRIES];
+    uint64_t vspmpen;
+#endif /* MEM_PROT_MPU */
 
 } __attribute__((__packed__, aligned(sizeof(unsigned long))));
 
@@ -165,5 +164,9 @@ static inline void vcpu_arch_inject_irq(struct vcpu* vcpu, irqid_t id)
 }
 
 void vm_arch_mem_prot_init(struct vm* vm);
+void vcpu_arch_mem_prot_init(struct vcpu* vcpu);
+void vcpu_arch_mem_prot_reset(struct vcpu* vcpu);
+void vcpu_arch_mem_prot_save_state(struct vcpu* vcpu);
+void vcpu_arch_mem_prot_restore_state(struct vcpu* vcpu);
 
 #endif /* __ARCH_VM_H__ */

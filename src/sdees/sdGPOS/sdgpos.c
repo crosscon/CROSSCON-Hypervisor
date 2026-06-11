@@ -21,8 +21,8 @@ static void sdgpos_interrupt_handle(struct vcpu* vcpu, irqid_t int_id)
 struct hndl_irq irq = {
     /* CROSSCON TODO: obtain this from config file */
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
-    .num = 10,
-    .irqs = { 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
+    .num = 11,
+    .irqs = { 1, 27, 33, 72, 73, 74, 75, 76, 77, 78, 79 },
     .handler = sdgpos_interrupt_handle,
 };
 

@@ -17,4 +17,8 @@
 #if defined(SDSGX)
 #include <sdsgx.h>
 #endif
+#if defined(VTEEV)
+#include <virtTEE_V.h>
+#include <arch/virtTEE_V.h>
+#endif
 #endif

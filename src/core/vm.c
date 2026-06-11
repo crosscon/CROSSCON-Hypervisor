@@ -696,11 +696,11 @@ struct vcpu* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_in
 
     cpu_sync_barrier(&vm->sync);
 
-    if (master) {
-        vm_mem_prot_init(vm, vm_config);
-    }
-
-    cpu_sync_barrier(&vm->sync);
+    //TODO: try to remove this because is repeated
+    // if (master) {
+    //     vm_mem_prot_init(vm, vm_config);
+    // }
+    //cpu_sync_barrier(&vm->sync);
 
     /**
      * Perform architecture dependent initializations. This includes, for example, setting the page
@@ -731,6 +731,9 @@ struct vcpu* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_in
                 #if defined(SDTZM)
                      INFO("VM %d is sdTZ (mTower)\n", vm->id);
                 #endif
+		#if defined(VTEEV)
+                    INFO("VM %d is VirtTEE-V (mTower)\n", vm->id);
+                #endif
                 break;
             default:
                 ERROR("VM %d type invalid");
@@ -742,6 +745,9 @@ struct vcpu* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_in
 #endif
 #if defined(SDTZM)
         sdtzm_handler_setup(vm);
+#endif
+#if defined(VTEEV)
+        virtteev_handler_setup(vm);
 #endif
         sdgpos_handler_setup(vm);
 #if defined(SDSGX)

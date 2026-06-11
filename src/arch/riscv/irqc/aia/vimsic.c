@@ -8,23 +8,31 @@
 #include <mem.h>
 #include <imsic.h>
 
-/** We only support 1 guest per hart at the moment */
-#define VS_FILE_IDX 1
-
 void vimsic_init(struct vm* vm, const union vm_irqc_dscrp* vm_irqc_dscrp)
 {
-    struct vcpu* vcpu = cpu()->vcpu;
-    cpuid_t pcpu_id = vcpu->phys_id;
-    vcpuid_t vcpu_id = vcpu->id;
-    paddr_t imsic_paddr;
-    vaddr_t imsic_vaddr;
+    if (cpu()->id == vm->master) {
+        paddr_t imsic_paddr;
+        vaddr_t imsic_vaddr = vm_irqc_dscrp->aia.imsic.base;
 
-    imsic_vaddr = vm_irqc_dscrp->aia.imsic.base + (PAGE_SIZE * vcpu_id);
+        for (size_t i = 0; i < vm->cpu_num; i++) {
+            struct vcpu* vcpu = vm_get_vcpu(vm, i);
+            imsic_paddr = platform.arch.irqc.aia.imsic.base +
+                (vcpu->phys_id * PLAT_IMSIC_HART_SIZE) +
+                (PAGE_SIZE * vcpu->arch.imsic_guest_file_index);
 
-    imsic_paddr = platform.arch.irqc.aia.imsic.base + (PLAT_IMSIC_HART_SIZE * pcpu_id) +
-        (PAGE_SIZE * VS_FILE_IDX);
+#ifdef MEM_PROT_MPU
+            /**
+             * For SPMP-based systems, we can't give the guest a true view of IMSIC layout as
+             * defined by the AIA spec, since we don't have translation to map the guest interrupt
+             * files contigously for the guest. This might be a problem for some guests that expect
+             * this layout.
+             */
+            imsic_vaddr = imsic_paddr;
+#endif
 
-    if (imsic_vaddr != INVALID_VA) {
-        mem_alloc_map_dev(&vm->as, SEC_VM_ANY, imsic_vaddr, imsic_paddr, 1);
+            mem_alloc_map_dev(&vm->as, SEC_VM_ANY, imsic_vaddr, imsic_paddr, 1);
+
+            imsic_vaddr += PAGE_SIZE;
+        }
     }
 }

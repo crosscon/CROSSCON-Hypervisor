@@ -11,25 +11,6 @@
 
 #define IMSIC_MAX_INTERRUPTS (PLAT_IMSIC_MAX_INTERRUPTS)
 
-#define STOPEI_EEID          (16)
-
-#define IMSIC_EIDELIVERY     (0x70)
-#define IMSIC_EITHRESHOLD    (0x72)
-#define IMSIC_EIP            (0x80)
-#define IMSIC_EIE            (0xC0)
-
-struct imsic_intp_file_hw {
-    uint32_t seteipnum_le;
-    uint32_t seteipnum_be;
-} __attribute__((__packed__, aligned(0x1000ULL)));
-
-struct imsic_global_hw {
-    struct imsic_intp_file_hw s_file;
-    struct imsic_intp_file_hw guest_file;
-} __attribute__((__packed__, aligned(0x1000ULL)));
-
-extern volatile struct imsic_global_hw* imsic[PLAT_CPU_NUM];
-
 /**
  * @brief Initializes the IMSIC
  *
@@ -73,10 +54,7 @@ void imsic_set_enbl(irqid_t intp_id);
  * @param target_cpu The ID of the target CPU
  * @param msi_id The MSI ID to be sent
  */
-static inline void imsic_send_msi(cpuid_t target_cpu, irqid_t msi_id)
-{
-    imsic[target_cpu]->s_file.seteipnum_le = msi_id;
-}
+void imsic_send_msi(cpuid_t target_cpu, irqid_t msi_id);
 
 /**
  * @brief Sends an MSI to the guest file of specified CPU with the specified IPI ID.
@@ -89,10 +67,7 @@ static inline void imsic_send_msi(cpuid_t target_cpu, irqid_t msi_id)
  * @param target_cpu The ID of the target CPU
  * @param msi_id The MSI ID to be injected in the guest interrupt file
  */
-static inline void imsic_send_guest_msi(cpuid_t target_cpu, irqid_t msi_id)
-{
-    imsic[target_cpu]->guest_file.seteipnum_le = msi_id;
-}
+void imsic_send_guest_msi(cpuid_t target_cpu, size_t guest_index, irqid_t msi_id);
 
 /**
  * @brief Handles interrupts in the IMSIC.
@@ -112,5 +87,13 @@ void imsic_handle(void);
  * @return irqid_t the allocated MSI ID
  */
 irqid_t imsic_allocate_msi(void);
+
+/**
+ * @brief Allocate a guest interrupt file
+ *
+ * @return ssize_t the ID of the allocated guest interrupt file (as an index in hstatus.VGEIN) if
+ * available, and a negative value if not.
+ */
+ssize_t imsic_alloc_guest_int_file(void);
 
 #endif // IMSIC_H

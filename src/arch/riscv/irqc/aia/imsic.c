@@ -10,6 +10,24 @@
 #include <cpu.h>
 #include <interrupts.h>
 
+#define STOPEI_EEID       (16)
+
+#define IMSIC_EIDELIVERY  (0x70)
+#define IMSIC_EITHRESHOLD (0x72)
+#define IMSIC_EIP         (0x80)
+#define IMSIC_EIE         (0xC0)
+struct imsic_intp_file_hw {
+    uint32_t seteipnum_le;
+    uint32_t seteipnum_be;
+} __attribute__((__packed__, aligned(0x1000ULL)));
+
+struct imsic_global_hw {
+    struct imsic_intp_file_hw s_file;
+    struct imsic_intp_file_hw guest_file[PLAT_IMSIC_NUM_GUEST_FILES];
+} __attribute__((__packed__, aligned(0x1000ULL)));
+
+extern volatile struct imsic_global_hw* imsic[PLAT_CPU_NUM];
+
 volatile struct imsic_global_hw* imsic[PLAT_CPU_NUM];
 BITMAP_ALLOC(msi_reserved, IMSIC_MAX_INTERRUPTS);
 
@@ -47,6 +65,10 @@ void imsic_init(void)
     imsic[cpu()->id] = (void*)mem_alloc_map_dev(&cpu()->as, SEC_HYP_GLOBAL, INVALID_VA,
         platform.arch.irqc.aia.imsic.base + (cpu()->id * PLAT_IMSIC_HART_SIZE),
         NUM_PAGES(sizeof(struct imsic_global_hw)));
+
+    csrs_hgeie_write(~0UL);
+    cpu()->arch.imsic_guest_int_file_avail = csrs_hgeie_read() & ~1UL;
+    csrs_hgeie_write(0UL);
 }
 
 void imsic_set_enbl(irqid_t intp_id)
@@ -92,4 +114,24 @@ irqid_t imsic_allocate_msi(void)
     spin_unlock(&msi_alloc_lock);
 
     return msi_id;
+}
+
+ssize_t imsic_alloc_guest_int_file(void)
+{
+    ssize_t guest_int_file = bit_ffs(cpu()->arch.imsic_guest_int_file_avail);
+    if (guest_int_file >= 0) {
+        cpu()->arch.imsic_guest_int_file_avail =
+            bit_clear(cpu()->arch.imsic_guest_int_file_avail, (size_t)guest_int_file);
+    }
+    return guest_int_file;
+}
+
+void imsic_send_msi(cpuid_t target_cpu, irqid_t msi_id)
+{
+    imsic[target_cpu]->s_file.seteipnum_le = msi_id;
+}
+
+void imsic_send_guest_msi(cpuid_t target_cpu, size_t guest_index, irqid_t msi_id)
+{
+    imsic[target_cpu]->guest_file[guest_index - 1].seteipnum_le = msi_id;
 }

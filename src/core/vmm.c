@@ -17,7 +17,9 @@
 #include <mem.h>
 #include <config_defs.h>
 #include <vmstack.h>
+#if (IRQC != AIA)
 #include <arch/sysregs.h>
+#endif
 
 
 /* CROSSCON TODO this over-allocates */
@@ -415,31 +417,31 @@ void vmm_destroy_dynamic(struct vm* vm)
     vmm_free_vm(vm);
 }
 
-void dump_sau_regions(void);
-void dump_sau_regions(void) {
-    uint32_t num_regions = sau->type & 0xFF;
+// void dump_sau_regions(void);
+// void dump_sau_regions(void) {
+//     uint32_t num_regions = sau->type & 0xFF;
 
-    INFO("SAU Regions: %x\n", num_regions);
+//     INFO("SAU Regions: %x\n", num_regions);
 
-    for (uint32_t i = 0; i < num_regions; i++) {
-        sau->rnr = i;
+//     for (uint32_t i = 0; i < num_regions; i++) {
+//         sau->rnr = i;
 
-        uint32_t rbar = sau->rbar;
-        uint32_t rlar = sau->rlar;
+//         uint32_t rbar = sau->rbar;
+//         uint32_t rlar = sau->rlar;
 
-        uint32_t base  = rbar & 0xFFFFFFE0UL;
-        uint32_t limit = rlar & 0xFFFFFFE0UL;
+//         uint32_t base  = rbar & 0xFFFFFFE0UL;
+//         uint32_t limit = rlar & 0xFFFFFFE0UL;
 
-        uint32_t enabled = (rlar & 1U);
-        uint32_t nsc     = (rlar & 2U) >> 1;
+//         uint32_t enabled = (rlar & 1U);
+//         uint32_t nsc     = (rlar & 2U) >> 1;
 
-        INFO("Region %x:\n", i);
-        INFO("  Base   : 0x%x\n", base);
-        INFO("  Limit  : 0x%x\n", limit);
-        INFO("  Enable : %x\n", enabled);
-        INFO("  NSC    : %x\n", nsc);
-    }
-}
+//         INFO("Region %x:\n", i);
+//         INFO("  Base   : 0x%x\n", base);
+//         INFO("  Limit  : 0x%x\n", limit);
+//         INFO("  Enable : %x\n", enabled);
+//         INFO("  NSC    : %x\n", nsc);
+//     }
+// }
 
 void vmm_init()
 {
@@ -454,7 +456,10 @@ void vmm_init()
                 cpu_sync_init(&vm_assign[j].root_sync, config.vmlist[j]->platform.cpu_num);
                 for (size_t i = 0; i < config.vmlist[j]->children_num; i++) {
                     cpu_sync_init(&vm_assign[j+i+1].root_sync, config.vmlist[j]->children[i]->platform.cpu_num);
-                    
+                    //added because of the grandchildren of the vm
+                    for (size_t z = 0; z < config.vmlist[j]->children[i]->children_num; z++) {
+                        cpu_sync_init(&vm_assign[j+i+z+2].root_sync, config.vmlist[j]->children[i]->children[z]->platform.cpu_num);
+                    }
                 }
             }
             objpool_init(&nodes_pool);
@@ -481,7 +486,7 @@ void vmm_init()
         list_push(&cpu()->vcpu_sched_lst, &cpu()->next_vcpu->sched_node);
 
         //apenas para debug
-        dump_sau_regions();
+        //dump_sau_regions();
         
         //isto teve de se comentar para que consiga integrar o stacking
         //vcpu_run(cpu()->vcpu);

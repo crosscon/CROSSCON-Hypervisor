@@ -11,5 +11,5 @@ cpu-objs-y+=sync_exceptions.o
 cpu-objs-y+=cpu.o
 cpu-objs-y+=cache.o
 cpu-objs-y+=aclint.o
-cpu-objs-y+=vfp.o
+cpu-objs-y+=vfpu.o
 cpu-objs-y+=timer.o

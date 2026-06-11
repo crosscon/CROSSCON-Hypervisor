@@ -12,7 +12,7 @@
 #include <fences.h>
 #include <hypercall.h>
 #include <interrupts.h>
-#include <arch/sdtz.h>
+#include <sdees.h>
 
 #define SBI_EXTID_BASE                  (0x10)
 #define SBI_GET_SBI_SPEC_VERSION_FID    (0)
@@ -49,6 +49,7 @@
  * space.
  */
 #define SBI_EXTID_BAO                   (0x08000ba0)
+#define SBI_EXTID_TEE                   (0x544545)
 
 static inline struct sbiret sbi_ecall(unsigned long eid, unsigned long fid, unsigned long a0,
     unsigned long a1, unsigned long a2, unsigned long a3, unsigned long a4, unsigned long a5)

@@ -9,6 +9,7 @@
 #include <arch/encoding.h>
 #include <arch/csrs.h>
 #include <arch/instructions.h>
+#include <arch/fences.h>
 
 static void internal_exception_handler(unsigned long gprs[])
 {
@@ -30,7 +31,7 @@ static uint32_t read_ins(uintptr_t ins_addr)
     }
 
 #ifdef MEM_PROT_MPU
-    csrs_spmpswitch_set(cpu()->vcpu->arch.spmp.switchmsk);
+    csrs_hspmpen_set(cpu()->vcpu->arch.spmp.spmpen);
 #endif
 
     /**
@@ -38,12 +39,13 @@ static uint32_t read_ins(uintptr_t ins_addr)
      * compressed, read the following 16-bits.
      */
     ins = (uint32_t)hlvxhu(ins_addr);
+    fence_i();
     if ((ins & 0x3) == 3) {
         ins |= ((uint32_t)hlvxhu(ins_addr + 2)) << 16;
     }
 
 #ifdef MEM_PROT_MPU
-    csrs_spmpswitch_clear(cpu()->vcpu->arch.spmp.switchmsk);
+    csrs_hspmpen_set(cpu()->vcpu->arch.spmp.spmpen);
 #endif
 
     return ins;

@@ -34,4 +34,6 @@ static inline void timer_disable(void)
     timer_arch_disable();
 }
 
+extern irqid_t timer_irq_id;
+
 #endif /* TIMER_H */

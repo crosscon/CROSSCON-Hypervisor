@@ -34,39 +34,58 @@ void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm)
     vcpu->arch.sbi_ctx.lock = SPINLOCK_INITVAL;
     vcpu->arch.sbi_ctx.state = vcpu->id == 0 ? STARTED : STOPPED;
 
-#ifdef MEM_PROT_MPU
-    spmp_init(&vcpu->arch.spmp, PRIV_VM);
+#if (IRQC == AIA)
+    ssize_t guest_int_file = imsic_alloc_guest_int_file();
+    if (guest_int_file < 0) {
+        ERROR("Not enough IMSIC guest interrupt files available.\n");
+    }
+    vcpu->arch.imsic_guest_file_index = (size_t)guest_int_file;
 #endif
+    vcpu_arch_mem_prot_init(vcpu);
 }
 
 void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
 {
     memset(&vcpu->regs, 0, sizeof(struct arch_regs));
 
-    // csrs_sscratch_write(cpu());
+    vcpu->regs.hstatus = HSTATUS_SPV;
 
-    vcpu->regs.hstatus = HSTATUS_SPV | (1ULL << HSTATUS_VGEIN_OFF);
-
-    if (DEFINED(RV64)) {
+    #if defined (RV64) 
         vcpu->regs.hstatus |= HSTATUS_VSXL_64;
-    }
+    #endif
 
-    vcpu->regs.sstatus = SSTATUS_SPP_BIT | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
+#if (IRQC == AIA)
+    vcpu->regs.hstatus |= ((unsigned long)vcpu->arch.imsic_guest_file_index) << HSTATUS_VGEIN_OFF;
+#endif
+
+    vcpu->regs.sstatus = SSTATUS_SPP_BIT | SSTATUS_FS_INITIAL;
     vcpu->regs.sepc = entry;
     vcpu->regs.a0 = vcpu->arch.hart_id = vcpu->id;
     vcpu->regs.a1 = 0; // according to sbi it should be the dtb load address
 
-    csrs_hcounteren_write(HCOUNTEREN_TM);
-    csrs_htimedelta_write(0);
-    csrs_vsstatus_write(SSTATUS_SD | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY);
-    csrs_hie_write(0);
-    csrs_vstvec_write(0);
-    csrs_vsscratch_write(0);
-    csrs_vsepc_write(0);
-    csrs_vscause_write(0);
-    csrs_vstval_write(0);
-    csrs_hvip_write(0);
-    csrs_vsatp_write(0);
+    vcpu->regs.vsstatus = SSTATUS_SD | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY;
+    vcpu->regs.vstvec = 0;
+    vcpu->regs.vsscratch = 0;
+    vcpu->regs.vsepc = 0;
+    vcpu->regs.vscause = 0;
+    vcpu->regs.vstval = 0;
+    vcpu->regs.vsatp = 0;
+    vcpu->regs.hvip = 0;
+    vcpu->regs.hie = 0;
+    vcpu->regs.vstimecmp = ~0UL;
+
+    if (CPU_HAS_EXTENSION(CPU_EXT_SSCSRIND)) {
+        vcpu->regs.vsiselect = 0;
+    }
+
+    vcpu_arch_mem_prot_reset(vcpu);
+
+#if !CPU_HAS_EXTENSION(CPU_EXT_SSTC)
+    timer_event_remove(&vcpu->arch.timer_event);
+    vcpu->arch.timer_event.timer = ~0ULL;
+#endif
+
+    vfpu_reset(vcpu);
 }
 
 unsigned long vcpu_readreg(struct vcpu* vcpu, unsigned long reg)
@@ -104,21 +123,24 @@ void vcpu_restore_state(struct vcpu* vcpu)
     csrs_vscause_write(vcpu->regs.vscause);
     csrs_vstval_write(vcpu->regs.vstval);
     csrs_vsatp_write(vcpu->regs.vsatp);
-    if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
-        csrs_vstimecmp_write(vcpu->regs.vstimecmp);
-    }
 
     csrs_hie_write(vcpu->regs.hie);
     csrs_hvip_write(vcpu->regs.hvip);
     csrs_hgatp_write(vcpu->vm->arch.hgatp);
 
-    timer_event_add(&vcpu->arch.timer_event);
-    /* vfp_restore_state(&vcpu->regs.vfp); */
+    vcpu_arch_mem_prot_restore_state(vcpu);
 
-#ifdef MEM_PROT_MPU
-    spmp_set_active(&vcpu->arch.spmp, true);
-    spmp_restore(&vcpu->arch.spmp);
+#if CPU_HAS_EXTENSION(CPU_EXT_SSTC)
+    csrs_vstimecmp_write(vcpu->regs.vstimecmp);
+#else
+    timer_event_add(&vcpu->arch.timer_event);
 #endif
+
+    vfpu_restore_state(vcpu);
+
+    if (CPU_HAS_EXTENSION(CPU_EXT_SSCSRIND)) {
+        csrs_vsiselect_write(vcpu->regs.vsiselect);
+    }
 }
 
 void vcpu_save_state(struct vcpu* vcpu)
@@ -130,15 +152,23 @@ void vcpu_save_state(struct vcpu* vcpu)
     vcpu->regs.vscause = csrs_vscause_read();
     vcpu->regs.vstval = csrs_vstval_read();
     vcpu->regs.vsatp = csrs_vsatp_read();
-    if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
-        vcpu->regs.vstimecmp = csrs_vstimecmp_read();
-    }
 
     vcpu->regs.hie = csrs_hie_read();
     vcpu->regs.hvip = csrs_hvip_read();
 
+    vcpu_arch_mem_prot_save_state(vcpu);
+
+#if CPU_HAS_EXTENSION(CPU_EXT_SSTC)
+    vcpu->regs.vstimecmp = csrs_vstimecmp_read();
+#else
     timer_event_remove(&vcpu->arch.timer_event);
-    /* vfp_save_state(&vcpu->regs.vfp); */
+#endif
+
+    vfpu_save_state(vcpu);
+
+    if (CPU_HAS_EXTENSION(CPU_EXT_SSCSRIND)) {
+        vcpu->regs.vsiselect = csrs_vsiselect_read();
+    }
 }
 
 bool vcpu_arch_is_on(struct vcpu* vcpu)

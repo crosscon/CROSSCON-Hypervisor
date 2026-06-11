@@ -14,6 +14,7 @@ void arch_platform_defs() {
 
     if (IRQC == AIA) {
         printf("#define PLAT_IMSIC_MAX_INTERRUPTS %ld\n", platform.arch.irqc.aia.imsic.num_msis);
+        printf("#define PLAT_IMSIC_NUM_GUEST_FILES (%ld)\n", platform.arch.irqc.aia.imsic.num_guest_files);
 
         /**
          * This calculation follows the rules for the arrangement of memory regions for multiple

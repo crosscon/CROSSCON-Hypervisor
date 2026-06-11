@@ -10,7 +10,7 @@ riscv_mabi:=lp64
 ld_emulation:=elf64lriscv
 else ifeq ($(ARCH_SUB), riscv32)
 CROSS_COMPILE ?= riscv32-unknown-elf-
-riscv_march:=rv32imafdc_zicsr
+riscv_march:=rv32imafch_zicsr
 riscv_mabi:=ilp32
 ld_emulation:=elf32lriscv
 else
@@ -38,7 +38,7 @@ arch-cppflags+=-DRV_XLEN=64
 else ifeq ($(ARCH_SUB), riscv32)
 arch-cppflags+=-DRV_XLEN=32
 endif
-arch-cppflags+=-DIRQC=$(IRQC)
+arch-cppflags+=-DPLIC=1 -DAPLIC=2 -DAIA=3 -DIRQC=$(IRQC)
 arch-cflags = -mcmodel=medany -march=$(riscv_march) -mstrict-align \
 	-mabi=$(riscv_mabi)
 arch-asflags =

@@ -3,6 +3,7 @@
 
 # Architecture definition
 ARCH:=armv8m
+ARCH_SUB:=armv8m
 ARCH_PROFILE:=main
 drivers = lpc_uart
 

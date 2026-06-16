@@ -107,10 +107,10 @@ static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
     }
 }
 
-static int64_t sdtzm_handle_abort(struct vcpu* vcpu, long unsigned addr)
+static int32_t sdtzm_handle_abort(struct vcpu* vcpu, long unsigned addr)
 {
     UNUSED_ARG(addr);
-    int64_t res = HC_E_SUCCESS;
+    int32_t res = HC_E_SUCCESS;
 
     if (vcpu->vm->type == 1) {
         struct vcpu* ree_vcpu = vcpu_get_child(vcpu, 0);

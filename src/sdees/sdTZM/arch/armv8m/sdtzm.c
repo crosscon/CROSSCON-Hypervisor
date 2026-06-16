@@ -28,7 +28,7 @@ void sdtzm_copy_args_call_done(struct vcpu* vcpu_dst, struct vcpu* vcpu_src, siz
 /* CROSSCON TODO Not good */
 extern long sdtzm_handler(struct vcpu* vcpu, uint64_t fid);
 
-static long sdtzm_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdtzm_hvc_handler(struct vcpu* vcpu, uint32_t smc_fid)
 {
     long ret = -HC_E_FAILURE;
 

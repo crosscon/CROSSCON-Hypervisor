@@ -12,22 +12,22 @@
 // #define SMCC64_FID_VND_HYP_SRVC (SMCC32_FID_VND_HYP_SRVC  | SMCC64_BIT)
 // #define SMCC_FID_FN_NUM_MSK (0xFFFF)
 
-static int64_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
+static int32_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     UNUSED_ARG(smc_fid);
     UNUSED_ARG(vcpu);
     return -1;
 }
 
-static long sdgpos_hvc_handler(struct vcpu* vcpu, uint64_t smc_fid)
+static long sdgpos_hvc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     long int ret = -HC_E_INVAL_ID;
-    uint64_t id;
+    //uint64_t id;
     //aqui falta ir buscar o valor de R0 e defenir o id=<função que recolhe o R0>;
     //r0 vem como parametro da hypercall
-    id = smc_fid; //isto esta aqui apenas para não dar erros de compilação
+    //id = smc_fid; //isto esta aqui apenas para não dar erros de compilação
 
-    switch (id) {
+    switch (smc_fid) {
         case HC_IPC:
             ret = ipc_hypercall(vcpu);
             break;

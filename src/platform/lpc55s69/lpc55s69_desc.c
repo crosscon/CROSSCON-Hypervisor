@@ -26,8 +26,8 @@ struct platform platform = {
             .perms = MEM_RWX,
         },
         {
-            .base = 0x20000, //Flash
-            .size = 0x35000,    //630 KiB
+            .base = 0x40000, //Flash
+            .size = 0x40000,    //630 KiB
             .perms = MEM_RX,
         },
         {
@@ -36,8 +36,8 @@ struct platform platform = {
             .perms = MEM_RWX,
         },
         {
-            .base = 0x40000, //Flash
-            .size = 0x10000, //630 KiB
+            .base = 0x00000, //Flash
+            .size = 0xa0000, //630 KiB
             .perms = MEM_RX,
         },
         {

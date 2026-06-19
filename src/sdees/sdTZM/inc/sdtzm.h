@@ -7,6 +7,6 @@
 int64_t sdtzm_handler_setup(struct vm* vm);
 
 /* PRIVATE */
-long sdtzm_handler(struct vcpu* vcpu, uint64_t fid);
+long sdtzm_handler(struct vcpu* vcpu, uint32_t fid);
 
 #endif /* TEE_H_ */

@@ -296,7 +296,7 @@ static void vm_init_ipc(struct vm* vm, const struct vm_config* vm_config)
     }
 
 #ifdef MEM_NON_UNIFIED
-    if (vm->ipc_num) {
+    if (vm->ipc_num || vm->type <= 2) { //vm->type == 0 means that is a normal VM, 1 means that is a TEE VM
         size_t num_pages = NUM_PAGES((size_t)(&_start - &_hypercall_start));
         // size_t num_pages = 1;
         struct ppages ppages = mem_ppages_get((paddr_t)&_hypercall_start, num_pages);

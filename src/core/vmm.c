@@ -485,10 +485,5 @@ void vmm_init()
         vmstack_push(cpu()->next_vcpu);
         list_push(&cpu()->vcpu_sched_lst, &cpu()->next_vcpu->sched_node);
 
-        //apenas para debug
-        //dump_sau_regions();
-        
-        //isto teve de se comentar para que consiga integrar o stacking
-        //vcpu_run(cpu()->vcpu);
     }
 }

@@ -6,7 +6,7 @@
 #define PREFIX_MASK                           0xff000000
 #define ID_TO_FUNCID(x)                       ((x) & ~(PREFIX_MASK))
 #define PREFIX                                0
-#define TEEHC_FUNCID_RETURN_ENTRY_DONE        (PREFIX | 0)
+#define TEEHC_FUNCID_BLNS                     (PREFIX | 0)
 #define TEEHC_FUNCID_RETURN_ON_DONE           (PREFIX | 1)
 #define TEEHC_FUNCID_RETURN_OFF_DONE          (PREFIX | 2)
 #define TEEHC_FUNCID_RETURN_SUSPEND_DONE      (PREFIX | 3)
@@ -15,6 +15,7 @@
 #define TEEHC_FUNCID_RETURN_FIQ_DONE          (PREFIX | 6)
 #define TEEHC_FUNCID_RETURN_SYSTEM_OFF_DONE   (PREFIX | 7)
 #define TEEHC_FUNCID_RETURN_SYSTEM_RESET_DONE (PREFIX | 8)
+#define TEEHC_FUNCID_BOOT                     (PREFIX | 0xF)
 
 #define OPTEE_MSG_CMD_OPEN_SESSION            U(0)
 #define OPTEE_MSG_CMD_INVOKE_COMMAND          U(1)

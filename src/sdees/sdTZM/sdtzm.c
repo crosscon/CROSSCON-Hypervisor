@@ -8,20 +8,68 @@
 #include <vmm.h>
 #include <arch/sdtzm.h>
 
+// #define TEE_BASE_HC_SG_ID 0x2 //the lower number for SG TEEs
+#define MAX_STACK_LEVEL 0x4 //the lower number for SG TEEs
+//#define MTOWER2_HC_SG_ID 0x3
+
+uint32_t curr_stack_level = 1; //initially mTower is already there, and since SG for mtower1 is 0x2, we need to set the leve to 2
 static int optee_crash = 0;
 
-static long mtower_handle_nw(struct vcpu* ree_vcpu)
+static long mtower_handle_nw(struct vcpu* ree_vcpu, uint32_t fid)
 {
     long ret = -HC_E_FAILURE;
-    //CROSSCON TODO: ADD switch case for different calls:  CROSSCON_HC_SG_ID
-    if (vmstack_pop() != NULL) {
-        tee_arch_interrupt_disable();
+    uint32_t pop_num = 0;
+ 
+    if(fid < MAX_STACK_LEVEL) { //if hypercall reieved wants to invoke TEE on stack, should be a TEE lower in stack
+
+        pop_num = curr_stack_level-fid;
+
+        for(uint32_t i=0; i<pop_num; i++){
+            if (vmstack_pop() == NULL) {
+                return ret;
+            }
+        }
+    
+        tee_arch_interrupt_disable(); 
         sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
         /* CROSSCON TODO: more generic stepping */
         /* in arm steeping is done here, but in RISC-V it is done outside */
         tee_step(cpu()->vcpu);
-        ret = HC_E_SUCCESS;
+        ret = HC_E_SUCCESS;  
     }
+ 
+    // if(fid == MTOWER_HC_SG_ID) {
+    //     //CROSSCON TODO: ADD switch case for different calls:  CROSSCON_HC_SG_ID
+
+    //      //CROSSCON TODO: complete interrupt disable function
+    //     tee_arch_interrupt_disable(); 
+    //     sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
+    //     /* CROSSCON TODO: more generic stepping */
+    //     /* in arm steeping is done here, but in RISC-V it is done outside */
+    //     tee_step(cpu()->vcpu);
+    //     ret = HC_E_SUCCESS;       
+
+    //     if (vmstack_pop() != NULL) {
+    //         //CROSSCON TODO: complete interrupt disable function
+    //         tee_arch_interrupt_disable(); 
+    //         sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
+    //         /* CROSSCON TODO: more generic stepping */
+    //         /* in arm steeping is done here, but in RISC-V it is done outside */
+    //         tee_step(cpu()->vcpu);
+    //         ret = HC_E_SUCCESS;
+    //     }
+    // }else if(fid == MTOWER2_HC_SG_ID) {
+    //     //CROSSCON TODO: Get child using fid number;
+    //     //mtower 2 is a child of FreeRTOS so it needs to get ree_vcpu child
+    //     struct vcpu* tee_vcpu = vcpu_get_child(ree_vcpu, 0);
+    //     if(tee_vcpu != NULL){
+    //         tee_arch_interrupt_disable();
+    //         vmstack_push(tee_vcpu);
+    //         sdtzm_copy_args(cpu()->vcpu, ree_vcpu, 3);
+    //         tee_step(cpu()->vcpu);
+    //         ret = HC_E_SUCCESS;
+    //     }
+    // }
     return ret;
 }
 
@@ -50,9 +98,12 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
             /*     vmstack_push(ree_vcpu); */
             /*     tee_arch_interrupt_enable(); */
             /*     break; */
-            case TEEHC_FUNCID_RETURN_ENTRY_DONE:
+            case TEEHC_FUNCID_BOOT:
                 vmstack_push(ree_vcpu);
-
+                curr_stack_level++;
+                break;
+            case TEEHC_FUNCID_BLNS:
+                vmstack_push(ree_vcpu);
                 break;
             default:
                 ERROR("unknown tee call %0lx by vm %d", fid, cpu()->vcpu->vm->id);
@@ -62,21 +113,40 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
 
     return ret;
 }
+// static long mtower2_handle_sw(void)
+// {
+//     long ret = -HC_E_FAILURE;
 
-long sdtzm_handler(struct vcpu* vcpu, uint64_t fid)
+//     //we only use a case to handle secure world hypercalls, which is the case where TEE wants to return to normal world
+//     if (vmstack_pop() != NULL) {
+//         //CROSSCON TODO: complete interrupt disable function
+//         tee_arch_interrupt_disable(); 
+//         //since we use shared memory to pass arguments we do not need to pass arguments back to normal world
+//         //in this sense, we do not use this: sdtzm_copy_args(ree_vcpu, cpu()->vcpu, 1);
+//         tee_step(cpu()->vcpu);
+//         ret = HC_E_SUCCESS;
+//     }
+
+//     return ret;
+// }
+
+long sdtzm_handler(struct vcpu* vcpu, uint32_t fid)
 {
     long ret = -HC_E_FAILURE;
 
-    if (vcpu->vm->type == 0) {
-        /* normal world */
-        ret = mtower_handle_nw(vcpu);
-    } else {
-        /* secure world */
-        /* CROSSCON TODO: get parent */
-        if (cpu()->vcpu->vm->type == 1) {        /* host secure world */
-            ret = mtower_handle_sw(vcpu, fid);
-        }
-    }
+    if (vcpu->vm->type == 0) { //freeRTOS did a HC
+        /* normal world call SG */
+        /* FID means the mTower ID, e.g., mTower1 or mTower2 */
+        ret = mtower_handle_nw(vcpu, fid);
+    } else if (vcpu->vm->type == 1) { //mtower1 did a HC
+        /* secure world wants to go back to normal world */
+        /* FID means the function ID*/
+        ret = mtower_handle_sw(vcpu, fid);
+    }// else if (vcpu->vm->type == 2) { //mtower2 did a HC
+    //     /* secure world wants to go back to normal world */
+    //     /* FID means the function ID*/
+    //     ret = mtower2_handle_sw();
+    // }
 
     return ret;
 }

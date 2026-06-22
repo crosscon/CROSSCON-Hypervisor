@@ -12,7 +12,8 @@
 #define MAX_STACK_LEVEL 0x4 //the lower number for SG TEEs
 //#define MTOWER2_HC_SG_ID 0x3
 
-uint32_t curr_stack_level = 1; //initially mTower is already there, and since SG for mtower1 is 0x2, we need to set the leve to 2
+uint32_t stack_level_after_boot = 1; 
+uint32_t curr_stack_level = 1; 
 static int optee_crash = 0;
 
 static long mtower_handle_nw(struct vcpu* ree_vcpu, uint32_t fid)
@@ -22,12 +23,13 @@ static long mtower_handle_nw(struct vcpu* ree_vcpu, uint32_t fid)
  
     if(fid < MAX_STACK_LEVEL) { //if hypercall reieved wants to invoke TEE on stack, should be a TEE lower in stack
 
-        pop_num = curr_stack_level-fid;
+        pop_num = stack_level_after_boot-fid;
 
         for(uint32_t i=0; i<pop_num; i++){
             if (vmstack_pop() == NULL) {
                 return ret;
             }
+            curr_stack_level--;
         }
     
         tee_arch_interrupt_disable(); 
@@ -100,10 +102,16 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
             /*     break; */
             case TEEHC_FUNCID_BOOT:
                 vmstack_push(ree_vcpu);
+                stack_level_after_boot++;
                 curr_stack_level++;
                 break;
             case TEEHC_FUNCID_BLNS:
-                vmstack_push(ree_vcpu);
+                while(curr_stack_level != stack_level_after_boot){ //since last stack level is always the REE, we can just push the child vcpu until we reach the stack level after a complete boot
+                    //push of all missing stack layers
+                    vmstack_push(ree_vcpu);
+                    ree_vcpu = vcpu_get_child(ree_vcpu, 0);
+                    curr_stack_level++;
+                }
                 break;
             default:
                 ERROR("unknown tee call %0lx by vm %d", fid, cpu()->vcpu->vm->id);

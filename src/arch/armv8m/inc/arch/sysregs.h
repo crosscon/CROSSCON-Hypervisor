@@ -29,6 +29,8 @@
 
 #define SCB_ICSR_PENDSTSET       (1 << 26)
 #define SCB_ICSR_PENDSTCLR       (1 << 25)
+#define SCB_ICSR_PENDSVSET       (1 << 28)
+#define SCB_ICSR_PENDSVCLR       (1 << 27)
 #define SCB_ICSR_VECTACTIVE_MSK  (0x1FFUL)
 
 #define SCB_SHCSR_EN_ALL_FAULTS                                              \

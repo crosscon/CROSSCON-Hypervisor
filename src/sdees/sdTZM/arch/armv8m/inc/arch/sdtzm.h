@@ -16,6 +16,7 @@
 #define TEEHC_FUNCID_RETURN_SYSTEM_OFF_DONE   (PREFIX | 7)
 #define TEEHC_FUNCID_RETURN_SYSTEM_RESET_DONE (PREFIX | 8)
 #define TEEHC_FUNCID_BOOT                     (PREFIX | 0xF)
+#define TEEHC_FUNCID_INTERRUPT                (PREFIX | 0xE)
 
 #define OPTEE_MSG_CMD_OPEN_SESSION            U(0)
 #define OPTEE_MSG_CMD_INVOKE_COMMAND          U(1)

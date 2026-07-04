@@ -417,31 +417,6 @@ void vmm_destroy_dynamic(struct vm* vm)
     vmm_free_vm(vm);
 }
 
-// void dump_sau_regions(void);
-// void dump_sau_regions(void) {
-//     uint32_t num_regions = sau->type & 0xFF;
-
-//     INFO("SAU Regions: %x\n", num_regions);
-
-//     for (uint32_t i = 0; i < num_regions; i++) {
-//         sau->rnr = i;
-
-//         uint32_t rbar = sau->rbar;
-//         uint32_t rlar = sau->rlar;
-
-//         uint32_t base  = rbar & 0xFFFFFFE0UL;
-//         uint32_t limit = rlar & 0xFFFFFFE0UL;
-
-//         uint32_t enabled = (rlar & 1U);
-//         uint32_t nsc     = (rlar & 2U) >> 1;
-
-//         INFO("Region %x:\n", i);
-//         INFO("  Base   : 0x%x\n", base);
-//         INFO("  Limit  : 0x%x\n", limit);
-//         INFO("  Enable : %x\n", enabled);
-//         INFO("  NSC    : %x\n", nsc);
-//     }
-// }
 
 void vmm_init()
 {

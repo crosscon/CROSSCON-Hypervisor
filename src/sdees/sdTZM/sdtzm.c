@@ -6,6 +6,7 @@
 #include <types.h>
 #include <vm.h>
 #include <vmm.h>
+#include <interrupts.h>
 #include <arch/sdtzm.h>
 
 // #define TEE_BASE_HC_SG_ID 0x2 //the lower number for SG TEEs
@@ -100,6 +101,13 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
             /*     vmstack_push(ree_vcpu); */
             /*     tee_arch_interrupt_enable(); */
             /*     break; */
+            case TEEHC_FUNCID_INTERRUPT:
+                //vmstack_push(ree_vcpu);
+                if(!interrupts_arch_vm_irq_resume()){
+                     ERROR("Interrupt recieved. Bad handling!");
+                }
+                cpu()->next_vcpu = ree_vcpu;
+                break;
             case TEEHC_FUNCID_BOOT:
                 vmstack_push(ree_vcpu);
                 stack_level_after_boot++;
@@ -167,21 +175,9 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 
 static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
-    UNUSED_ARG(int_id);
-    /* CROSSCON TODO: check current active handler */
-
-    if (vcpu != cpu()->vcpu && vcpu->state == VCPU_INACTIVE) {
-        if (cpu()->vcpu->vm->type == 1) {
-            /* CROSSCON TODO */
-            //interrupt occurred during secure world execution
-            //who belongs the interrupt?
-            /* interrupts_vm_inject(cpu()->vcpu, 40); */
-        }else if (cpu()->vcpu->vm->type == 0) {
-            /* CROSSCON TODO */
-            //interrupt occurred during normal world execution
-            //who belongs the interrupt?
-            /* interrupts_vm_inject(cpu()->vcpu, 40); */
-        }
+    if (!interrupts_arch_vm_irq_enter(vcpu, int_id)) {
+        interrupts_vm_inject(vcpu, int_id);
+        cpu()->next_vcpu = vcpu;
     }
 }
 

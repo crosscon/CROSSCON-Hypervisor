@@ -4,6 +4,22 @@
 #include <arch/vm.h>
 #include <bitmap.h>
 
+#define SCB_AIRCR_ADDR           (0xE000ED0CUL)
+// #define AIRCR_VECTKEY_Pos           16U
+// #define AIRCR_VECTKEY               (0x5FAUL << AIRCR_VECTKEY_Pos)
+// #define AIRCR_VECTCLRACTIVE_Msk     (1UL << 1)
+
+static inline void clear_active_exceptions_ns_debug(void)
+{
+    volatile uint32_t *aircr = (volatile uint32_t *)SCB_AIRCR_ADDR;
+
+    *aircr = (0x5FAUL << 16) | (1UL << 1);
+    *(uint32_t *)0xE002ED0C = (0x5FA << 16) | (1 << 1);
+
+    __asm volatile ("dsb 0xF" ::: "memory");
+    __asm volatile ("isb 0xF" ::: "memory");
+}
+
 void vnvic_init(void) { }
 
 void vnvic_reset(void) { }
@@ -12,6 +28,15 @@ void vnvic_inject(struct vcpu* vcpu, irqid_t id)
 {
     struct vnvic* vnvic = &vcpu->arch.vnvic;
     bitmap_set(vnvic->irq_pend, id);
+
+    if (nvic_get_act(nvic_s, id)) {
+        return;
+    }
+
+    nvic_int_target(NONSECURE, id);
+    nvic_enable(nvic_ns, id, true);
+    nvic_set_pend(nvic_ns, id);
+    //clear_active_exceptions_ns_debug(); //this clears all active exceptions, so that the next exception can be handled by the VM that owns it
 }
 
 static void vnvic_save_interrupt(irqid_t int_id, struct vnvic* vnvic)
@@ -43,6 +68,10 @@ static void vnvic_save_interrupt(irqid_t int_id, struct vnvic* vnvic)
 
 static void vnvic_restore_interrupt(irqid_t int_id, bool en, bool pend)
 {
+    if (nvic_get_act(nvic_s, int_id)) {
+        return;
+    }
+
     nvic_int_target(NONSECURE, int_id);
 
     if (en) {

@@ -23,7 +23,13 @@
 
 #ifndef __ASSEMBLER__
 
+struct vcpu;
+
 void interrupts_arch_handle(void);
+struct vcpu* get_vcpu_to_interrupt(void);
+void interrupts_arch_pendsv_handle(void);
+bool interrupts_arch_vm_irq_enter(struct vcpu* owner, irqid_t int_id);
+bool interrupts_arch_vm_irq_resume(void);
 void nvic_init_ipi(void);
 
 #endif

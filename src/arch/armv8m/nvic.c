@@ -10,12 +10,20 @@
 #include <mem.h>
 #include <vm.h>
 #include <arch/nvic.h>
+#include <arch/sysregs.h>
 
 extern irq_handler_t interrupt_handlers[MAX_INTERRUPT_HANDLERS];
 
 void nvic_init(void) { }
 
-void nvic_int_handle(void) { }
+void nvic_int_handle(void)
+{
+    irqid_t int_id = (irqid_t)(scb_s->icsr & SCB_ICSR_VECTACTIVE_MSK);
+
+    if ((int_id > EXT_IRQ_BASE) && (int_id < MAX_INTERRUPT_LINES)) {
+        interrupts_handle(int_id);
+    }
+}
 
 bool nvic_any_act_irq(struct nvic* ic)
 {

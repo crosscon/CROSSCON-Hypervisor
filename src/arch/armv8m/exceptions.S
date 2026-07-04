@@ -14,7 +14,7 @@
  *
  * The number of interrupts is also cpu-specific, e.g., 480 for CM33, 240 for CM23.
  */
-#define VECTTBL_ALIGN   (0x80)
+#define VECTTBL_ALIGN   (0x100)
 
 .macro define_handler name
     .thumb
@@ -140,9 +140,10 @@ _hyp_vector_table:
      */
     .word 0                     //TODO:ARMV8M should this be initialized with the real MSP value?
     .word _reset_handler
-    .rept 13
+    .rept 12
     .word _exception_handler
     .endr
+    .word _pendsv_handler
     .word _systick_handler
     /* Interrupts */
     .rept MAX_INTERRUPTS
@@ -158,7 +159,61 @@ _exception_handler:
 
 define_handler _irq_handler
 _irq_handler:
-    b   .
+    // Save registers from current vcpu.
+    push {lr}
+    //VM_EXIT_ESF
+    //VM_EXIT
+    // Define next vcpu and inject interrupt to the vcpu that owns it.
+    bl      interrupts_arch_handle
+    // Restore banked registers from next vcpu.
+    //VM_ENTRY
+    //VM_ENTRY_ESF
+    pop {lr}
+    bx   lr
+
+
+//I tried to implement irq_handler directly during the interrupt active state, but is not working
+//define_handler _irq_handler
+//_irq_handler:
+//    // Save registers from current vcpu.
+//    push {lr}
+//    VM_EXIT_ESF
+//    VM_EXIT
+//    // Define next vcpu and inject interrupt to the vcpu that owns it.
+//    bl      interrupts_arch_handle
+//    // Restore banked registers from next vcpu.
+//    VM_ENTRY
+//    VM_ENTRY_ESF
+//
+//    //para fazer isto falta dar regiões de MPU
+//    mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
+//    ldr r1, =0x01000000     /* T-bit set, IPSR = 0 */
+//    str r1, [r2, #0x1c]     /* stacked xPSR */
+//    str lr, [r2, #0x18]     /* stacked PC */
+//
+//    pop {lr}
+//    bx   lr
+
+define_handler _pendsv_handler
+_pendsv_handler:
+    push {lr}
+    VM_EXIT_ESF
+    VM_EXIT
+    //save PC of the vcpu that is being preempted
+    //bl      vcpu_savepc
+    bl      interrupts_arch_pendsv_handle
+    VM_ENTRY
+    VM_ENTRY_ESF
+    //restore PC of the vcpu that is being resumed
+    //bl      vcpu_restorepc
+
+    mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
+    ldr r1, =0x01000000     /* T-bit set, IPSR = 0 */
+    str r1, [r2, #0x1c]     /* stacked xPSR */
+    str lr, [r2, #0x18]     /* stacked PC */
+    pop {lr}    
+    bx lr
+
 
 define_handler _systick_handler
 _systick_handler:
@@ -240,5 +295,3 @@ first_entry_childvm:
     mov r1, #0
     cpsie i 
     bxns r0
-
-

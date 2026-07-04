@@ -13,8 +13,16 @@
 #include <fences.h>
 #include <arch/sysregs.h>
 #include <arch/nvic.h>
+#include <arch/timer.h>
 
 extern irq_handler_t interrupt_handlers[MAX_INTERRUPT_HANDLERS];
+
+static struct {
+    bool active;
+    irqid_t int_id;
+    struct vcpu* interrupted;
+    struct vcpu* owner;
+} vm_irq_service;
 
 void interrupts_arch_ipi_init(void){
     //Joao Add this here to replace the weak implementation of this function. 
@@ -44,6 +52,69 @@ void interrupts_arch_enable(irqid_t int_id, bool en)
 void interrupts_arch_handle(void)
 {
     nvic_int_handle();
+}
+
+struct vcpu* get_vcpu_to_interrupt(void)
+{
+    return vm_irq_service.owner;
+}
+
+void interrupts_arch_pendsv_handle(void)
+{
+    if (!vm_irq_service.active) {
+        return;
+    }
+
+    if (nvic_get_act(nvic_s, vm_irq_service.int_id)) {
+        scb_s->icsr = SCB_ICSR_PENDSVSET;
+        return;
+    }
+
+    interrupts_vm_inject(vm_irq_service.owner, vm_irq_service.int_id);
+    cpu()->next_vcpu = vm_irq_service.owner;
+}
+
+bool interrupts_arch_vm_irq_enter(struct vcpu* owner, irqid_t int_id)
+{
+    if ((owner == NULL) || (owner == cpu()->vcpu)) {
+        return false;
+    }
+
+    if (vm_irq_service.active) {
+        return false;
+    }
+
+    vm_irq_service.active = true;
+    vm_irq_service.int_id = int_id;
+    vm_irq_service.interrupted = cpu()->vcpu;
+    vm_irq_service.owner = owner;
+
+    //interrupts_vm_inject(owner, int_id);
+    cpu()->next_vcpu = cpu()->vcpu;
+    scb_s->icsr = SCB_ICSR_PENDSVSET;
+
+    return true;
+}
+
+bool interrupts_arch_vm_irq_resume(void)
+{
+    if (!vm_irq_service.active) {
+        return false;
+    }
+
+    //note that we expect secure context place hyp call insince handler, so the interrupt is still active in nvic
+    if ((cpu()->vcpu != vm_irq_service.owner) /*|| vm_nvic_act_irq()*/) {
+        return false;
+    }
+
+    cpu()->next_vcpu = vm_irq_service.interrupted;
+
+    vm_irq_service.active = false;
+    vm_irq_service.int_id = INVALID_IRQID;
+    vm_irq_service.interrupted = NULL;
+    vm_irq_service.owner = NULL;
+
+    return true;
 }
 
 bool interrupts_arch_check(irqid_t int_id)

@@ -213,7 +213,7 @@ void mem_prot_init()
     if (DEFINED(MMIO_SLAVE_SIDE_PROT) && cpu_is_master()) {
         mem_mmio_init_regions(&cpu()->as);
     }
-    //mpu_enable();
+    mpu_enable();
 }
 
 size_t mem_cpu_boot_alloc_size()

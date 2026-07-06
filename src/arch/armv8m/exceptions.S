@@ -16,6 +16,12 @@
  */
 #define VECTTBL_ALIGN   (0x100)
 
+#define PENDSV_MSP_NS_MPU_REGION (7)
+#define PENDSV_MSP_NS_MPU_SIZE   (32)
+#define PENDSV_MSP_NS_RBAR_FLAGS \
+    (MPU_RBAR_XN | MPU_RBAR_AP_RW_PLVL | MPU_RBAR_SH_NS)
+#define PENDSV_MSP_NS_RLAR_FLAGS (MPU_RLAR_ATTR(1) | MPU_RLAR_EN)
+
 .macro define_handler name
     .thumb
     .thumb_func
@@ -159,15 +165,8 @@ _exception_handler:
 
 define_handler _irq_handler
 _irq_handler:
-    // Save registers from current vcpu.
     push {lr}
-    //VM_EXIT_ESF
-    //VM_EXIT
-    // Define next vcpu and inject interrupt to the vcpu that owns it.
     bl      interrupts_arch_handle
-    // Restore banked registers from next vcpu.
-    //VM_ENTRY
-    //VM_ENTRY_ESF
     pop {lr}
     bx   lr
 
@@ -199,18 +198,59 @@ _pendsv_handler:
     push {lr}
     VM_EXIT_ESF
     VM_EXIT
-    //save PC of the vcpu that is being preempted
-    //bl      vcpu_savepc
+
     bl      interrupts_arch_pendsv_handle
     VM_ENTRY
-    VM_ENTRY_ESF
-    //restore PC of the vcpu that is being resumed
-    //bl      vcpu_restorepc
 
+    //Add MPU region of next VM MSP_NS frame to hypervisor
+    ldr r0, =MPU_BASE
+    ldr r1, [r0, #MPU_RNR_OFF]
+    mov r2, #PENDSV_MSP_NS_MPU_REGION
+    str r2, [r0, #MPU_RNR_OFF]
+    isb
+    ldr r2, [r0, #MPU_RBAR_OFF]
+    ldr r3, [r0, #MPU_RLAR_OFF]
+    push {r1-r3}
+
+    mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
+    mov r3, r2
+    add r3, #(PENDSV_MSP_NS_MPU_SIZE - 1)
+    bic r2, r2, #MPU_RBAR_FLAGS_MSK
+    bic r3, r3, #MPU_RLAR_FLAGS_MSK
+    orr r2, r2, #PENDSV_MSP_NS_RBAR_FLAGS
+    orr r3, r3, #PENDSV_MSP_NS_RLAR_FLAGS
+    str r2, [r0, #MPU_RBAR_OFF]
+    str r3, [r0, #MPU_RLAR_OFF]
+    dsb
+    isb
+
+    //since last time execution went from VM_SEC to hypervisor, was through SG and not an exception, it needs to define at leaste xpsr and pc to return from an exception/interrupt   
     mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
     ldr r1, =0x01000000     /* T-bit set, IPSR = 0 */
     str r1, [r2, #0x1c]     /* stacked xPSR */
     str lr, [r2, #0x18]     /* stacked PC */
+
+    //Remove MPU region of next VM MSP_NS frame from hypervisor
+    pop {r1-r3}
+    mov r12, #PENDSV_MSP_NS_MPU_REGION
+    str r12, [r0, #MPU_RNR_OFF]
+    isb
+    cmp r3, #0
+    beq clear_pendsv_msp_ns_mpu_region
+    str r2, [r0, #MPU_RBAR_OFF]
+    str r3, [r0, #MPU_RLAR_OFF]
+    b restore_pendsv_msp_ns_mpu_rnr
+clear_pendsv_msp_ns_mpu_region:
+    mov r2, #0
+    str r2, [r0, #MPU_RLAR_OFF]
+    str r2, [r0, #MPU_RBAR_OFF]
+restore_pendsv_msp_ns_mpu_rnr:
+    str r1, [r0, #MPU_RNR_OFF]
+    dsb
+    isb
+
+    VM_ENTRY_ESF
+
     pop {lr}    
     bx lr
 

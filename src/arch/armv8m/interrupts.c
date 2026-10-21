@@ -61,14 +61,15 @@ struct vcpu* get_vcpu_to_interrupt(void)
 
 void interrupts_arch_pendsv_handle(void)
 {
-    if (!vm_irq_service.active) {
-        return;
-    }
+    // this is not necessary, if function entered here is because previously was active by interrupts_arch_vm_irq_enter but now is not, so I removed to optimize
+    // if (!vm_irq_service.active) {
+    //     return;
+    // }
 
-    if (nvic_get_act(nvic_s, vm_irq_service.int_id)) {
-        scb_s->icsr = SCB_ICSR_PENDSVSET;
-        return;
-    }
+    // if (nvic_get_act(nvic_s, vm_irq_service.int_id)) {
+    //     scb_s->icsr = SCB_ICSR_PENDSVSET;
+    //     return;
+    // }
 
     interrupts_vm_inject(vm_irq_service.owner, vm_irq_service.int_id);
     cpu()->next_vcpu = vm_irq_service.owner;
@@ -98,12 +99,10 @@ bool interrupts_arch_vm_irq_enter(struct vcpu* owner, irqid_t int_id)
 
 bool interrupts_arch_vm_irq_resume(void)
 {
-    if (!vm_irq_service.active) {
-        return false;
-    }
-
-    //note that we expect secure context place hyp call insince handler, so the interrupt is still active in nvic
-    if ((cpu()->vcpu != vm_irq_service.owner) /*|| vm_nvic_act_irq()*/) {
+    //note that we expect: 
+    //1. secure SDEE context place hyp call insince handler, so the interrupt is still active in nvic
+    //2. the interrupt is virtually active
+    if ((cpu()->vcpu != vm_irq_service.owner) && (!vm_irq_service.active) /*|| vm_nvic_act_irq()*/) {
         return false;
     }
 

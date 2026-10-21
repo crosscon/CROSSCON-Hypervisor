@@ -202,7 +202,9 @@ _pendsv_handler:
     bl      interrupts_arch_pendsv_handle
     VM_ENTRY
 
+    //todo: Test if diable MPU and Enable again would optimize this code
     //Add MPU region of next VM MSP_NS frame to hypervisor
+    //save current MPU region 7 to restore later
     ldr r0, =MPU_BASE
     ldr r1, [r0, #MPU_RNR_OFF]
     mov r2, #PENDSV_MSP_NS_MPU_REGION
@@ -212,6 +214,7 @@ _pendsv_handler:
     ldr r3, [r0, #MPU_RLAR_OFF]
     push {r1-r3}
 
+    //add MPU region 7 to hypervisor to access next VM MSP_NS frame
     mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
     mov r3, r2
     add r3, #(PENDSV_MSP_NS_MPU_SIZE - 1)
@@ -225,6 +228,7 @@ _pendsv_handler:
     isb
 
     //since last time execution went from VM_SEC to hypervisor, was through SG and not an exception, it needs to define at leaste xpsr and pc to return from an exception/interrupt   
+    //
     mrs r2, msp_ns          /* or psp_ns, depending on EXC_RETURN */
     ldr r1, =0x01000000     /* T-bit set, IPSR = 0 */
     str r1, [r2, #0x1c]     /* stacked xPSR */

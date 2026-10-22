@@ -5,6 +5,7 @@
 ARCH:=armv8
 ARCH_PROFILE:=armv8-r
 ARCH_SUB:=aarch32
+SDEES_ARCH:=armv8r32
 
 PLAT_CPUS:=cortex_r52
 

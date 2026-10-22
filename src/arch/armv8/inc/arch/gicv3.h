@@ -168,12 +168,16 @@ static inline void gich_set_apr(size_t i, uint32_t val)
     switch (i) {
         case 0:
             sysreg_ich_ap1r0_el2_write(val);
+            break;
         case 1:
             sysreg_ich_ap1r1_el2_write(val);
+            break;
         case 2:
             sysreg_ich_ap1r2_el2_write(val);
+            break;
         case 3:
             sysreg_ich_ap1r3_el2_write(val);
+            break;
         default:
             ERROR("Unkown GICH APR");
     }

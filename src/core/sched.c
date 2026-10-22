@@ -60,7 +60,7 @@ void sched_yield(void)
 
 void sched_start(void)
 {
-    time_slice = TIME_MS(10);
+    time_slice = (timer_value_t)((uint32_t)TIMER_ARCH_FREQ() / 100U);
     sched_next();
     if (list_size(&cpu()->vcpu_sched_lst) > 1) {
         sched_set_next_timer_event();

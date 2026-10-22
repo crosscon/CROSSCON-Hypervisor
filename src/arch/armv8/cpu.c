@@ -60,7 +60,11 @@ void cpu_arch_park()
     __asm volatile("mov sp, %0\n\r" ::"r"(&cpu()->stack[STACK_SIZE]));
 
     // enable interrupts
-    __asm volatile("msr   daifclr, 0x3");
+#ifdef AARCH64
+    __asm volatile("msr daifclr, 0x3");
+#else
+    __asm volatile("cpsie if");
+#endif
 
     while (true) {
         __asm volatile("wfi");

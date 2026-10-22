@@ -14,7 +14,9 @@
 #include <arch/smmuv2.h>
 #endif
 #include <list.h>
+#ifdef AARCH64
 #include <vtimer.h>
+#endif
 
 struct arch_vm_platform {
     struct vgic_dscrp {
@@ -62,6 +64,7 @@ struct vcpu_arch {
             uint64_t vmpidr_el2;
             uint64_t cntvoff_el2;
             uint64_t cptr_el2;
+            uint64_t vsctlr_el2;
         } hyp;
 
         struct {
@@ -94,7 +97,9 @@ struct vcpu_arch {
         } vm;
 
     } sysregs;
+#ifdef AARCH64
     struct vtimer vtimer;
+#endif
 };
 
 struct vcpu* vm_get_vcpu_by_mpidr(struct vm* vm, unsigned long mpidr);
@@ -102,6 +107,7 @@ void vcpu_arch_entry(void);
 
 bool vcpu_arch_profile_on(struct vcpu* vcpu);
 void vcpu_subarch_reset(struct vcpu* vcpu);
+void vcpu_arch_profile_init(struct vcpu* vcpu, struct vm* vm);
 void vcpu_arch_profile_restore_state(struct vcpu* vcpu);
 void vcpu_arch_profile_save_state(struct vcpu* vcpu);
 

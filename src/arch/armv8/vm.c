@@ -65,6 +65,7 @@ void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm)
     //
 
     vcpu->arch.vmpidr = vm_cpuid_to_mpidr(vm, vcpu->id);
+    vcpu->arch.sysregs.hyp.vmpidr_el2 = vcpu->arch.vmpidr;
     sysreg_vmpidr_el2_write(vcpu->arch.vmpidr);
 
     vcpu->arch.psci_ctx.state = vcpu->id == 0 ? ON : OFF;
@@ -79,10 +80,6 @@ void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry)
     memset(&vcpu->regs, 0, sizeof(struct arch_regs));
 
     vcpu_subarch_reset(vcpu);
-    /* CROSSCON TODO */
-    vcpu->regs.elr_el2 = entry;
-    vcpu->regs.spsr_el2 = SPSR_EL1h | SPSR_F | SPSR_I | SPSR_A | SPSR_D;
-
     vcpu->arch.sysregs.hyp.cntvoff_el2 = 0;
     // sysreg_cntvoff_el2_write(0);
     vcpu_writepc(vcpu, entry);

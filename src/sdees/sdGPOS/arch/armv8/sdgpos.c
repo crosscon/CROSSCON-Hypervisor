@@ -12,7 +12,7 @@
 // #define SMCC64_FID_VND_HYP_SRVC (SMCC32_FID_VND_HYP_SRVC  | SMCC64_BIT)
 #define SMCC_FID_FN_NUM_MSK (0xFFFF)
 
-static int64_t sdgpos_smc_handler(struct vcpu* vcpu, long unsigned int smc_fid)
+static int64_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     if (vcpu->vm->type != 0) {
         return 0;

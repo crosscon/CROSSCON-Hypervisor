@@ -9,6 +9,32 @@
 #include <arch/sysregs.h>
 #include <arch/fences.h>
 
+struct mpu_temp
+{
+    /* data */
+    unsigned long base[24];
+    unsigned long limit[24];
+    unsigned long en;
+    unsigned long mair1;
+}MPU;
+
+
+static void mpu_temp_update(void)
+{
+    for (size_t i = 0; i < 24; i++)
+    {
+        /* code */
+        sysreg_prselr_el2_write(i);
+        DSB();
+        MPU.limit[i] = sysreg_prlar_el2_read();
+        MPU.base[i] = sysreg_prbar_el2_read();
+        DSB();
+    }
+    MPU.en = sysreg_prenr_el2_read();
+    DSB();
+    
+}
+
 static unsigned long mpu_get_region_base(mpid_t mpid)
 {
     unsigned long prbar = 0;
@@ -73,6 +99,7 @@ static void mpu_entry_set(mpid_t mpid, struct mp_region* mpr)
     sysreg_prbar_el2_write((mpr->base & PRBAR_BASE_MSK) | mpr->mem_flags.prbar);
     sysreg_prlar_el2_write((lim & PRLAR_LIMIT_MSK) | mpr->mem_flags.prlar);
     ISB();
+    mpu_temp_update();
 }
 
 static void mpu_entry_update_limit(mpid_t mpid, struct mp_region* mpr)
@@ -83,6 +110,7 @@ static void mpu_entry_update_limit(mpid_t mpid, struct mp_region* mpr)
     ISB();
     sysreg_prlar_el2_write((lim & PRLAR_LIMIT_MSK) | mpr->mem_flags.prlar);
     ISB();
+    mpu_temp_update();
 }
 
 static bool mpu_entry_clear(mpid_t mpid)
@@ -92,6 +120,7 @@ static bool mpu_entry_clear(mpid_t mpid)
     sysreg_prlar_el2_write(0);
     sysreg_prbar_el2_write(0);
     ISB();
+    mpu_temp_update();
     return true;
 }
 

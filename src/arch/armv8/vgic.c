@@ -45,7 +45,7 @@ extern volatile const size_t VGIC_IPI_ID;
 void vgic_ipi_handler(uint32_t event, uint64_t data);
 CPU_MSG_HANDLER(vgic_ipi_handler, VGIC_IPI_ID)
 
-static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, uint64_t lr)
+static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, size_t lr)
 {
     if (vcpu->state == VCPU_ACTIVE) {
         return gich_read_lr(lr);
@@ -54,7 +54,7 @@ static inline uint64_t vgic_lr_rd(struct vcpu* vcpu, uint64_t lr)
     }
 }
 
-static inline void vgic_lr_wr(struct vcpu* vcpu, uint64_t lr, uint64_t val)
+static inline void vgic_lr_wr(struct vcpu* vcpu, size_t lr, uint64_t val)
 {
     if (vcpu->state == VCPU_ACTIVE) {
         gich_write_lr(lr, val);
@@ -71,13 +71,13 @@ static inline void vgic_lr_wr(struct vcpu* vcpu, uint64_t lr, uint64_t val)
     }
 }
 
-static inline bool vgic_lr_empty(struct vcpu* vcpu, uint64_t lr)
+static inline bool vgic_lr_empty(struct vcpu* vcpu, size_t lr)
 {
     if (vcpu->state == VCPU_ACTIVE) {
         uint64_t elsr = gich_get_elrsr();
-        return bit_get(elsr, lr % 64);
+        return bit64_get(elsr, lr % 64);
     } else {
-        return bit_get(vcpu->arch.vgic_priv.gich.ELSR, lr % 64);
+        return bit64_get(vcpu->arch.vgic_priv.gich.ELSR, lr % 64);
     }
 }
 
@@ -845,7 +845,7 @@ struct vgic_reg_handler_info icpendr_info = {
     vgic_int_state_hw,
 };
 
-struct vgic_reg_handler_info iactiver_info = {
+struct vgic_reg_handler_info icactiver_info = {
     vgic_emul_generic_access,
     0x4,
     VGIC_ICACTIVER_ID,
@@ -950,7 +950,7 @@ struct vgic_reg_handler_info* reg_handler_info_table[VGIC_REG_HANDLER_ID_NUM] = 
     [VGIC_ISACTIVER_ID] = &isactiver_info,
     [VGIC_ICENABLER_ID] = &icenabler_info,
     [VGIC_ICPENDR_ID] = &icpendr_info,
-    [VGIC_ICACTIVER_ID] = &iactiver_info,
+    [VGIC_ICACTIVER_ID] = &icactiver_info,
     [VGIC_ICFGR_ID] = &icfgr_info,
     [VGIC_IROUTER_ID] = &irouter_info,
     [VGIC_IPRIORITYR_ID] = &ipriorityr_info,
@@ -998,7 +998,7 @@ bool vgicd_emul_handler(struct emul_access* acc)
             handler_info = &icpendr_info;
             break;
         case GICD_REG_GROUP(ICACTIVER):
-            handler_info = &iactiver_info;
+            handler_info = &icactiver_info;
             break;
         case GICD_REG_GROUP(ICFGR):
             handler_info = &icfgr_info;
@@ -1112,7 +1112,7 @@ void vgic_ipi_handler(uint32_t event, uint64_t data)
         } break;
 
         default:
-            WARNING("Unknown VGIC IPI event\n");
+            WARNING("Unknown VGIC IPI event");
             break;
     }
 
@@ -1305,7 +1305,7 @@ void vgic_set_hw(struct vm* vm, irqid_t id)
             interrupt->hw = true;
             spin_unlock(&interrupt->lock);
         } else {
-            WARNING("trying to link non-existent virtual irq to physical irq\n");
+            WARNING("trying to link non-existent virtual irq to physical irq");
         }
     }
 }

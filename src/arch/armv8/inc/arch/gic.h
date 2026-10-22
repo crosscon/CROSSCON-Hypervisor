@@ -139,6 +139,13 @@ struct gicd_hw {
     uint32_t ID[(0x10000 - 0xFFD0) / sizeof(uint32_t)];
 } __attribute__((__packed__, aligned(0x10000)));
 
+_Static_assert(offsetof(struct gicd_hw, IGROUPR) == 0x0080, "invalid GICD_IGROUPR offset");
+_Static_assert(offsetof(struct gicd_hw, IPRIORITYR) == 0x0400,
+    "invalid GICD_IPRIORITYR offset");
+_Static_assert(offsetof(struct gicd_hw, ICFGR) == 0x0C00, "invalid GICD_ICFGR offset");
+_Static_assert(offsetof(struct gicd_hw, IROUTER) == 0x6000, "invalid GICD_IROUTER offset");
+_Static_assert(sizeof(struct gicd_hw) == 0x10000, "invalid GICD frame size");
+
 /* Redistributor Wake Register, GICD_WAKER */
 
 #define GICR_CTRL_DS_BIT              (1U << 6)
@@ -223,6 +230,7 @@ struct gicr_hw {
 #define ICC_SGIR_TRGLSTFLT_MSK   BIT64_MASK(ICC_SGIR_TRGLSTFLT_OFF, ICC_SGIR_TRGLSTFLT_LEN)
 #define ICC_SGIR_TRGLSTFLT(sgir) bit64_extract(sgir, ICC_SGIR_TRGLSTFLT_OFF, ICC_SGIR_TRGLSTFLT_LEN)
 #define ICC_SGIR_AFF1_OFFSET     (16)
+#define ICC_SGIR_AFF2_OFFSET     (32)
 
 #define ICC_SRE_ENB_BIT          (0x8)
 #define ICC_SRE_DIB_BIT          (0x4)

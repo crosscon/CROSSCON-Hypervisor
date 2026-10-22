@@ -135,7 +135,7 @@ static void smc_handler(unsigned long iss, unsigned long far, unsigned long il, 
     UNUSED_ARG(far);
     UNUSED_ARG(il);
     UNUSED_ARG(ec);
-    uint64_t smc_fid = vcpu_readreg(cpu()->vcpu, 0);
+    unsigned long smc_fid = vcpu_readreg(cpu()->vcpu, 0);
 
     struct vcpu* vcpu = cpu()->vcpu;
 
@@ -218,6 +218,8 @@ void aborts_sync_handler(void)
     } else {
         ipa_fault_addr = far;
     }
+
+    //console_printk("Emulating addr esr 0x%lx, far 0x%lx, hpfar 0x%lx\n", esr, far, hpfar);
 
     unsigned long ec = bit_extract(esr, ESR_EC_OFF, ESR_EC_LEN);
     unsigned long il = bit_extract(esr, ESR_IL_OFF, ESR_IL_LEN);

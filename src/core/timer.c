@@ -38,6 +38,11 @@ static void timer_irq_handler(irqid_t int_id)
     // TODO:ARMV8M - This needs to be fixed for all architectures (code was removed ). In this
     // architectures the timer works as a systick timer instead of a event timer.
     next_node = list_pop(timer_cpu_list());
+    if (next_node == NULL) {
+        timer_disable();
+        return;
+    }
+
     struct timer_event* next_event = CONTAINER_OF(struct timer_event, node, next_node);
 
     if (next_event->handler != NULL) {

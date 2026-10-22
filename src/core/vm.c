@@ -90,9 +90,9 @@ static struct vcpu* vm_vcpu_init(struct vm* vm, const struct vm_config* vm_confi
     vcpu->vm = vm;
     vcpu->active = true;
     // TODO:ARMV8M - Check this
-    if (DEFINED(MEM_NON_UNIFIED)) {
+    //if (DEFINED(MEM_NON_UNIFIED)) { //RZT2M is unified, and this is needed so I commented it out, is it needed for V8-M OR RISC-V(SPMP)? TEST IT
         cpu()->vcpu = vcpu;
-    }
+    //}
     vcpu->blocked_count = 0;
 
     if (!root_vcpu) {

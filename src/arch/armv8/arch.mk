@@ -22,4 +22,3 @@ arch-cflags+=-mgeneral-regs-only
 endif
 arch-asflags+=
 arch-ldflags+=
-

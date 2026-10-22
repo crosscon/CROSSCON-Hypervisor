@@ -10,14 +10,17 @@
 
 void vm_arch_profile_init(struct vm* vm)
 {
+    ISB(); // make sure vmid is committed before invalidating the TLB
+    tlb_vm_inv_all(vm->id);
+}
+
+void vcpu_arch_profile_init(struct vcpu* vcpu, struct vm* vm)
+{
     paddr_t root_pt_pa;
     mem_translate(&cpu()->as, (vaddr_t)vm->as.pt.root, &root_pt_pa);
 
     vcpu->arch.sysregs.hyp.vttbr_el2 =
-        ((vcpu->vm->id << VTTBR_VMID_OFF) & VTTBR_VMID_MSK) | (root_pt_pa & ~VTTBR_VMID_MSK);
-
-    ISB(); // make sure vmid is commited befor tlbi
-    tlb_vm_inv_all(vm->id);
+        ((vm->id << VTTBR_VMID_OFF) & VTTBR_VMID_MSK) | (root_pt_pa & ~VTTBR_VMID_MSK);
 
     vcpu->arch.sysregs.vm.ttbr0_el1 = 0;
     vcpu->arch.sysregs.vm.ttbr1_el1 = 0;

@@ -4,6 +4,7 @@
 # Architecture definition
 ARCH:=riscv
 ARCH_SUB:=riscv32
+SDEES_ARCH:=riscv32
 # CPU definition
 CPU:=
 # Interrupt controller definition

@@ -37,7 +37,7 @@ static void update_vcpu_psci_ctx(struct vcpu* vcpu)
 
 void psci_wake_from_off(uint64_t vmid)
 {
-    struct vcpu* vcpu = cpu_get_vcpu_by_vmid(vmid);
+    struct vcpu* vcpu = cpu_get_vcpu_by_vmid((vmid_t)vmid);
 
     if (cpu()->vcpu == NULL) {
         return;

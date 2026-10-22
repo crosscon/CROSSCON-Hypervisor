@@ -5,6 +5,7 @@
 ARCH:=armv8
 ARCH_SUB:=aarch32
 ARCH_PROFILE:=armv8-r
+SDEES_ARCH:=armv8r32
 
 GIC_VERSION:=GICV3
 

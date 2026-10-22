@@ -234,3 +234,30 @@ void vcpu_subarch_reset(struct vcpu* vcpu)
 {
     vcpu->regs.spsr_hyp = SPSR_SVC | SPSR_F | SPSR_I | SPSR_A;
 }
+
+void vcpu_save_state(struct vcpu* vcpu)
+{
+    if (vcpu == NULL) {
+        return;
+    }
+
+    vcpu->arch.sysregs.hyp.vmpidr_el2 = sysreg_vmpidr_el2_read();
+    vcpu->arch.sysregs.hyp.cntvoff_el2 = sysreg_cntvoff_el2_read();
+    vcpu->arch.sysregs.vm.sctlr_el1 = sysreg_sctlr_el1_read();
+    vcpu->arch.sysregs.vm.cntkctl_el1 = sysreg_cntkctl_el1_read();
+    vgic_save_state(vcpu);
+}
+
+void vcpu_restore_state(struct vcpu* vcpu)
+{
+    if (vcpu == NULL) {
+        return;
+    }
+
+    sysreg_vmpidr_el2_write((unsigned long)vcpu->arch.sysregs.hyp.vmpidr_el2);
+    sysreg_cntvoff_el2_write(vcpu->arch.sysregs.hyp.cntvoff_el2);
+    sysreg_sctlr_el1_write((unsigned long)vcpu->arch.sysregs.vm.sctlr_el1);
+    sysreg_cntkctl_el1_write((unsigned long)vcpu->arch.sysregs.vm.cntkctl_el1);
+    vcpu_arch_profile_restore_state(vcpu);
+    vgic_restore_state(vcpu);
+}

@@ -32,7 +32,8 @@ static inline timer_value_t timer_arch_get_count(void)
 
 static inline void timer_arch_disable(void)
 {
-    sysreg_cnthp_cval_el2_write(~0UL);
+    /* timer_value_t is 64-bit also when the hypervisor is built for AArch32. */
+    sysreg_cnthp_cval_el2_write(~(timer_value_t)0);
 }
 
 static inline void timer_arch_init(void)

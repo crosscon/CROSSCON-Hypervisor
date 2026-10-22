@@ -105,7 +105,8 @@ ifneq ($(MAKECMDGOALS), clean)
  core_mem_prot_dir:=$(core_dir)/$(arch_mem_prot)
 endif
 
-sdees_arch_dir:=$(addsuffix /arch/$(ARCH_SUB), $(sdees_dir))
+SDEES_ARCH?=$(ARCH)
+sdees_arch_dir:=$(addsuffix /arch/$(SDEES_ARCH), $(sdees_dir))
 
 # MAYBE NOT NEED
 -include $(sdees_base_dir)/sdees.mk

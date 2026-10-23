@@ -105,6 +105,9 @@ void gic_handle()
         gicc_eoir(ack);
         if (res == HANDLED_BY_HYP) {
             gicc_dir(ack);
+            if (cpu()->next_vcpu != (cpu()->vcpu)){
+                vcpu_context_switch();
+            }
         }
     }
 }

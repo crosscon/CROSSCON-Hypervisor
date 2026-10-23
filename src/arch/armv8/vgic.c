@@ -311,7 +311,7 @@ bool vgic_remove_lr(struct vcpu* vcpu, struct vgic_int* interrupt)
     gic_lr_t lr_val = 0;
     ssize_t lr_ind = -1;
     if ((lr_ind = gich_get_lr(interrupt, &lr_val)) >= 0) {
-        gich_write_lr((size_t)lr_ind, 0);
+        vgic_lr_wr(vcpu, (size_t)lr_ind, 0);
     }
 
     interrupt->in_lr = false;
@@ -331,7 +331,7 @@ bool vgic_remove_lr(struct vcpu* vcpu, struct vgic_int* interrupt)
         if ((interrupt->state & PEND) && interrupt->enabled) {
             hcr |= GICH_HCR_NPIE_BIT;
         }
-        gich_set_hcr(hcr | GICH_HCR_UIE_BIT);
+        vgic_hcr_set(vcpu, GICH_HCR_UIE_BIT);
 
         ret = true;
     }
@@ -350,12 +350,12 @@ static void vgic_add_spilled(struct vcpu* vcpu, struct vgic_int* interrupt)
     }
     list_push(spilled_list, (node_t*)interrupt);
     spin_unlock(&vcpu->vm->arch.vgic_spilled_lock);
-    gich_set_hcr(gich_get_hcr() | GICH_HCR_NPIE_BIT);
+    vgic_hcr_set(vcpu, GICH_HCR_NPIE_BIT);
 }
 
 static void vgic_spill_lr(struct vcpu* vcpu, size_t lr_ind)
 {
-    gic_lr_t lr = (gic_lr_t)gich_read_lr(lr_ind);
+    gic_lr_t lr = (gic_lr_t)vgic_lr_rd(vcpu, lr_ind);
     struct vgic_int* spilled_int = vgic_get_int(vcpu, (irqid_t)GICH_LR_VID(lr), vcpu->id);
 
     if (spilled_int != NULL) {
@@ -376,9 +376,8 @@ bool vgic_add_lr(struct vcpu* vcpu, struct vgic_int* interrupt)
     }
 
     ssize_t lr_ind = -1;
-    uint64_t elrsr = gich_get_elrsr();
     for (size_t i = 0; i < NUM_LRS; i++) {
-        if (bit64_get(elrsr, i)) {
+        if (vgic_lr_empty(vcpu, i)) {
             lr_ind = (ssize_t)i;
             break;
         }
@@ -391,7 +390,7 @@ bool vgic_add_lr(struct vcpu* vcpu, struct vgic_int* interrupt)
         ssize_t pend_ind = -1, act_ind = -1;
 
         for (size_t i = 0; i < NUM_LRS; i++) {
-            gic_lr_t lr = (gic_lr_t)gich_read_lr(i);
+            gic_lr_t lr = (gic_lr_t)vgic_lr_rd(vcpu, i);
             irqid_t lr_id = (irqid_t)GICH_LR_VID(lr);
             unsigned lr_prio = (lr & GICH_LR_PRIO_MSK) >> GICH_LR_PRIO_OFF;
             if (GIC_VERSION == GICV2) {
@@ -1309,11 +1308,6 @@ void vgic_set_hw(struct vm* vm, irqid_t id)
         }
     }
 }
-
-/**
- * TODO: Should we save and restore GIC.APR state too?
- * If so, fix the commented out loops below
- */
 
 void vgic_save_state(struct vcpu* vcpu)
 {

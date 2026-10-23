@@ -298,7 +298,7 @@ static inline struct vcpu* vcpu_current(void)
 
 static inline struct vcpu* vcpu_next(void)
 {
-    return cpu()->vcpu;
+    return cpu()->next_vcpu;
 }
 
 static inline struct vcpu* vcpu_set_next(struct vcpu* vcpu)

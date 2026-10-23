@@ -17,6 +17,7 @@ __attribute__((used)) static void cpu_defines(void)
     DEFINE_SIZE(CPU_STACK_SIZE, ((struct cpu*)NULL)->stack);
 
     DEFINE_OFFSET(CPU_VCPU_OFF, struct cpu, vcpu);
+    DEFINE_OFFSET(CPU_NEXT_VCPU_OFF, struct cpu, next_vcpu);
 
 #ifdef MEM_PROT_MPU
     DEFINE_OFFSET(CPU_ARCH_PROFILE_MPU_LOCKED_OFF, struct cpu, arch.profile.mpu.locked_entries);

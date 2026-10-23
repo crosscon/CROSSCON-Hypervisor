@@ -99,6 +99,7 @@ _reset_handler:
 #if defined(CPU_MASTER_FIXED)
    mov r3, #CPU_MASTER_FIXED
    cmp r0, r3
+   moveq r9, #0
    movne r9, #1
    cmp r9, #0
    bne 1f

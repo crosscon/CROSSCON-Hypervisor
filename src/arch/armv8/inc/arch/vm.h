@@ -55,6 +55,11 @@ struct vcpu_arch {
     struct list vgic_spilled;
     struct psci_ctx psci_ctx;
 
+#ifdef AARCH32
+    struct arch_banked_regs banked;
+    struct arch_fault_regs fault;
+#endif
+
 #ifdef MEM_PROT_MPU
     unsigned long mpu_entry_mask;
 #endif

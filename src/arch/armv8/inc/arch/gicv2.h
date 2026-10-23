@@ -100,6 +100,5 @@ static void gich_set_apr(size_t i, uint32_t val)
         gich->APR = val;
     }
 }
-//*/
 
 #endif /* __GICV2_H__ */

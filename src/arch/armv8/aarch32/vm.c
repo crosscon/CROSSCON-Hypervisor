@@ -22,6 +22,7 @@ static inline uint32_t vcpu_read_sp_current_el1_mode(struct vcpu* vcpu)
     uint32_t sp_val = 0;
     switch (spsr_m) {
         case SPSR_USR:
+        case SPSR_SYS:
             sp_val = sysreg_sp_usr_read();
             break;
         case SPSR_IRQ:
@@ -51,6 +52,7 @@ static inline void vcpu_write_sp_current_el1_mode(struct vcpu* vcpu, uint32_t sp
     uint32_t spsr_m = vcpu_current_spsr_m(vcpu);
     switch (spsr_m) {
         case SPSR_USR:
+        case SPSR_SYS:
             sysreg_sp_usr_write(sp_val);
             break;
         case SPSR_IRQ:
@@ -79,6 +81,12 @@ static inline uint32_t vcpu_read_lr_current_el1_mode(struct vcpu* vcpu)
     uint32_t lr_val = 0;
     switch (spsr_m) {
         case SPSR_USR:
+        case SPSR_SYS:
+            /*
+             * In Hyp mode r14 aliases LR_usr.  The exception entry assembly
+             * saved the guest value before any BL changed Hyp's return
+             * address, so never access LR_usr from an ordinary C function.
+             */
             lr_val = vcpu->regs.x[14];
             break;
         case SPSR_IRQ:
@@ -108,6 +116,7 @@ static inline void vcpu_write_lr_current_el1_mode(struct vcpu* vcpu, uint32_t lr
     uint32_t spsr_m = vcpu_current_spsr_m(vcpu);
     switch (spsr_m) {
         case SPSR_USR:
+        case SPSR_SYS:
             vcpu->regs.x[14] = lr_val;
             break;
         case SPSR_IRQ:
@@ -233,6 +242,72 @@ void vcpu_writepc(struct vcpu* vcpu, unsigned long pc)
 void vcpu_subarch_reset(struct vcpu* vcpu)
 {
     vcpu->regs.spsr_hyp = SPSR_SVC | SPSR_F | SPSR_I | SPSR_A;
+    vcpu->arch.banked = (struct arch_banked_regs){ 0 };
+    vcpu->arch.fault = (struct arch_fault_regs){ 0 };
+}
+
+static void vcpu_save_banked_state(struct vcpu* vcpu)
+{
+     struct arch_banked_regs* regs = &vcpu->arch.banked;
+
+     regs->sp_usr = sysreg_sp_usr_read();
+
+    regs->sp_irq = sysreg_sp_irq_read();
+    regs->lr_irq = sysreg_lr_irq_read();
+    regs->spsr_irq = sysreg_spsr_irq_read();
+
+    regs->sp_fiq = sysreg_sp_fiq_read();
+    regs->lr_fiq = sysreg_lr_fiq_read();
+    regs->spsr_fiq = sysreg_spsr_fiq_read();
+    regs->r8_fiq = sysreg_r8_fiq_read();
+    regs->r9_fiq = sysreg_r9_fiq_read();
+    regs->r10_fiq = sysreg_r10_fiq_read();
+    regs->r11_fiq = sysreg_r11_fiq_read();
+    regs->r12_fiq = sysreg_r12_fiq_read();
+
+    regs->sp_svc = sysreg_sp_svc_read();
+    regs->lr_svc = sysreg_lr_svc_read();
+    regs->spsr_svc = sysreg_spsr_svc_read();
+
+    regs->sp_abt = sysreg_sp_abt_read();
+    regs->lr_abt = sysreg_lr_abt_read();
+    regs->spsr_abt = sysreg_spsr_abt_read();
+
+    regs->sp_und = sysreg_sp_und_read();
+    regs->lr_und = sysreg_lr_und_read();
+    regs->spsr_und = sysreg_spsr_und_read();
+}
+
+static void vcpu_restore_banked_state(struct vcpu* vcpu)
+{
+     const struct arch_banked_regs* regs = &vcpu->arch.banked;
+
+     sysreg_sp_usr_write(regs->sp_usr);
+
+    sysreg_sp_irq_write(regs->sp_irq);
+    sysreg_lr_irq_write(regs->lr_irq);
+    sysreg_spsr_irq_write(regs->spsr_irq);
+
+    sysreg_sp_fiq_write(regs->sp_fiq);
+    sysreg_lr_fiq_write(regs->lr_fiq);
+    sysreg_spsr_fiq_write(regs->spsr_fiq);
+    sysreg_r8_fiq_write(regs->r8_fiq);
+    sysreg_r9_fiq_write(regs->r9_fiq);
+    sysreg_r10_fiq_write(regs->r10_fiq);
+    sysreg_r11_fiq_write(regs->r11_fiq);
+    sysreg_r12_fiq_write(regs->r12_fiq);
+
+    sysreg_sp_svc_write(regs->sp_svc);
+    sysreg_lr_svc_write(regs->lr_svc);
+    sysreg_spsr_svc_write(regs->spsr_svc);
+
+    sysreg_sp_abt_write(regs->sp_abt);
+    sysreg_lr_abt_write(regs->lr_abt);
+    sysreg_spsr_abt_write(regs->spsr_abt);
+
+    sysreg_sp_und_write(regs->sp_und);
+    sysreg_lr_und_write(regs->lr_und);
+    sysreg_spsr_und_write(regs->spsr_und);
 }
 
 void vcpu_save_state(struct vcpu* vcpu)
@@ -243,8 +318,29 @@ void vcpu_save_state(struct vcpu* vcpu)
 
     vcpu->arch.sysregs.hyp.vmpidr_el2 = sysreg_vmpidr_el2_read();
     vcpu->arch.sysregs.hyp.cntvoff_el2 = sysreg_cntvoff_el2_read();
+    vcpu->arch.sysregs.vm.vbar_el1 = sysreg_vbar_el1_read();
+    vcpu->arch.sysregs.vm.tpidr_el1 = sysreg_tpidr_el1_read();
+    vcpu->arch.sysregs.vm.tpidr_el0 = sysreg_tpidr_el0_read();
+    vcpu->arch.sysregs.vm.tpidrro_el0 = sysreg_tpidrro_el0_read();
+    vcpu->arch.sysregs.vm.mair_el1 = sysreg_mair_el1_read();
+    vcpu->arch.sysregs.vm.actlr_el1 = sysreg_actlr_el1_read();
+    vcpu->arch.sysregs.vm.par_el1 = sysreg_par_el1_read();
+    vcpu->arch.sysregs.vm.cntv_ctl_el0 = sysreg_cntv_ctl_el0_read();
+    vcpu->arch.sysregs.vm.cntv_cval_el0 = sysreg_cntv_cval_el0_read();
+    vcpu->arch.sysregs.vm.cpacr_el1 = sysreg_cpacr_el1_read();
+    vcpu->arch.sysregs.vm.contextidr_el1 = sysreg_contextidr_el1_read();
+    vcpu->arch.sysregs.vm.csselr_el1 = sysreg_csselr_el1_read();
+    vcpu->arch.fault.dfsr = sysreg_dfsr_el1_read();
+    vcpu->arch.fault.ifsr = sysreg_ifsr_el1_read();
+    vcpu->arch.fault.adfsr = sysreg_adfsr_el1_read();
+    vcpu->arch.fault.aifsr = sysreg_aifsr_el1_read();
+    vcpu->arch.fault.dfar = sysreg_dfar_el1_read();
+    vcpu->arch.fault.ifar = sysreg_ifar_el1_read();
+
+    vcpu_save_banked_state(vcpu);
     vcpu->arch.sysregs.vm.sctlr_el1 = sysreg_sctlr_el1_read();
     vcpu->arch.sysregs.vm.cntkctl_el1 = sysreg_cntkctl_el1_read();
+    vcpu_arch_profile_save_state(vcpu);
     vgic_save_state(vcpu);
 }
 
@@ -256,6 +352,27 @@ void vcpu_restore_state(struct vcpu* vcpu)
 
     sysreg_vmpidr_el2_write((unsigned long)vcpu->arch.sysregs.hyp.vmpidr_el2);
     sysreg_cntvoff_el2_write(vcpu->arch.sysregs.hyp.cntvoff_el2);
+    sysreg_vbar_el1_write((unsigned long)vcpu->arch.sysregs.vm.vbar_el1);
+    sysreg_tpidr_el1_write((unsigned long)vcpu->arch.sysregs.vm.tpidr_el1);
+    sysreg_tpidr_el0_write((unsigned long)vcpu->arch.sysregs.vm.tpidr_el0);
+    sysreg_tpidrro_el0_write((unsigned long)vcpu->arch.sysregs.vm.tpidrro_el0);
+    sysreg_mair_el1_write(vcpu->arch.sysregs.vm.mair_el1);
+    sysreg_actlr_el1_write((unsigned long)vcpu->arch.sysregs.vm.actlr_el1);
+    sysreg_par_el1_write(vcpu->arch.sysregs.vm.par_el1);
+    sysreg_cntv_ctl_el0_write((unsigned long)vcpu->arch.sysregs.vm.cntv_ctl_el0);
+    sysreg_cntv_cval_el0_write(vcpu->arch.sysregs.vm.cntv_cval_el0);
+    sysreg_cpacr_el1_write((unsigned long)vcpu->arch.sysregs.vm.cpacr_el1);
+    sysreg_contextidr_el1_write((unsigned long)vcpu->arch.sysregs.vm.contextidr_el1);
+    sysreg_csselr_el1_write((unsigned long)vcpu->arch.sysregs.vm.csselr_el1);
+
+    sysreg_dfsr_el1_write(vcpu->arch.fault.dfsr);
+    sysreg_ifsr_el1_write(vcpu->arch.fault.ifsr);
+    sysreg_adfsr_el1_write(vcpu->arch.fault.adfsr);
+    sysreg_aifsr_el1_write(vcpu->arch.fault.aifsr);
+    sysreg_dfar_el1_write(vcpu->arch.fault.dfar);
+    sysreg_ifar_el1_write(vcpu->arch.fault.ifar);
+
+    vcpu_restore_banked_state(vcpu);
     sysreg_sctlr_el1_write((unsigned long)vcpu->arch.sysregs.vm.sctlr_el1);
     sysreg_cntkctl_el1_write((unsigned long)vcpu->arch.sysregs.vm.cntkctl_el1);
     vcpu_arch_profile_restore_state(vcpu);

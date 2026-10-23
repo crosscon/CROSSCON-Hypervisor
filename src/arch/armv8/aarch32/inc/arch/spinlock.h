@@ -24,25 +24,21 @@ static inline void spin_lock(spinlock_t* lock)
 {
     uint32_t ticket;
     uint32_t next;
-    uint32_t temp;
 
     (void)lock;
     __asm__ volatile(
         /* Get ticket */
-        "1:\n\t"
-        "ldaex  %0, %3\n\t"
+        "ldr    %0, %2\n\t"
         "add    %1, %0, #1\n\t"
-        "strex  %2, %1, %3\n\t"
-        "cmp  %2, #0\n\t"
-        "bne 1b \n\t"
+        "str    %1, %2\n\t"
         /* Wait for your turn */
         "2:\n\t"
-        "ldr    %1, %4\n\t"
+        "ldr    %1, %3\n\t"
         "cmp    %0, %1\n\t"
-        "beq   3f\n\t"
-        "wfe \n\t"
-        "b 2b\n\t"
-        "3:\n\t" : "=&r"(ticket), "=&r"(next), "=&r"(temp) : "Q"(lock->ticket), "Q"(lock->next)
+        "beq    3f\n\t"
+        "wfe    \n\t"
+        "b      2b\n\t"
+        "3:\n\t" : "=&r"(ticket), "=&r"(next) : "Q"(lock->ticket), "Q"(lock->next)
         : "memory");
 }
 

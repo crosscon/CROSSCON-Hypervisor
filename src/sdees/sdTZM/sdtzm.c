@@ -102,10 +102,11 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
             /*     tee_arch_interrupt_enable(); */
             /*     break; */
             case TEEHC_FUNCID_INTERRUPT:
-                //vmstack_push(ree_vcpu);
+#if defined(ARCH_SUB_ARMV8M)
                 if(!interrupts_arch_vm_irq_resume()){
                      ERROR("Interrupt recieved. Bad handling!");
                 }
+#endif
                 cpu()->next_vcpu = ree_vcpu;
                 break;
             case TEEHC_FUNCID_BOOT:
@@ -120,6 +121,9 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
                     ree_vcpu = vcpu_get_child(ree_vcpu, 0);
                     curr_stack_level++;
                 }
+#ifndef ARCH_SUB_ARMV8M
+                sdtzm_copy_args(cpu()->vcpu, mtower_vcpu, 3);
+#endif
                 break;
             default:
                 ERROR("unknown tee call %0lx by vm %d", fid, cpu()->vcpu->vm->id);
@@ -175,10 +179,15 @@ static inline uint64_t interrupts_get_vmid(uint64_t int_id)
 
 static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
 {
+#if defined(ARCH_SUB_ARMV8M)
     if (!interrupts_arch_vm_irq_enter(vcpu, int_id)) {
         interrupts_vm_inject(vcpu, int_id);
         cpu()->next_vcpu = vcpu;
     }
+#else
+    UNUSED_ARG(vcpu);
+    UNUSED_ARG(int_id);
+#endif
 }
 
 static int32_t sdtzm_handle_abort(struct vcpu* vcpu, long unsigned addr)

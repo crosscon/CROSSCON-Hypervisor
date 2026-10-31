@@ -318,6 +318,9 @@ endif
 ifneq ($(filter sdSGX, $(_SDEES)),)
     build_macros += -DSDSGX
 endif
+ifeq ($(ARCH_SUB),armv8m)
+    build_macros += -DARCH_SUB_ARMV8M
+endif
 
 #Platform specific Defines
 ifneq ($(filter virtTEE_V, $(_SDEES)),)

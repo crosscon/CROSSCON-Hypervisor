@@ -10,7 +10,9 @@
 #include <vmm.h>
 #include <arch/sdgpos.h>
 
+#ifdef ARCH_SUB_ARMV8M
 #define SMCC_FID_FN_NUM_MSK (0xFFFF)
+#endif
 
 static int32_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
@@ -37,13 +39,14 @@ static int32_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 static long sdgpos_hvc_handler(struct vcpu* vcpu, uint32_t hvc_fid)
 {
     UNUSED_ARG(hvc_fid);
+
+    #if defined(ARCH_SUB_ARMV8M)
+      long res;
     if (vcpu->vm->type != 0) {
         return 0;
     }
-
-    long res;
     unsigned long fid = vcpu_readreg(vcpu, 0);
-
+    
     switch (fid & SMCC_FID_FN_NUM_MSK) {
         case HC_IPC:
             res = ipc_hypercall(vcpu);
@@ -52,8 +55,13 @@ static long sdgpos_hvc_handler(struct vcpu* vcpu, uint32_t hvc_fid)
         default:
             res = -1;
     }
+        return res;
+    #else
+    UNUSED_ARG(vcpu);
+    return 0;
+    #endif
 
-    return res;
+
 }
 
 static struct hndl_smc smc = {

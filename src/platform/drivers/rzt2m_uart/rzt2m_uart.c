@@ -93,11 +93,110 @@ static void uart_config_set(volatile R_SCI0_Type *const p_uart, uart_cfg_t const
     }
 }
 
+#define USE_UART0 1
+#define USE_UART2 1
+#define USE_UART3 1
+#define USE_UART4 1
+//#define USE_UART5 0
+
+static void rzt2m_uart_configure_pins(void)
+{
+    R_RWP_S->PRCRS = 0x0000A504;
+
+#if defined(USE_UART5)
+    /* SCI5: RX=P21_2/PFC5, TX=P21_3/PFC4, safety region. */
+    R_PTADR->RSELP[21] &= (uint8_t) ~((1U << 2) | (1U << 3));
+    R_PORT_SR->PFC_b[21].PFC2 = 5;
+    R_PORT_SR->PFC_b[21].PFC3 = 4;
+    R_PORT_SR->PM_b[21].PM2 = 1;
+    R_PORT_SR->PM_b[21].PM3 = 0;
+    R_PORT_SR->PMC_b[21].PMC2 = 1;
+    R_PORT_SR->PMC_b[21].PMC3 = 1;
+#endif
+
+#if defined(USE_UART0)
+    /* SCI0: RX=P16_6/PFC2, TX=P16_5/PFC1. */
+    //R_PTADR->RSELP[16] |= (1U << 6) | (1U << 5);
+#endif
+
+#if defined(USE_UART1)
+    /* SCI1: RX=P13_0/PFC6, TX=P13_1/PFC5. */
+    R_PTADR->RSELP[13] |= (1U << 0) | (1U << 1);
+#endif
+
+#if defined(USE_UART2)
+    /* SCI2: RX=P03_5/PFC5, TX=P03_6/PFC6. */
+    R_PTADR->RSELP[3] |= (1U << 5) | (1U << 6);
+#endif
+
+#if defined(USE_UART3)
+    /* SCI3: RX=P17_7/PFC4, TX=P18_0/PFC4. */
+    R_PTADR->RSELP[17] |= (1U << 7);
+    R_PTADR->RSELP[18] |= (1U << 0);
+#endif
+
+#if defined(USE_UART4)
+    /* SCI4: RX=P18_5/PFC2, TX=P18_4/PFC2. */
+    R_PTADR->RSELP[18] |= (1U << 5) | (1U << 4);
+#endif
+
+    R_RWP_S->PRCRS = 0x0000A500;
+    R_RWP_NS->PRCRN = 0x0000A504;
+
+#if defined(USE_UART0)
+    // R_PORT_NSR->PFC_b[16].PFC6 = 2;
+    // R_PORT_NSR->PFC_b[16].PFC5 = 1;
+    // R_PORT_NSR->PM_b[16].PM6 = 1;
+    // R_PORT_NSR->PM_b[16].PM5 = 0;
+    // R_PORT_NSR->PMC_b[16].PMC6 = 1;
+    // R_PORT_NSR->PMC_b[16].PMC5 = 1;
+#endif
+#if defined(USE_UART1)
+    R_PORT_NSR->PFC_b[13].PFC0 = 6;
+    R_PORT_NSR->PFC_b[13].PFC1 = 5;
+    R_PORT_NSR->PM_b[13].PM0 = 1;
+    R_PORT_NSR->PM_b[13].PM1 = 0;
+    R_PORT_NSR->PMC_b[13].PMC0 = 1;
+    R_PORT_NSR->PMC_b[13].PMC1 = 1;
+#endif
+#if defined(USE_UART2)
+    R_PORT_NSR->PFC_b[3].PFC5 = 5;
+    R_PORT_NSR->PFC_b[3].PFC6 = 6;
+    R_PORT_NSR->PM_b[3].PM5 = 1;
+    R_PORT_NSR->PM_b[3].PM6 = 0;
+    R_PORT_NSR->PMC_b[3].PMC5 = 1;
+    R_PORT_NSR->PMC_b[3].PMC6 = 1;
+#endif
+#if defined(USE_UART3)
+    R_PORT_NSR->PFC_b[17].PFC7 = 4;
+    R_PORT_NSR->PFC_b[18].PFC0 = 4;
+    R_PORT_NSR->PM_b[17].PM7 = 1;
+    R_PORT_NSR->PM_b[18].PM0 = 0;
+    R_PORT_NSR->PMC_b[17].PMC7 = 1;
+    R_PORT_NSR->PMC_b[18].PMC0 = 1;
+#endif
+#if defined(USE_UART4)
+    R_PORT_NSR->PFC_b[18].PFC5 = 2;
+    R_PORT_NSR->PFC_b[18].PFC4 = 2;
+    R_PORT_NSR->PM_b[18].PM5 = 1;
+    R_PORT_NSR->PM_b[18].PM4 = 0;
+    R_PORT_NSR->PMC_b[18].PMC5 = 1;
+    R_PORT_NSR->PMC_b[18].PMC4 = 1;
+#endif
+
+    R_RWP_NS->PRCRN = 0x0000A500;
+
+    R_RWP_S->PRCRS = 0x0000A500;
+}
+
+
 static void renesas_uart_init(volatile R_SCI0_Type *const p_uart, uart_cfg_t const *const p_cfg)
 {
     register_protect_disable(BSP_REG_PROTECT_LPC_RESET);
     R_BSP_MODULE_START(FSP_IP_SCI, p_cfg->channel);
     register_protect_enable(BSP_REG_PROTECT_LPC_RESET);
+
+    rzt2m_uart_configure_pins();
 
     p_uart->CCR0 = SCI_UART_CCR0_DEFAULT_VALUE;
     FSP_HARDWARE_REGISTER_WAIT(p_uart->CCR0_b.RE, 0);
@@ -127,6 +226,20 @@ void uart_init(volatile R_SCI0_Type *const p_api_ctrl)
     if (sysc_s == INVALID_VA) {
         ERROR("Maping SYSC_S MMIO failed");
     }
+
+    // Pin function control registers - Non-safety Region
+    vaddr_t sysport_s = mem_alloc_map_dev(&cpu()->as, SEC_HYP_ANY, INVALID_VA,
+        (paddr_t)R_PORT_SR_BASE, NUM_PAGES(0x10000));
+    if (sysport_s == INVALID_VA) {
+        ERROR("Maping SYSC_S MMIO failed");
+    }
+    
+    // Pin function control registers - Non-safety Region
+    vaddr_t sysport_nsr = mem_alloc_map_dev(&cpu()->as, SEC_HYP_ANY, INVALID_VA,
+        (paddr_t)R_PORT_NSR_BASE, NUM_PAGES(0x10000));
+    if (sysport_nsr == INVALID_VA) {
+        ERROR("Maping SYSC_S MMIO failed");
+    } 
 
     baud_setting_t g_uart0_baud_setting = {
         .abcse = 0,
@@ -161,6 +274,8 @@ void uart_init(volatile R_SCI0_Type *const p_api_ctrl)
 
     mem_unmap(&cpu()->as, (vaddr_t)R_SYSC_NS_BASE, NUM_PAGES(0x2000), true);
     mem_unmap(&cpu()->as, (vaddr_t)R_SYSC_S_BASE, NUM_PAGES(0x2000), true);
+    mem_unmap(&cpu()->as, (vaddr_t)R_PORT_NSR_BASE, NUM_PAGES(0x10000), true);
+    mem_unmap(&cpu()->as, (vaddr_t)R_PORT_SR_BASE, NUM_PAGES(0x10000), true);
 }
 
 void uart_enable(volatile R_SCI0_Type *const p_uart)

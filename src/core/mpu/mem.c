@@ -135,8 +135,7 @@ static mpid_t mem_vmpu_get_entry_by_addr(struct addr_space* as, vaddr_t addr)
             continue;
         }
 
-        vaddr_t limit_addr = mpe->region.base + mpe->region.size;
-        if ((addr >= mpe->region.base) && (addr < limit_addr)) {
+        if (addr >= mpe->region.base && addr - mpe->region.base < mpe->region.size) {
             mpid = i;
             break;
         }
@@ -410,7 +409,9 @@ static bool mem_vmpu_remove_region(struct addr_space* as, mpid_t mpid, bool broa
         if (mem_broadcast(as, &mpe->region, broadcast)) {
             mem_region_broadcast(as, &mpe->region, MEM_REMOVE_REGION, lock);
         }
-        mpu_unmap(as, &mpe->region);
+        if (!mpu_unmap(as, &mpe->region)) {
+            ERROR("Failed to remove MPU mapping for AS %lu", (unsigned long)as->id);
+        }
         mem_vmpu_free_entry(as, mpid);
         removed = true;
     }
@@ -557,11 +558,14 @@ static void mem_vmpu_coalesce_contiguous(struct addr_space* as, bool broadcast)
             cur_reg = mem_vmpu_get_entry(as, cur->mpid);
             prev_reg = mem_vmpu_get_entry(as, prev->mpid);
 
-            bool contiguous = prev_reg->region.base + prev_reg->region.size == cur_reg->region.base;
+            bool contiguous = prev_reg->region.size <= MAX_VA - prev_reg->region.base &&
+                prev_reg->region.size <= SIZE_MAX - cur_reg->region.size &&
+                prev_reg->region.base + prev_reg->region.size == cur_reg->region.base;
             bool perms_compatible =
                 mpu_perms_compatible(prev_reg->region.mem_flags.raw, cur_reg->region.mem_flags.raw);
             bool lock_compatible = !prev_reg->lock && !cur_reg->lock;
-            if (contiguous && perms_compatible && lock_compatible) {
+            bool section_compatible = prev_reg->region.as_sec == cur_reg->region.as_sec;
+            if (contiguous && perms_compatible && lock_compatible && section_compatible) {
                 cur_mpid = cur->mpid;
                 prev_mpid = prev->mpid;
                 merge = true;
@@ -574,9 +578,12 @@ static void mem_vmpu_coalesce_contiguous(struct addr_space* as, bool broadcast)
                 .base = prev_reg->region.base,
                 .size = prev_reg->region.size + cur_reg->region.size,
                 .mem_flags = cur_reg->region.mem_flags,
+                .as_sec = cur_reg->region.as_sec,
             };
             if (mem_vmpu_update_region(as, prev_mpid, merged_reg, broadcast, prev_reg->lock)) {
                 mem_vmpu_remove_region(as, cur_mpid, broadcast);
+            } else {
+                break; /* Optional merge failed; do not retry forever. */
             }
         } else {
             break;
@@ -593,19 +600,31 @@ bool mem_map(struct addr_space* as, struct mp_region* mpr, bool broadcast, bool 
         return true;
     }
 
-    if ((mpr->size % mpu_granularity()) != 0) {
-        ERROR("trying to set mpu region which is not a multiple of "
-              "granularity");
+    if ((mpr->base % mpu_granularity()) != 0 ||
+        (mpr->size % mpu_granularity()) != 0 || mpr->size - 1 > MAX_VA - mpr->base) {
+        ERROR("Invalid MPU interval: AS %lu base 0x%lx size 0x%lx",
+            (unsigned long)as->id, (unsigned long)mpr->base, (unsigned long)mpr->size);
     }
 
     spin_lock(&as->lock);
 
-    if (mem_vmpu_find_overlapping_region(as, mpr) == INVALID_MPID) {
+    struct mp_region query = *mpr;
+    query.as_sec = SEC_UNKNOWN; /* Sections do not make physical overlap safe. */
+    if (mem_vmpu_find_overlapping_region(as, &query) == INVALID_MPID) {
         mpid = mem_vmpu_allocate_entry(as);
         if (mpid != INVALID_MPID) {
             mapped = mem_vmpu_insert_region(as, mpid, mpr, broadcast, locked);
+            if (!mapped) {
+                mem_vmpu_deallocate_entry(as, mpid);
+                spin_unlock(&as->lock);
+                ERROR("Failed to install MPU mapping for AS %lu at 0x%lx",
+                    (unsigned long)as->id, (unsigned long)mpr->base);
+                return false;
+            }
         } else {
-            mem_vmpu_deallocate_entry(as, mpid);
+            spin_unlock(&as->lock);
+            ERROR("vMPU exhausted for AS %lu", (unsigned long)as->id);
+            return false;
         }
     }
 
@@ -620,6 +639,13 @@ bool mem_map(struct addr_space* as, struct mp_region* mpr, bool broadcast, bool 
 
 bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool broadcast)
 {
+    if (size == 0) {
+        return true;
+    }
+    if (vaddr % mpu_granularity() != 0 || size % mpu_granularity() != 0 ||
+        size - 1 > MAX_VA - vaddr) {
+        ERROR("Invalid MPU unmap interval");
+    }
     spin_lock(&as->lock);
 
     size_t size_left = size;
@@ -644,8 +670,8 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
 
         bool locked = mpe->lock;
 
-        vaddr_t limit = vaddr + size;
-        vaddr_t r_limit = reg.base + reg.size;
+        vaddr_t limit = vaddr + size - 1;
+        vaddr_t r_limit = reg.base + reg.size - 1;
         vaddr_t r_base = reg.base;
 
         size_t top_size = limit >= r_limit ? 0 : r_limit - limit;
@@ -655,10 +681,15 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
 
         if (top_size > 0) {
             struct mp_region top = reg;
-            top.base = limit;
+            top.base = limit + 1;
             top.size = top_size;
             mpid_t top_mpid = mem_vmpu_allocate_entry(as);
             if (!mem_vmpu_insert_region(as, top_mpid, &top, broadcast, locked)) {
+                if (top_mpid != INVALID_MPID) {
+                    mem_vmpu_deallocate_entry(as, top_mpid);
+                }
+                spin_unlock(&as->lock);
+                ERROR("MPU split failed; guest execution stopped");
                 return false;
             }
         }
@@ -668,6 +699,11 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
             bottom.size = bottom_size;
             mpid_t bottom_mpid = mem_vmpu_allocate_entry(as);
             if (!mem_vmpu_insert_region(as, bottom_mpid, &bottom, broadcast, locked)) {
+                if (bottom_mpid != INVALID_MPID) {
+                    mem_vmpu_deallocate_entry(as, bottom_mpid);
+                }
+                spin_unlock(&as->lock);
+                ERROR("MPU split failed; guest execution stopped");
                 return false;
             }
         }
@@ -683,6 +719,9 @@ bool mem_unmap_range(struct addr_space* as, vaddr_t vaddr, size_t size, bool bro
 
 void mem_unmap(struct addr_space* as, vaddr_t at, size_t num_pages, bool free_ppages)
 {
+    if (num_pages > SIZE_MAX / PAGE_SIZE) {
+        ERROR("MPU unmap size overflow");
+    }
     if (mem_unmap_range(as, at, num_pages * PAGE_SIZE, MEM_BROADCAST) && free_ppages) {
         struct ppages ppages = mem_ppages_get(at, num_pages);
         mem_free_ppages(&ppages);
@@ -786,12 +825,43 @@ bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
     }
 }
 
+/* mem_alloc_map declares a mapping. Re-declaring already-covered bytes with
+ * identical policy is a no-op, as its old callers already expected. This is
+ * deliberately not used by mem_map_cpy: a temporary mapping must not borrow
+ * an existing mapping and subsequently unmap its owner's bytes.
+ */
+static bool mem_vmpu_covers_region(struct addr_space* as, struct mp_region* region)
+{
+    bool covered = false;
+    bool locked = mem_check_forced_locked(region, MEM_NOT_LOCKED);
+    spin_lock(&as->lock);
+    for (mpid_t i = 0; i < VMPU_NUM_ENTRIES; i++) {
+        struct mpe* mpe = mem_vmpu_get_entry(as, i);
+        if (mpe->state != MPE_S_VALID || mpe->region.as_sec != region->as_sec ||
+            mpe->region.mem_flags.raw != region->mem_flags.raw || mpe->lock != locked ||
+            region->base < mpe->region.base) {
+            continue;
+        }
+        vaddr_t offset = region->base - mpe->region.base;
+        if (offset < mpe->region.size && region->size <= mpe->region.size - offset) {
+            covered = true;
+            break;
+        }
+    }
+    spin_unlock(&as->lock);
+    return covered;
+}
+
 vaddr_t mem_alloc_map(struct addr_space* as, as_sec_t section, struct ppages* ppages, vaddr_t at,
     size_t num_pages, mem_flags_t flags)
 {
     // TODO: Check if page->base, page->size and vaddr_t at are page_size align?
 
     struct ppages temp_ppages;
+
+    if (num_pages > SIZE_MAX / PAGE_SIZE) {
+        ERROR("MPU mapping size overflow");
+    }
 
     if (at == INVALID_VA && ppages == NULL) {
         ERROR("Can't map an MPU region because neither the virtual"
@@ -816,7 +886,11 @@ vaddr_t mem_alloc_map(struct addr_space* as, as_sec_t section, struct ppages* pp
         .mem_flags = flags,
     };
 
-    mem_map(as, &mpr, MEM_BROADCAST, MEM_NOT_LOCKED);
+    if (!mem_map(as, &mpr, MEM_BROADCAST, MEM_NOT_LOCKED) &&
+        !mem_vmpu_covers_region(as, &mpr)) {
+        ERROR("Conflicting MPU mapping: AS %lu base 0x%lx size 0x%lx",
+            (unsigned long)as->id, (unsigned long)mpr.base, (unsigned long)mpr.size);
+    }
 
     return at;
 }

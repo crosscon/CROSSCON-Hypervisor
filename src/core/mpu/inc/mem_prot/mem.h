@@ -43,7 +43,14 @@ void as_destroy(struct addr_space *as);
 
 static inline bool mem_regions_overlap(struct mp_region* reg1, struct mp_region* reg2)
 {
-    return range_in_range(reg1->base, reg1->size, reg2->base, reg2->size);
+    if (reg1->size == 0 || reg2->size == 0) {
+        return false;
+    }
+    /* Difference-based half-open intersection: no endpoint overflow. */
+    if (reg1->base <= reg2->base) {
+        return reg2->base - reg1->base < reg1->size;
+    }
+    return reg1->base - reg2->base < reg2->size;
 }
 
 static inline vaddr_t mp_region_top(struct mp_region* reg)

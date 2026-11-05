@@ -7,6 +7,23 @@
 #include <config.h>
 #include <shmem.h>
 
+static void config_validate_vm_ipc(const struct vm_config* vm)
+{
+    for (size_t i = 0; i < vm->platform.ipc_num; i++) {
+        const struct ipc* ipc = &vm->platform.ipcs[i];
+        if (ipc->shmem_id >= config.shmemlist_size) {
+            ERROR("Invalid IPC shmem_id %lu at VM entry 0x%lx",
+                (unsigned long)ipc->shmem_id, (unsigned long)vm->entry);
+        }
+        if (ipc->base != config.shmemlist[ipc->shmem_id].base) {
+            ERROR("IPC base addr must be the same as its shmem base addr.");
+        }
+    }
+    for (size_t i = 0; i < vm->children_num; i++) {
+        config_validate_vm_ipc(vm->children[i]);
+    }
+}
+
 void config_mem_prot_init(void)
 {
     for (size_t i = 0; i < config.vmlist_size; i++) {
@@ -19,18 +36,7 @@ void config_mem_prot_init(void)
             config.vmlist[i]->platform.regions[j].phys = region_base;
         }
 
-        for (size_t j = 0; j < config.vmlist[i]->platform.ipc_num; j++) {
-            /**
-             * In MPU-based systems, the address of the VM's IPC object and the used must follow a
-             * 1-1 mapping.
-             */
-            size_t shmem_id = config.vmlist[i]->platform.ipcs[j].shmem_id;
-            vaddr_t ipc_base_addr = config.vmlist[i]->platform.ipcs[j].base;
-            vaddr_t shmem_base_addr = config.shmemlist[shmem_id].base;
-            if (ipc_base_addr != shmem_base_addr) {
-                ERROR("IPC base addr must be the same as its shmem base addr.");
-            }
-        }
+        config_validate_vm_ipc(config.vmlist[i]);
     }
 
     for (size_t i = 0; i < config.shmemlist_size; i++) {

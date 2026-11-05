@@ -22,6 +22,14 @@ static long mtower_handle_nw(struct vcpu* ree_vcpu, uint32_t fid)
     long ret = -HC_E_FAILURE;
     uint32_t pop_num = 0;
  
+#if defined(ARCH_SUB_ARMV8M)
+    if(fid == TEEHC_FUNCID_INTERRUPT) {
+        if(!interrupts_arch_vm_irq_resume()){
+             ERROR("Interrupt recieved. Bad handling!");
+        }
+    }
+#endif
+
     if(fid < MAX_STACK_LEVEL) { //if hypercall reieved wants to invoke TEE on stack, should be a TEE lower in stack
 
         pop_num = stack_level_after_boot-fid;

@@ -16,6 +16,46 @@
 #ifndef GIC_VERSION
 #error "GIC_VERSION not defined for this platform"
 #endif
+static struct {
+    bool active;
+    irqid_t int_id;
+    struct vcpu* interrupted;
+    struct vcpu* owner;
+} vm_irq_service = {
+    .int_id = INVALID_IRQID,
+};
+
+void pause_vcpu_to_interrupt(struct vcpu* interrupted, irqid_t int_id, struct vcpu* owner)
+{
+    if(vm_irq_service.active) {
+        ERROR("Trying to pause a vcpu to interrupt, but another vcpu is already paused for an interrupt. This should not happen.");
+    }
+    if(vm_irq_service.int_id != INVALID_IRQID) {
+        ERROR("Trying to pause a vcpu to interrupt, but another interrupt is already being serviced. This should not happen.");
+    }
+    vm_irq_service.interrupted = interrupted;
+    vm_irq_service.int_id = int_id;
+    vm_irq_service.active = true;
+    vm_irq_service.owner = owner;
+}
+
+void resume_vcpu_from_interrupt(struct vcpu* owner)
+{
+    if(owner != vm_irq_service.owner) {
+        ERROR("Trying to resume a vcpu from interrupt, but the owner vcpu does not match the one that was paused. This should not happen.");
+    }
+
+    if(vm_irq_service.active) {
+        cpu()->next_vcpu = vm_irq_service.interrupted;
+    }
+
+    vm_irq_service.owner = NULL;
+    vm_irq_service.active = false;
+    vm_irq_service.int_id = INVALID_IRQID;
+    vm_irq_service.interrupted = NULL;
+}
+
+
 
 void interrupts_arch_init()
 {

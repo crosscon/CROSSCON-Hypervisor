@@ -58,4 +58,9 @@ void interrupts_arch_ipi_init(void);
 void interrupts_vm_inject(struct vcpu* vcpu, irqid_t id);
 void interrupts_set_shared(irqid_t id);
 bool interrupts_is_shared(irqid_t id);
+#if defined(ARCH_SUB_ARMV8R32)
+void pause_vcpu_to_interrupt(struct vcpu* interrupted, irqid_t int_id, struct vcpu* owner);
+void resume_vcpu_from_interrupt(struct vcpu* owner);
+struct vcpu* get_interrupted_vcpu(void);
+#endif
 #endif /* __INTERRUPTS_H__ */

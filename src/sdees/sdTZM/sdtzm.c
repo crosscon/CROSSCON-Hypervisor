@@ -28,6 +28,12 @@ static long mtower_handle_nw(struct vcpu* ree_vcpu, uint32_t fid)
              ERROR("Interrupt recieved. Bad handling!");
         }
     }
+#else
+    if(fid == TEEHC_FUNCID_INTERRUPT) {
+        resume_vcpu_from_interrupt(ree_vcpu);
+        vmstack_pop();
+        return HC_E_SUCCESS;
+    }
 #endif
 
     if(fid < MAX_STACK_LEVEL) { //if hypercall reieved wants to invoke TEE on stack, should be a TEE lower in stack
@@ -114,6 +120,15 @@ static long mtower_handle_sw(struct vcpu* mtower_vcpu, uint64_t fid)
                 if(!interrupts_arch_vm_irq_resume()){
                      ERROR("Interrupt recieved. Bad handling!");
                 }
+#else
+                resume_vcpu_from_interrupt(mtower_vcpu);
+                //TODO: we should implement a logic to handle the case where the interrupted vcpu is not the child of the mtower_vcpu, but for now we assume that it is always the child
+                //for example, when we have 2 mtower and 1 freertos
+                //this scenario does not fully work, becuase when ree is not the child of mtoer_vcpu
+                vmstack_push(ree_vcpu);
+                //curr_stack_level++;
+                vcpu_context_switch();
+                break;
 #endif
                 cpu()->next_vcpu = ree_vcpu;
                 break;
@@ -193,8 +208,30 @@ static void sdtzm_handle_interrupt(struct vcpu* vcpu, irqid_t int_id)
         cpu()->next_vcpu = vcpu;
     }
 #else
-    UNUSED_ARG(vcpu);
-    UNUSED_ARG(int_id);
+    //if (vcpu->vm->type == 1) //if interrupt is for non-secure, sdgpos shoudl handle it, and not sdtzm
+        //verify if interrupt belongs to this VM, if not, jump to the owner of the interrupt
+    // uint32_t vmid_temp = (uint32_t)interrupts_get_vmid(int_id);
+    // struct vcpu* owner_vcpu =  cpu_get_vcpu_by_vmid((vmid_t)vmid_temp);
+    // if (owner_vcpu == NULL) {
+    //     ERROR("sdtzm_handle_interrupt: interrupt %d not assigned to this vcpu\n", int_id);
+    // }
+    if(vcpu->vm->type == 1){ //if interrupt owner is secure
+        if (vcpu->vm->id != cpu()->vcpu->vm->id) {
+            pause_vcpu_to_interrupt(cpu()->vcpu, int_id, vcpu);
+            interrupts_vm_inject(vcpu, int_id);
+            //TODO: we should implement a logic to handle the case where the interrupted vcpu is not the child of the mtower_vcpu, but for now we assume that it is always the child
+            //for example, when we have 2 mtower and 1 freertos
+            //this scenario does not fully work, becuase when ree is not the child of mtoer_vcpu
+            //how many times should we pop the stack? we should pop until we reach the owner of the interrupt, which is vcpu
+            //while (vcpu != cpu()->vcpu) {   
+                vmstack_pop();
+            //    curr_stack_level--;
+            //}
+        }else{ //if interrupt is secure and execution is secure
+            interrupts_vm_inject(vcpu, int_id);
+            cpu()->next_vcpu = vcpu;
+        }
+    }
 #endif
 }
 

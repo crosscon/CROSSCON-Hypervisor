@@ -59,12 +59,15 @@ struct vcpu* get_vcpu_to_interrupt(void)
     return vm_irq_service.owner;
 }
 
-void interrupts_arch_pendsv_handle(void)
+bool interrupts_arch_pendsv_handle(void)
 {
-    // this is not necessary, if function entered here is because previously was active by interrupts_arch_vm_irq_enter but now is not, so I removed to optimize
-    // if (!vm_irq_service.active) {
-    //     return;
-    // }
+    /* PendSV can remain pending after a hypercall-driven VM switch.  In that
+     * case there is no interrupt owner to inject into.  Dereferencing the
+     * cleared owner corrupts the return path (or faults at vnvic_inject). */
+    if (!vm_irq_service.active || vm_irq_service.owner == NULL) {
+        cpu()->next_vcpu = cpu()->vcpu;
+        return false;
+    }
 
     // if (nvic_get_act(nvic_s, vm_irq_service.int_id)) {
     //     scb_s->icsr = SCB_ICSR_PENDSVSET;
@@ -73,6 +76,7 @@ void interrupts_arch_pendsv_handle(void)
 
     interrupts_vm_inject(vm_irq_service.owner, vm_irq_service.int_id);
     cpu()->next_vcpu = vm_irq_service.owner;
+    return true;
 }
 
 bool interrupts_arch_vm_irq_enter(struct vcpu* owner, irqid_t int_id)

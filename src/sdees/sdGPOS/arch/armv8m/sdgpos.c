@@ -19,6 +19,7 @@ static int32_t sdgpos_smc_handler(struct vcpu* vcpu, unsigned long smc_fid)
     return -1;
 }
 
+#if !defined(SDTZM_HVC_PRIORITY)
 static long sdgpos_hvc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 {
     long int ret = -HC_E_INVAL_ID;
@@ -38,6 +39,7 @@ static long sdgpos_hvc_handler(struct vcpu* vcpu, unsigned long smc_fid)
 
     return ret;
 }
+#endif
 
 static struct hndl_smc smc = {
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
@@ -46,10 +48,12 @@ static struct hndl_smc smc = {
     .handler = sdgpos_smc_handler,
 };
 
+#if !defined(SDTZM_HVC_PRIORITY)
 static struct hndl_hvc hvc = {
     /* CROSSCON TODO: obtain this to decide whether to invoke handler early on */
     .handler = sdgpos_hvc_handler,
 };
+#endif
 
 bool sdgpos_arch_setup(struct vm* vm)
 {
@@ -63,7 +67,9 @@ bool sdgpos_arch_setup(struct vm* vm)
      * to handle its events */
     if (vm->type == 0) {
         vm_hndl_smc_add(vm, &smc);
+#if !defined(SDTZM_HVC_PRIORITY)
         vm_hndl_hvc_add(vm, &hvc);
+#endif
     }
 
     return ret;

@@ -200,6 +200,8 @@ _pendsv_handler:
     VM_EXIT
 
     bl      interrupts_arch_pendsv_handle
+    cmp     r0, #0
+    beq     pendsv_no_vm_switch
     VM_ENTRY
 
     //todo: Test if diable MPU and Enable again would optimize this code
@@ -256,6 +258,15 @@ restore_pendsv_msp_ns_mpu_rnr:
     VM_ENTRY_ESF
 
     pop {lr}    
+    bx lr
+
+pendsv_no_vm_switch:
+    /* A stale PendSV must return through the untouched hardware exception
+     * frame.  The VM-switch path below manufactures a frame and would replace
+     * its valid PC with the current EXC_RETURN value. */
+    VM_ENTRY
+    VM_ENTRY_ESF
+    pop {lr}
     bx lr
 
 
